@@ -34,6 +34,10 @@ const DataProfileAttributeStat = require('./models/DataProfileAttributeStat');
 const ProjectDataStructureAttributeGroupAssociation = require('./models/ProjectDataStructureAttributeGroupAssociation');
 const ProjectDataStructureAttributeAssociation = require('./models/ProjectDataStructureAttributeAssociation');
 
+const DataStructureAttributeGroupInstanceProfile = require('./models/DataStructureAttributeGroupInstanceProfile');
+const DataAccessMechanismCharacteristic = require('./models/DataAccessMechanismCharacteristic');
+const DataAccessMechanism = require('./models/DataAccessMechanism');
+
 
 require('dotenv').config();
 
@@ -84,22 +88,26 @@ app.use('*', (req, res) => {
 
 // Initialize models
 const models = [
-  DataStructureAttributeGroup,
-  DataStructureAttribute,
+  // DataStructureAttributeGroup,
+  // DataStructureAttribute,
 
-  DataStructureAttributeGroupAssociation,
-  DataStructureAttributeAssociation,
+  // DataStructureAttributeGroupAssociation,
+  // DataStructureAttributeAssociation,
 
-  DataProfileAttributeGroupStat,
-  DataProfileAttributeStat,
+  // DataProfileAttributeGroupStat,
+  // DataProfileAttributeStat,
 
-  ProjectDataStructureAttributeGroupAssociation,
-  ProjectDataStructureAttributeAssociation,
+  // ProjectDataStructureAttributeGroupAssociation,
+  // ProjectDataStructureAttributeAssociation,
 
-  AppLog,
-  Project,
-  User,
-  UserRole,
+  // AppLog,
+  // Project,
+  // User,
+  // UserRole,
+
+  DataStructureAttributeGroupInstanceProfile,
+  DataAccessMechanism,
+  DataAccessMechanismCharacteristic
 
 ];
 

@@ -9,9 +9,12 @@ import {
   Tooltip, Container
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
-import { ViewModule, ViewList, Edit, FileCopy, Share, Delete } from '@mui/icons-material';
+import { ViewModule, ViewList, Edit, FileCopy, Share, Delete, Add } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useView } from '../context/ViewContext';
+
+
+
 
 const Sources = () => {
   const { projectsView, setProjectsView } = useView();
@@ -22,6 +25,7 @@ const Sources = () => {
   const [deleteAllDependents, setDeleteAllDependents] = useState(true);
   const navigate = useNavigate();
   const [sources, setSources] = useState([]);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
 
   useEffect(() => {
     fetchSources();
@@ -65,6 +69,10 @@ const Sources = () => {
     } catch (error) {
       console.error('Error deleting source:', error);
     }
+  };
+
+  const handleAddNewSource = () => {
+    navigate('/sources/new');
   };
 
   const columns = [
@@ -145,6 +153,15 @@ const Sources = () => {
           mb={3} 
           width="100%"
         >
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleAddNewSource}
+            startIcon={<Add />}
+          >
+            Add New Source
+          </Button>
+          
           <ToggleButtonGroup 
             value={filter} 
             exclusive 
@@ -155,6 +172,7 @@ const Sources = () => {
             <ToggleButton value="active" aria-label="active sources">Active</ToggleButton>
             <ToggleButton value="inactive" aria-label="inactive sources">Inactive</ToggleButton>
           </ToggleButtonGroup>
+          
           <ToggleButtonGroup value={sourcesView} exclusive onChange={handleViewChange}>
             <ToggleButton value="card"><ViewModule /></ToggleButton>
             <ToggleButton value="grid"><ViewList /></ToggleButton>

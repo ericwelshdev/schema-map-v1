@@ -15,6 +15,7 @@ import Dashboard from './pages/Dashboard';
 import Workspace from './pages/Workspace';
 import Projects from './pages/Projects';
 import Sources from './pages/Sources';
+import NewSource from './pages/NewSource';
 import SourceDetail from './pages/SourceDetail';
 import Targets from './pages/Targets';
 import Admin from './pages/Admin';
@@ -54,6 +55,7 @@ function App() {
                           <Route path="/projects" element={<Projects />} />
                           <Route path="/sources" element={<Sources />} />
                           <Route path="/source/:id" element={<SourceDetail />} />
+                          <Route path="/sources/new" element={<NewSource />} />
                           <Route path="/targets" element={<Targets />} />
                           <Route path="/admin" element={<Admin />} />
                         </Routes>

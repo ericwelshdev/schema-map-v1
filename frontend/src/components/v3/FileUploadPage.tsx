@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, X, Grid, Code, ChevronDown, ChevronUp, FileText, AlertCircle, CheckCircle, Loader } from 'lucide-react';
-import { UploadedFile, Schema, FileContent } from '../types';
+import { UploadedFile, Schema, FileContent } from './types';
 import { parseCSV, parseExcel, inferSchemaFromFileContent } from '../utils/fileParser';
 
 // ... (previous code remains the same)
