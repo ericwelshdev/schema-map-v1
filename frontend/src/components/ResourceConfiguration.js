@@ -13,6 +13,8 @@ const ResourceConfiguration = ({ resourceData }) => {
   const [uploadStatus, setUploadStatus] = useState(null);
   const [schema, setSchema] = useState(null);
   const [ingestionSettings, setIngestionSettings] = useState({});
+  const [fileInfo, setFileInfo] = useState(null);
+  const [sampleData, setSampleData] = useState(null);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedAccordion(isExpanded ? panel : false);
@@ -33,6 +35,14 @@ const ResourceConfiguration = ({ resourceData }) => {
 
       const schemaResult = await generateSchema(file, combinedSettings);
       setSchema(schemaResult.schema);
+      setSampleData(schemaResult.sampleData);
+
+      setFileInfo({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        lastModified: new Date(file.lastModified).toLocaleString(),
+      });
 
       if (schemaResult.warnings.length > 0) {
         setUploadStatus({ type: 'warning', message: schemaResult.warnings.join('. ') });
@@ -55,7 +65,7 @@ const ResourceConfiguration = ({ resourceData }) => {
       <ResourceFileUpload onUpload={handleFileUpload} type={resourceData.resourceType} />
       
       {uploadStatus && (
-        <Alert severity={uploadStatus.type} sx={{ mt: 2 }}>
+        <Alert severity={uploadStatus.type} sx={{ mt: 2, mb: 2 }}>
           {uploadStatus.message}
         </Alert>
       )}
@@ -85,7 +95,12 @@ const ResourceConfiguration = ({ resourceData }) => {
           Data
         </AccordionSummary>
         <AccordionDetails>
-          <ResourceDataPreview schema={schema} resourceData={resourceData} />
+          <ResourceDataPreview 
+            schema={schema} 
+            resourceData={resourceData} 
+            fileInfo={fileInfo}
+            sampleData={sampleData}
+          />
         </AccordionDetails>
       </Accordion>
 

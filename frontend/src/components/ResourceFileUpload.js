@@ -51,7 +51,7 @@ const ResourceFileUpload = ({ onUpload, type }) => {
     <Card 
       variant="outlined" 
       sx={{ 
-        mt: 2, 
+        mt: 1, 
         ml: 0, 
         border: isDragging ? '2px dashed #1976d2' : '2px dashed #ccc',
         backgroundColor: isDragging ? '#e3f2fd' : 'transparent'
