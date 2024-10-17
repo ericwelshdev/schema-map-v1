@@ -1,8 +1,8 @@
 import React from 'react';
-import { Box, Tabs, Tab, Typography } from '@mui/material';
+import { Box, Tabs, Tab, Typography, TextField } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 
-const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData }) => {
+const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData, rawData }) => {
   const [tabValue, setTabValue] = React.useState(0);
 
   const handleTabChange = (event, newValue) => {
@@ -11,7 +11,7 @@ const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData }) => 
 
   const renderGeneralInfo = () => (
     <Box>
-      <Typography variant="h6">Source Information</Typography>
+      <Typography variant="h6">File Information</Typography>
       {fileInfo && (
         <>
           <Typography variant="body2">Name: {fileInfo.name}</Typography>
@@ -36,8 +36,8 @@ const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData }) => 
         <DataGrid
           rows={schema.map((col, index) => ({ id: index, ...col, order: index + 1 }))}
           columns={schemaColumns}
-          pageSize={5}
-          rowsPerPageOptions={[5,10, 25, 50]}
+          pageSize={10}
+          rowsPerPageOptions={[10, 25, 50]}
           autoHeight
           density="compact"
         />
@@ -55,12 +55,12 @@ const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData }) => 
 
   const renderSampleData = () => (
     sampleData ? (
-      <Box sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
+      <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
         <DataGrid
           rows={sampleData.map((row, index) => ({ id: index, ...row }))}
           columns={sampleDataColumns}
-          pageSize={5}
-          rowsPerPageOptions={[5,10, 25, 50]}
+          pageSize={10}
+          rowsPerPageOptions={[10, 25, 50]}
           autoHeight
           density="compact"
         />
@@ -70,17 +70,32 @@ const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData }) => 
     )
   );
 
+  const renderRawData = () => (
+    <TextField
+      multiline
+      fullWidth
+      rows={15}
+      value={rawData || ''}
+      variant="outlined"
+      InputProps={{
+        readOnly: true,
+      }}
+    />
+  );
+
   return (
-    <Box sx={{ mt: -3 }}>
+    <Box>
       <Tabs value={tabValue} onChange={handleTabChange}>
         <Tab label="General" />
         <Tab label="Schema" />
         <Tab label="Sample Data" />
+        <Tab label="Raw Data" />
       </Tabs>
-      <Box sx={{ p: 1 }}>
+      <Box sx={{ p: 3 }}>
         {tabValue === 0 && renderGeneralInfo()}
         {tabValue === 1 && renderSchema()}
         {tabValue === 2 && renderSampleData()}
+        {tabValue === 3 && renderRawData()}
       </Box>
     </Box>
   );

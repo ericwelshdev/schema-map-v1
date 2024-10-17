@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Accordion, AccordionSummary, AccordionDetails, Alert, LinearProgress } from '@mui/material';
+import { Box, Accordion, AccordionSummary, AccordionDetails, Button, Alert, LinearProgress } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileUpload from './ResourceFileUpload';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
@@ -15,15 +15,17 @@ const ResourceConfiguration = ({ resourceData }) => {
   const [ingestionSettings, setIngestionSettings] = useState({});
   const [fileInfo, setFileInfo] = useState(null);
   const [sampleData, setSampleData] = useState(null);
+  const [rawData, setRawData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [detectedFileType, setDetectedFileType] = useState(null);
+  const [currentFile, setCurrentFile] = useState(null);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedAccordion(isExpanded ? panel : false);
   };
 
-  const handleFileUpload = async (file) => {
+  const processFile = async (file, settings) => {
     setLoading(true);
     setProgress(0);
     try {
@@ -36,7 +38,8 @@ const ResourceConfiguration = ({ resourceData }) => {
       
       const combinedSettings = {
         ...defaultSettings,
-        ...autoDetectedSettings
+        ...autoDetectedSettings,
+        ...settings
       };
 
       setIngestionSettings(combinedSettings);
@@ -45,6 +48,7 @@ const ResourceConfiguration = ({ resourceData }) => {
       const schemaResult = await generateSchema(file, combinedSettings);
       setSchema(schemaResult.schema);
       setSampleData(schemaResult.sampleData);
+      setRawData(schemaResult.rawData);
       setProgress(80);
 
       setFileInfo({
@@ -66,6 +70,17 @@ const ResourceConfiguration = ({ resourceData }) => {
       setUploadStatus({ type: 'error', message: error.message });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (file) => {
+    setCurrentFile(file);
+    await processFile(file, {});
+  };
+
+  const handleApplyChanges = async () => {
+    if (currentFile) {
+      await processFile(currentFile, ingestionSettings);
     }
   };
 
@@ -94,6 +109,9 @@ const ResourceConfiguration = ({ resourceData }) => {
             ingestionSettings={ingestionSettings}
             onSettingChange={(field, value) => setIngestionSettings(prev => ({ ...prev, [field]: value }))}
           />
+          <Button onClick={handleApplyChanges} variant="contained" color="primary" sx={{ mt: 2 }}>
+            Apply Changes
+          </Button>
         </AccordionDetails>
       </Accordion>
 
@@ -110,6 +128,7 @@ const ResourceConfiguration = ({ resourceData }) => {
             resourceData={resourceData} 
             fileInfo={fileInfo}
             sampleData={sampleData}
+            rawData={rawData}
           />
         </AccordionDetails>
       </Accordion>
