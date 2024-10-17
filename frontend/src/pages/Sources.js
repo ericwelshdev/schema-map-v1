@@ -1,6 +1,7 @@
 // frontend/src/components/pages/Sources.js
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { getSources, deleteSource } from '../services/sourceService';
 import { 
   Typography, Box, Breadcrumbs, Link, ToggleButtonGroup, ToggleButton,
   Card, CardContent, CardActions, IconButton, Grid, Divider, Dialog, DialogTitle,
@@ -13,12 +14,28 @@ import { useNavigate } from 'react-router-dom';
 import { useView } from '../context/ViewContext';
 
 const Sources = () => {
+  const { projectsView, setProjectsView } = useView();
   const [sourcesView, setSourcesView] = useState('card');
   const [filter, setFilter] = useState('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedSource, setSelectedSource] = useState(null);
   const [deleteAllDependents, setDeleteAllDependents] = useState(true);
   const navigate = useNavigate();
+  const [sources, setSources] = useState([]);
+
+  useEffect(() => {
+    fetchSources();
+  }, []);
+
+  const fetchSources = async () => {
+    try {
+      const data = await getSources();
+      setSources(data);
+    } catch (error) {
+      console.error('Error fetching sources:', error);
+    }
+  };
+
   const handleViewChange = (event, newView) => {
     if (newView !== null) {
       setSourcesView(newView);
@@ -31,12 +48,8 @@ const Sources = () => {
     }
   };
 
-  const handleSourceClick = (source) => {
-    navigate('/source-detail', { state: { source } });
-  };
-
   const handleEditClick = (source) => {
-    navigate(`/source/${source.id}`);
+    navigate('/workspace', { state: { source } });
   };
 
   const handleDeleteClick = (source) => {
@@ -44,27 +57,28 @@ const Sources = () => {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    // Implement delete logic here
-    setDeleteDialogOpen(false);
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteSource(selectedSource.ds_id);
+      setDeleteDialogOpen(false);
+      fetchSources();
+    } catch (error) {
+      console.error('Error deleting source:', error);
+    }
   };
 
-  const sourcesData = [
-    { id: 1, name: 'Source 1', type: 'Database', connectionString: 'example1', lastUpdated: '2023-05-10', description: 'This is a sample database source' },
-    { id: 2, name: 'Source 2', type: 'API', endpoint: 'https://api.example.com', lastUpdated: '2023-05-09', description: 'This is a sample API source' },
-    // Add more sources as needed
-  ];
-
   const columns = [
-    { field: 'name', headerName: 'Source Name', flex: 1 },
-    { field: 'type', headerName: 'Type', flex: 1 },
-    { field: 'lastUpdated', headerName: 'Last Updated', flex: 1 },
+    { field: 'dsstrc_attr_grp_id', headerName: 'Source ID', flex: 1 },
+    { field: 'dsstrc_attr_grp_nm', headerName: 'Source Name', flex: 1 },
+    { field: 'dsstrc_attr_grp_shrt_nm', headerName: 'Source Short Name', flex: 1 },
+    { field: 'dsstrc_attr_grp_desc', headerName: 'Description', flex: 1 },
+    { field: 'physcl_data_typ_nm', headerName: 'Data Type', flex: 1 },
+    { field: 'updt_ts', headerName: 'Last Updated', flex: 1 },
     {
       field: 'actions',
       headerName: 'Actions',
       width: 200,
       sortable: false,
-      filterable: false,
       renderCell: (params) => (
         <Box>
           <IconButton onClick={() => handleEditClick(params.row)}><Edit /></IconButton>
@@ -138,8 +152,8 @@ const Sources = () => {
             aria-label="filter"
           >
             <ToggleButton value="all" aria-label="all sources">All Sources</ToggleButton>
-            <ToggleButton value="database" aria-label="database sources">Databases</ToggleButton>
-            <ToggleButton value="api" aria-label="api sources">APIs</ToggleButton>
+            <ToggleButton value="active" aria-label="active sources">Active</ToggleButton>
+            <ToggleButton value="inactive" aria-label="inactive sources">Inactive</ToggleButton>
           </ToggleButtonGroup>
           <ToggleButtonGroup value={sourcesView} exclusive onChange={handleViewChange}>
             <ToggleButton value="card"><ViewModule /></ToggleButton>
@@ -149,18 +163,20 @@ const Sources = () => {
 
         {sourcesView === 'card' ? (
           <Grid container spacing={3}>
-            {sourcesData.map((source) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={source.id}>
+            {sources.map((source) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={source.dsstrc_attr_grp_id}>
                 <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" gutterBottom>{source.name}</Typography>
-                    <Tooltip title={source.description} arrow>
+                    <Typography variant="h6" gutterBottom>{source.dsstrc_attr_grp_nm}</Typography>
+                    <Tooltip title={source.dsstrc_attr_desc} arrow>
                       <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }} noWrap>
-                        {source.description}
+                        {source.dsstrc_attr_desc}
                       </Typography>
                     </Tooltip>
-                    <Typography variant="body2">Type: {source.type}</Typography>
-                    <Typography variant="body2">Last Updated: {source.lastUpdated}</Typography>
+                    <Typography variant="body2">Short Name: {source.dsstrc_attr_grp_shrt_nm}</Typography>
+                    <Typography variant="body2">Description: {source.dsstrc_attr_grp_shrt_nm}</Typography>
+                    <Typography variant="body2">Data Type: {source.dsstrc_attr_grp_desc}</Typography>
+                    <Typography variant="body2">Last Updated: {source.updt_ts}</Typography>
                   </CardContent>
                   <Divider />
                   <CardActions>
@@ -176,8 +192,9 @@ const Sources = () => {
         ) : (
           <Box sx={{ height: 600, width: '100%' }}>
             <DataGrid 
-              rows={sourcesData}
+              rows={sources}
               columns={columns}
+              getRowId={(row) => row.dsstrc_attr_grp_id}
               pageSize={10}
               rowsPerPageOptions={[10]}
               disableSelectionOnClick

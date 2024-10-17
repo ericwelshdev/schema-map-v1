@@ -6,12 +6,15 @@ const { connectDB, sequelize } = require('../config/db');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/userRoutes');
 const projectRoutes = require('./routes/projectRoutes');
-const adminRoutes = require('./routes/adminRoutes');const logger = require('./utils/logger');
+const sourceRoutes = require('./routes/sourceRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const logger = require('./utils/logger');
 const morgan = require('morgan');
 
 // Import all model files
 const AppLog = require('./models/AppLog');
 const Project = require('./models/Project');
+
 const User = require('./models/User');
 
 const UserRole = require('./models/UserRole');
@@ -19,6 +22,11 @@ const UserRole = require('./models/UserRole');
 // data structure
 const DataStructureAttributeGroup = require('./models/DataStructureAttributeGroup');
 const DataStructureAttribute = require('./models/DataStructureAttribute');
+
+// data structure associations
+const DataStructureAttributeGroupAssociation = require('./models/DataStructureAttributeGroupAssociation');
+const DataStructureAttributeAssociation = require('./models/DataStructureAttributeAssociation');
+
 // data profile
 const DataProfileAttributeGroupStat = require('./models/DataProfileAttributeGroupStat');
 const DataProfileAttributeStat = require('./models/DataProfileAttributeStat');
@@ -50,10 +58,16 @@ app.use('/api/auth', authRoutes);
 
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+
 app.use('/api/projects', (req, res, next) => {
   console.log('2. Request reaching /api/projects in app.js');
   next();
 }, projectRoutes);
+
+app.use('/api/sources', (req, res, next) => {
+  console.log('2. Request reaching /api/sources in app.js');
+  next();
+}, sourceRoutes);
 
 
 app.use('*', (req, res) => {
@@ -72,10 +86,16 @@ app.use('*', (req, res) => {
 const models = [
   DataStructureAttributeGroup,
   DataStructureAttribute,
+
+  DataStructureAttributeGroupAssociation,
+  DataStructureAttributeAssociation,
+
   DataProfileAttributeGroupStat,
   DataProfileAttributeStat,
+
   ProjectDataStructureAttributeGroupAssociation,
   ProjectDataStructureAttributeAssociation,
+
   AppLog,
   Project,
   User,

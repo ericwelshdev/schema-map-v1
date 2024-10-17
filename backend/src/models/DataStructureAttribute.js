@@ -5,10 +5,15 @@ const DataStructureAttributeGroup = require('./DataStructureAttributeGroup');
 class DataStructureAttribute extends Model {}
 
 DataStructureAttribute.init({
+    ds_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        allowNull: false
+    },    
     dsstrc_attr_id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        autoIncrement: true
+        // autoIncrement: true
     },
     dsstrc_attr_grp_id: {
         type: DataTypes.INTEGER,
