@@ -36,8 +36,8 @@ const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData }) => 
         <DataGrid
           rows={schema.map((col, index) => ({ id: index, ...col, order: index + 1 }))}
           columns={schemaColumns}
-          pageSize={10}
-          rowsPerPageOptions={[10, 25, 50]}
+          pageSize={5}
+          rowsPerPageOptions={[5,10, 25, 50]}
           autoHeight
           density="compact"
         />
@@ -55,12 +55,12 @@ const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData }) => 
 
   const renderSampleData = () => (
     sampleData ? (
-      <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
+      <Box sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
         <DataGrid
           rows={sampleData.map((row, index) => ({ id: index, ...row }))}
           columns={sampleDataColumns}
-          pageSize={10}
-          rowsPerPageOptions={[10, 25, 50]}
+          pageSize={5}
+          rowsPerPageOptions={[5,10, 25, 50]}
           autoHeight
           density="compact"
         />
