@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardContent, Typography, Button } from '@mui/material';
+import { Card, CardContent, Typography } from '@mui/material';
 import { Upload } from 'lucide-react';
 
 const ResourceFileUpload = ({ onUpload, type }) => {
@@ -41,6 +41,10 @@ const ResourceFileUpload = ({ onUpload, type }) => {
     }
   };
 
+  const handleClick = () => {
+    document.getElementById(`${type}-file-upload`).click();
+  };
+
   const handleFileChange = (event) => {
     if (event.target.files && event.target.files[0]) {
       handleFile(event.target.files[0]);
@@ -54,17 +58,19 @@ const ResourceFileUpload = ({ onUpload, type }) => {
         mt: 1, 
         ml: 0, 
         border: isDragging ? '2px dashed #1976d2' : '2px dashed #ccc',
-        backgroundColor: isDragging ? '#e3f2fd' : 'transparent'
+        backgroundColor: isDragging ? '#e3f2fd' : 'transparent',
+        cursor: 'pointer'
       }}
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onClick={handleClick}
     >
-      <CardContent>
-        <Typography variant="h6" component="div" gutterBottom>
+      <CardContent >
+        <Typography variant="h6" component="div" >
           <Upload style={{ verticalAlign: 'middle', marginRight: '8px' }} />
-          {type} File Upload
+          File Upload
         </Typography>
         <input
           type="file"
@@ -73,17 +79,6 @@ const ResourceFileUpload = ({ onUpload, type }) => {
           onChange={handleFileChange}
           accept={fileTypes.join(',')}
         />
-        <label htmlFor={`${type}-file-upload`}>
-          <Button
-            variant="contained"
-            component="span"
-            startIcon={<Upload />}
-            fullWidth
-            sx={{ mt: 2, mb: 2 }}
-          >
-            Choose File
-          </Button>
-        </label>
         <Typography variant="body2" color="text.secondary" align="center">
           Drag and drop your file here, or click to select
         </Typography>

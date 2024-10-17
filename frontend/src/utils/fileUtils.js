@@ -9,7 +9,6 @@ export const detectFileType = (file) => {
       return 'json';
     case 'xml':
       return 'xml';
-    // Add more file types as needed
     default:
       throw new Error('Unsupported file type');
   }
@@ -28,7 +27,6 @@ export const autoDetectSettings = async (file, fileType) => {
       });
     });
   }
-  // Add auto-detection for other file types here
   return {};
 };
 
@@ -39,8 +37,10 @@ export const generateSchema = async (file, settings) => {
       complete: (results) => {
         const schema = results.meta.fields.map((field, index) => ({
           name: field,
-          type: inferDataType(results.data.slice(1, 6).map(row => row[index]))
+          type: inferDataType(results.data.slice(1, 6).map(row => row[index])),
+          comment: ''
         }));
+        const sampleData = results.data.slice(1, 11);
         const warnings = [];
         if (results.errors.length > 0) {
           warnings.push('Some rows could not be parsed correctly');
@@ -48,7 +48,7 @@ export const generateSchema = async (file, settings) => {
         if (results.data.length > 1000000) {
           warnings.push('Large file detected. Only a sample of the data was processed.');
         }
-        resolve({ schema, warnings });
+        resolve({ schema, sampleData, warnings });
       },
       error: (error) => reject(error)
     });

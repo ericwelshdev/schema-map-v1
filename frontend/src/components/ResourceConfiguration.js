@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Accordion, AccordionSummary, AccordionDetails, Button, Alert } from '@mui/material';
+import { Box, Accordion, AccordionSummary, AccordionDetails, Alert, LinearProgress } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileUpload from './ResourceFileUpload';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
@@ -15,15 +15,23 @@ const ResourceConfiguration = ({ resourceData }) => {
   const [ingestionSettings, setIngestionSettings] = useState({});
   const [fileInfo, setFileInfo] = useState(null);
   const [sampleData, setSampleData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [detectedFileType, setDetectedFileType] = useState(null);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedAccordion(isExpanded ? panel : false);
   };
 
   const handleFileUpload = async (file) => {
+    setLoading(true);
+    setProgress(0);
     try {
       const fileType = await detectFileType(file);
+      setDetectedFileType(fileType);
+      setProgress(20);
       const autoDetectedSettings = await autoDetectSettings(file, fileType);
+      setProgress(40);
       const defaultSettings = ingestionConfig.file[fileType];
       
       const combinedSettings = {
@@ -32,10 +40,12 @@ const ResourceConfiguration = ({ resourceData }) => {
       };
 
       setIngestionSettings(combinedSettings);
+      setProgress(60);
 
       const schemaResult = await generateSchema(file, combinedSettings);
       setSchema(schemaResult.schema);
       setSampleData(schemaResult.sampleData);
+      setProgress(80);
 
       setFileInfo({
         name: file.name,
@@ -50,22 +60,23 @@ const ResourceConfiguration = ({ resourceData }) => {
         setUploadStatus({ type: 'success', message: 'File successfully ingested.' });
       }
 
-      setExpandedAccordion('ingestionSettings');
+      setExpandedAccordion('data');
+      setProgress(100);
     } catch (error) {
       setUploadStatus({ type: 'error', message: error.message });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleViewData = () => {
-    setExpandedAccordion('data');
-  };
-
   return (
-    <Box>
+    <Box sx={{ '& > *': { mb: '1px' } }}>
       <ResourceFileUpload onUpload={handleFileUpload} type={resourceData.resourceType} />
       
+      {loading && <LinearProgress variant="determinate" value={progress} />}
+
       {uploadStatus && (
-        <Alert severity={uploadStatus.type} sx={{ mt: 2, mb: 2 }}>
+        <Alert severity={uploadStatus.type} sx={{ mt: '1px', mb: '1px' }}>
           {uploadStatus.message}
         </Alert>
       )}
@@ -79,11 +90,10 @@ const ResourceConfiguration = ({ resourceData }) => {
         </AccordionSummary>
         <AccordionDetails>
           <ResourceIngestionSettings 
-            resourceData={resourceData}
+            resourceData={{...resourceData, fileType: detectedFileType}}
             ingestionSettings={ingestionSettings}
             onSettingChange={(field, value) => setIngestionSettings(prev => ({ ...prev, [field]: value }))}
           />
-          <Button onClick={handleViewData}>View Data</Button>
         </AccordionDetails>
       </Accordion>
 

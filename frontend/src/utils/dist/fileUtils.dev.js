@@ -27,7 +27,6 @@ var detectFileType = function detectFileType(file) {
 
     case 'xml':
       return 'xml';
-    // Add more file types as needed
 
     default:
       throw new Error('Unsupported file type');
@@ -88,9 +87,11 @@ var generateSchema = function generateSchema(file, settings) {
                     name: field,
                     type: inferDataType(results.data.slice(1, 6).map(function (row) {
                       return row[index];
-                    }))
+                    })),
+                    comment: ''
                   };
                 });
+                var sampleData = results.data.slice(1, 11);
                 var warnings = [];
 
                 if (results.errors.length > 0) {
@@ -103,6 +104,7 @@ var generateSchema = function generateSchema(file, settings) {
 
                 resolve({
                   schema: schema,
+                  sampleData: sampleData,
                   warnings: warnings
                 });
               },
