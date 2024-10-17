@@ -10,8 +10,7 @@ const NewSource = () => {
         <Link color="inherit" href="/sources">Sources</Link>
         <Typography color="textPrimary">New Source</Typography>
       </Breadcrumbs>
-      
-      <Typography variant="h4" sx={{ mb: 3 }}>Add New Source</Typography>
+  
       
       <ResourceWizard />
     </Box>

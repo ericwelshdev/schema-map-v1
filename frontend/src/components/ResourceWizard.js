@@ -23,10 +23,17 @@ const ResourceWizard = () => {
     handleNext();
   };
 
+  const isStepComplete = (step) => {
+    // Add logic to check if the current step is complete
+    // For example:
+    // return resourceData.hasOwnProperty('someRequiredField');
+    return true; // Placeholder, replace with actual logic
+  };
+
   const getStepContent = (step) => {
     switch (step) {
       case 0:
-        return <ResourceTypeSelection onComplete={handleResourceTypeSelection} />;
+        return <ResourceTypeSelection onComplete={handleResourceTypeSelection} setResourceData={setResourceData} />;
       case 1:
         return <ResourceConfiguration resourceData={resourceData} />;
       case 2:

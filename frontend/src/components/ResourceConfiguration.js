@@ -1,31 +1,105 @@
 import React, { useState } from 'react';
-import { Box, Tabs, Tab } from '@mui/material';
+import { Box, Accordion, AccordionSummary, AccordionDetails, Button, Alert } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileUpload from './ResourceFileUpload';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataPreview from './ResourceDataPreview';
 import ResourceSummary from './ResourceSummary';
+import { detectFileType, autoDetectSettings, generateSchema } from '../utils/fileUtils';
+import { ingestionConfig } from '../utils/ingestionConfig';
 
 const ResourceConfiguration = ({ resourceData }) => {
-  const [tabValue, setTabValue] = useState(0);
+  const [expandedAccordion, setExpandedAccordion] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState(null);
+  const [schema, setSchema] = useState(null);
+  const [ingestionSettings, setIngestionSettings] = useState({});
 
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
+  const handleAccordionChange = (panel) => (event, isExpanded) => {
+    setExpandedAccordion(isExpanded ? panel : false);
+  };
+
+  const handleFileUpload = async (file) => {
+    try {
+      const fileType = await detectFileType(file);
+      const autoDetectedSettings = await autoDetectSettings(file, fileType);
+      const defaultSettings = ingestionConfig.file[fileType];
+      
+      const combinedSettings = {
+        ...defaultSettings,
+        ...autoDetectedSettings
+      };
+
+      setIngestionSettings(combinedSettings);
+
+      const schemaResult = await generateSchema(file, combinedSettings);
+      setSchema(schemaResult.schema);
+
+      if (schemaResult.warnings.length > 0) {
+        setUploadStatus({ type: 'warning', message: schemaResult.warnings.join('. ') });
+      } else {
+        setUploadStatus({ type: 'success', message: 'File successfully ingested.' });
+      }
+
+      setExpandedAccordion('ingestionSettings');
+    } catch (error) {
+      setUploadStatus({ type: 'error', message: error.message });
+    }
+  };
+
+  const handleViewData = () => {
+    setExpandedAccordion('data');
   };
 
   return (
-    <Box sx={{ width: '100%' }}>
-      <Tabs value={tabValue} onChange={handleTabChange}>
-        <Tab label="Resource Upload" />
-        <Tab label="Resource Ingestion Settings" />
-        <Tab label="Resource Data Preview" />
-        <Tab label="Resource Summary" />
-      </Tabs>
-      <Box sx={{ p: 3 }}>
-        {tabValue === 0 && <ResourceFileUpload type={resourceData.resourceType} />}
-        {tabValue === 1 && <ResourceIngestionSettings resourceData={resourceData} />}
-        {tabValue === 2 && <ResourceDataPreview resourceData={resourceData} />}
-        {tabValue === 3 && <ResourceSummary resourceData={resourceData} />}
-      </Box>
+    <Box>
+      <ResourceFileUpload onUpload={handleFileUpload} type={resourceData.resourceType} />
+      
+      {uploadStatus && (
+        <Alert severity={uploadStatus.type} sx={{ mt: 2 }}>
+          {uploadStatus.message}
+        </Alert>
+      )}
+
+      <Accordion 
+        expanded={expandedAccordion === 'ingestionSettings'} 
+        onChange={handleAccordionChange('ingestionSettings')}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          Source Ingestion Settings
+        </AccordionSummary>
+        <AccordionDetails>
+          <ResourceIngestionSettings 
+            resourceData={resourceData}
+            ingestionSettings={ingestionSettings}
+            onSettingChange={(field, value) => setIngestionSettings(prev => ({ ...prev, [field]: value }))}
+          />
+          <Button onClick={handleViewData}>View Data</Button>
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion 
+        expanded={expandedAccordion === 'data'} 
+        onChange={handleAccordionChange('data')}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          Data
+        </AccordionSummary>
+        <AccordionDetails>
+          <ResourceDataPreview schema={schema} resourceData={resourceData} />
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion 
+        expanded={expandedAccordion === 'summary'} 
+        onChange={handleAccordionChange('summary')}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          Summary
+        </AccordionSummary>
+        <AccordionDetails>
+          <ResourceSummary resourceData={resourceData} ingestionSettings={ingestionSettings} />
+        </AccordionDetails>
+      </Accordion>
     </Box>
   );
 };
