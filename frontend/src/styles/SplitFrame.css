@@ -1,0 +1,31 @@
+/* SplitFrame.css */
+.split-container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+  }
+  
+  .left-pane {
+    background-color: #f0f0f0;
+    overflow: auto;
+  }
+  
+  .right-pane {
+    flex-grow: 1;
+    background-color: #e0e0e0;
+    overflow: auto;
+    padding: 5px;
+  }
+  
+  .resizer {
+    width: 5px;
+    background-color: #ccc;
+    cursor: col-resize;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .resizer:hover {
+    background-color: #999;
+  }
+  
