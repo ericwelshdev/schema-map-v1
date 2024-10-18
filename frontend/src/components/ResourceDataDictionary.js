@@ -7,21 +7,39 @@ import ResourceIngestionSettings from './ResourceIngestionSettings';
 import { detectFileType, autoDetectSettings, generateSchema } from '../utils/fileUtils';
 import { getConfigForResourceType } from '../utils/ingestionConfig';
 
-const ResourceDataDictionary = ({ resourceData, onUpload, onSkip }) => {
-  const [expandedAccordion, setExpandedAccordion] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState(null);
-  const [schema, setSchema] = useState(null);
-  const [ingestionSettings, setIngestionSettings] = useState({});
-  const [fileInfo, setFileInfo] = useState(null);
-  const [sampleData, setSampleData] = useState(null);
-  const [rawData, setRawData] = useState(null);
+const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {}, onStateChange }) => {
+  const [expandedAccordion, setExpandedAccordion] = useState(savedState.expandedAccordion || false);
+  const [uploadStatus, setUploadStatus] = useState(savedState.uploadStatus || null);
+  const [schema, setSchema] = useState(savedState.schema || null);
+  const [ingestionSettings, setIngestionSettings] = useState(savedState.ingestionSettings || {});
+  const [fileInfo, setFileInfo] = useState(savedState.fileInfo || null);
+  const [sampleData, setSampleData] = useState(savedState.sampleData || null);
+  const [rawData, setRawData] = useState(savedState.rawData || null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [detectedFileType, setDetectedFileType] = useState(null);
+  const [detectedFileType, setDetectedFileType] = useState(savedState.detectedFileType || null);
   const [currentFile, setCurrentFile] = useState(null);
-  const [config, setConfig] = useState({});
-  const [classifications, setClassifications] = useState({});
-  const [sourceDataMapping, setSourceDataMapping] = useState([]);
+  const [config, setConfig] = useState(savedState.config || {});
+  const [classifications, setClassifications] = useState(savedState.classifications || {});
+  const [sourceDataMapping, setSourceDataMapping] = useState(savedState.sourceDataMapping || []);
+
+  useEffect(() => {
+    if (onStateChange) {
+      onStateChange({
+        expandedAccordion,
+        uploadStatus,
+        schema,
+        ingestionSettings,
+        fileInfo,
+        sampleData,
+        rawData,
+        detectedFileType,
+        config,
+        classifications,
+        sourceDataMapping
+      });
+    }
+  }, [expandedAccordion, uploadStatus, schema, ingestionSettings, fileInfo, sampleData, rawData, detectedFileType, config, classifications, sourceDataMapping]);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedAccordion(isExpanded ? panel : false);
@@ -151,9 +169,9 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip }) => {
       editable: true,
       type: 'singleSelect',
       valueOptions: ['Identifier', 'Text', 'Numeric', 'Date', 'Other'],
-      valueGetter: (params) => classifications[params.id] || '',
+      valueGetter: (params) => params.row && params.row.id !== undefined ? classifications[params.row.id] || '' : '',
       valueSetter: (params) => {
-        handleClassificationChange(params.id, params.value);
+        handleClassificationChange(params.row.id, params.value);
         return true;
       }
     }
