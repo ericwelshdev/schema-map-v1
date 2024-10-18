@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Accordion, AccordionSummary, AccordionDetails, Button, Alert, LinearProgress } from '@mui/material';
+import { Box, Accordion, AccordionSummary, AccordionDetails, Button, Alert, LinearProgress, Autocomplete, TextField, Chip } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { DataGrid } from '@mui/x-data-grid';
 import ResourceFileUpload from './ResourceFileUpload';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
 import { detectFileType, autoDetectSettings, generateSchema } from '../utils/fileUtils';
 import { getConfigForResourceType } from '../utils/ingestionConfig';
+
+const standardClassifications = [
+  'physical_table_name', 'physical_column_name', 'data_type', 'nullability',
+  'primary_key', 'foreign_key', 'table_description', 'column_description', 'tags'
+];
 
 const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {}, onStateChange }) => {
   const [expandedAccordion, setExpandedAccordion] = useState(savedState.expandedAccordion || false);
@@ -63,8 +68,6 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
         ...settings
       };
 
-      
-
       setIngestionSettings(combinedSettings);
       setProgress(60);
 
@@ -91,6 +94,10 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
       setExpandedAccordion('data');
       setProgress(100);
       onUpload(schemaResult);
+
+      // Auto-detect classifications
+      const autoDetectedClassifications = autoDetectClassifications(schemaWithIds);
+      setClassifications(autoDetectedClassifications);
     } catch (error) {
       setUploadStatus({ type: 'error', message: error.message });
     } finally {
@@ -134,28 +141,13 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
   };
 
   const autoDetectClassifications = (schema) => {
-    const newClassifications = {};
-    schema.forEach((column) => {
-      if (column.name.toLowerCase().includes('id')) {
-        newClassifications[column.id] = 'Identifier';
-      } else if (column.type === 'string') {
-        newClassifications[column.id] = 'Text';
-      } else if (column.type === 'number') {
-        newClassifications[column.id] = 'Numeric';
-      } else if (column.type === 'date') {
-        newClassifications[column.id] = 'Date';
-      } else {
-        newClassifications[column.id] = 'Other';
-      }
-    });
-    setClassifications(newClassifications);
+    return schema.reduce((acc, column) => {
+      acc[column.id] = standardClassifications.includes(column.name.toLowerCase().replace(/\s/g, '_'))
+        ? column.name.toLowerCase().replace(/\s/g, '_')
+        : '';
+      return acc;
+    }, {});
   };
-
-  useEffect(() => {
-    if (schema) {
-      autoDetectClassifications(schema);
-    }
-  }, [schema]);
 
   const handleClassificationChange = (id, newValue) => {
     setClassifications(prev => ({ ...prev, [id]: newValue }));
@@ -178,23 +170,21 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
     {
       field: 'classification',
       headerName: 'Classification',
-      width: 150,
-      editable: true,
-      type: 'singleSelect',
-      valueOptions: ['Identifier', 'Text', 'Numeric', 'Date', 'Other'],
-      valueGetter: (params) => {
-        if (params && params.row && params.row.id !== undefined) {
-          return classifications[params.row.id] || '';
-        }
-        return '';
-      },
-      valueSetter: (params) => {
-        if (params && params.row && params.row.id !== undefined) {
-          handleClassificationChange(params.row.id, params.value);
-          return true;
-        }
-        return false;
-      }
+      width: 300,
+      renderCell: (params) => (
+        <Autocomplete
+          value={classifications[params.row.id] || ''}
+          onChange={(event, newValue) => handleClassificationChange(params.row.id, newValue)}
+          options={standardClassifications}
+          renderInput={(params) => <TextField {...params} variant="outlined" size="small" />}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip variant="outlined" label={option} {...getTagProps({ index })} />
+            ))
+          }
+          style={{ width: '100%' }}
+        />
+      ),
     }
   ];
 
@@ -249,6 +239,7 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
               columns={classificationColumns}
               pageSize={5}
               autoHeight
+              disableSelectionOnClick
             />
           )}
           <Button onClick={applyClassifications} variant="contained" color="primary" sx={{ mt: 2 }}>
@@ -270,7 +261,7 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
             columns={mappingColumns}
             pageSize={5}
             autoHeight
-            getRowId={(row) => row.id}
+            disableSelectionOnClick
           />
         </AccordionDetails>
       </Accordion>
