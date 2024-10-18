@@ -139,7 +139,8 @@ const generateXMLSchema = async (file, settings) => {
 // Generate schema for Excel files
 export const generateExcelSchema = async (file, settings) => {
   const data = await file.arrayBuffer();
-  const workbook = XLSX.read(data, { type: 'array', ...settings });
+  console.log('Standardized args:', settings);
+  const workbook = XLSX.read(data, { type: 'array' });
   const sheetName = settings.sheetSelection === 'firstSheet' ? workbook.SheetNames[0] : settings.sheetSelection;
   const worksheet = workbook.Sheets[sheetName];
   
@@ -148,17 +149,26 @@ export const generateExcelSchema = async (file, settings) => {
     range: settings.skipFirstNRows,
     blankrows: !settings.skipEmptyLines,
     raw: !settings.dateParsing,
+    defval: null  // Use null for empty cells instead of empty string
   });
 
-  const schema = Object.keys(jsonData[0]).map(key => ({
-    name: key,
-    type: inferDataType(jsonData.slice(0, 5).map(row => row[key])),
+  const headerRow = settings.includeHeader ? jsonData[0] : jsonData[0].map((_, index) => `Column${index + 1}`);
+  const dataRows = settings.includeHeader ? jsonData.slice(1) : jsonData;
+
+  const schema = headerRow.map((header, index) => ({
+    name: header,
+    type: inferDataType(dataRows.slice(0, 5).map(row => row[index])),
     comment: ''
   }));
 
-  const sampleData = jsonData.slice(0, settings.previewNRows);
-  const warnings = [];
+  const sampleData = dataRows.slice(0, settings.previewNRows).map(row => 
+    headerRow.reduce((acc, header, index) => {
+      acc[header] = row[index] !== undefined ? row[index] : null;
+      return acc;
+    }, {})
+  );
 
+  const warnings = [];
   if (jsonData.length > 1000000) {
     warnings.push('Large file detected. Only a sample of the data was processed.');
   }
@@ -167,6 +177,8 @@ export const generateExcelSchema = async (file, settings) => {
 
   return { schema, sampleData, warnings, rawData };
 };
+
+
 // Infer data type for CSV schema generation
 const inferDataType = (values) => {
   if (values.every(value => !isNaN(value))) {
