@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Accordion, AccordionSummary, AccordionDetails, Button, Alert, LinearProgress } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileUpload from './ResourceFileUpload';
@@ -6,7 +6,8 @@ import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataPreview from './ResourceDataPreview';
 import ResourceSummary from './ResourceSummary';
 import { detectFileType, autoDetectSettings, generateSchema } from '../utils/fileUtils';
-import { ingestionConfig } from '../utils/ingestionConfig';
+import { getConfigForResourceType, updateConfigForResourceType } from '../utils/ingestionConfig';
+
 
 const ResourceConfiguration = ({ resourceData }) => {
   const [expandedAccordion, setExpandedAccordion] = useState(false);
@@ -20,6 +21,7 @@ const ResourceConfiguration = ({ resourceData }) => {
   const [progress, setProgress] = useState(0);
   const [detectedFileType, setDetectedFileType] = useState(null);
   const [currentFile, setCurrentFile] = useState(null);
+  const [config, setConfig] = useState({});
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedAccordion(isExpanded ? panel : false);
@@ -34,10 +36,11 @@ const ResourceConfiguration = ({ resourceData }) => {
       setProgress(20);
       const autoDetectedSettings = await autoDetectSettings(file, fileType);
       setProgress(40);
-      const defaultSettings = ingestionConfig.file[fileType];
+      const newConfig = getConfigForResourceType(fileType);
+      setConfig(newConfig);
       
       const combinedSettings = {
-        ...defaultSettings,
+        ...newConfig,
         ...autoDetectedSettings,
         ...settings
       };
@@ -75,13 +78,40 @@ const ResourceConfiguration = ({ resourceData }) => {
 
   const handleFileUpload = async (file) => {
     setCurrentFile(file);
-    await processFile(file, {});
+    const fileType = await detectFileType(file);
+    const detectedSettings = await autoDetectSettings(file, fileType);
+    
+    updateConfigForResourceType(fileType, detectedSettings);
+    
+    const newConfig = getConfigForResourceType(fileType);
+    setConfig(newConfig);
+    
+    const defaultSettings = Object.entries(newConfig).reduce((acc, [key, value]) => {
+      acc[value.uiField] = detectedSettings[value.uiField] ?? value.default;
+      return acc;
+    }, {});
+
+    if (fileType === 'excel' && detectedSettings.sheetNames) {
+      defaultSettings.sheetSelection = detectedSettings.sheetNames[0];
+    }
+
+    setIngestionSettings(defaultSettings);
+    
+    await processFile(file, defaultSettings);
   };
+  
 
   const handleApplyChanges = async () => {
     if (currentFile) {
       await processFile(currentFile, ingestionSettings);
     }
+  };
+
+  const handleSettingChange = (field, value) => {
+    setIngestionSettings(prevSettings => ({
+      ...prevSettings,
+      [field]: value
+    }));
   };
 
   return (
@@ -105,9 +135,9 @@ const ResourceConfiguration = ({ resourceData }) => {
         </AccordionSummary>
         <AccordionDetails>
           <ResourceIngestionSettings 
-            resourceData={{...resourceData, fileType: detectedFileType}}
+            config={config}
             ingestionSettings={ingestionSettings}
-            onSettingChange={(field, value) => setIngestionSettings(prev => ({ ...prev, [field]: value }))}
+            onSettingChange={handleSettingChange}
           />
           <Button onClick={handleApplyChanges} variant="contained" color="primary" sx={{ mt: 2 }}>
             Apply Changes
@@ -141,7 +171,7 @@ const ResourceConfiguration = ({ resourceData }) => {
           Summary
         </AccordionSummary>
         <AccordionDetails>
-          <ResourceSummary resourceData={resourceData} ingestionSettings={ingestionSettings} />
+          {/* <ResourceSummary resourceData={resourceData} ingestionSettings={ingestionSettings} /> */}
         </AccordionDetails>
       </Accordion>
     </Box>

@@ -1,12 +1,25 @@
-import { csvConfig } from './ingestionConfigs/csvConfig';
-// import { databaseConfig } from './ingestionConfigs/databaseConfig';
-// import { apiConfig } from './ingestionConfigs/apiConfig';
+import { csvConfig, updateCSVConfig } from './ingestionConfigs/csvConfig';
+import { excelConfig, updateExcelConfig } from './ingestionConfigs/excelConfig';
 
 export const ingestionConfig = {
   file: {
     csv: csvConfig,
-    // Add other file types here
+    excel: excelConfig,
   },
-  // database: databaseConfig,
-  // api: apiConfig
+};
+
+export const getConfigForResourceType = (resourceType) => {
+  if (resourceType in ingestionConfig.file) {
+    return ingestionConfig.file[resourceType];
+  }
+  return ingestionConfig[resourceType] || {};
+};
+
+export const updateConfigForResourceType = (resourceType, detectedSettings) => {
+  if (resourceType === 'csv') {
+    updateCSVConfig(detectedSettings);
+  } else if (resourceType === 'excel') {
+    updateExcelConfig(detectedSettings);
+  }
+  // Add more file types here as needed
 };

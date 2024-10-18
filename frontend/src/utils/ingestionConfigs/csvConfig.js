@@ -285,3 +285,12 @@ export const getCSVIngestionSummary = (ingestionSettings, detectedSettings) => {
   return summary;
 };
 
+
+// Existing code...
+
+export const updateCSVConfig = (detectedSettings) => {
+  // For now, this function doesn't need to do anything specific
+  // It's included for consistency and potential future use
+};
+
+// Rest of the existing code...
