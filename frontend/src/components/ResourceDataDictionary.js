@@ -63,6 +63,8 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
         ...settings
       };
 
+      
+
       setIngestionSettings(combinedSettings);
       setProgress(60);
 
@@ -100,11 +102,22 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
     setCurrentFile(file);
     const fileType = await detectFileType(file);
     const detectedSettings = await autoDetectSettings(file, fileType);
-    setIngestionSettings(prevSettings => ({
-      ...prevSettings,
-      ...detectedSettings
-    }));
-    await processFile(file, detectedSettings);
+    
+    const newConfig = getConfigForResourceType(fileType);
+    setConfig(newConfig);
+    
+    const defaultSettings = Object.entries(newConfig).reduce((acc, [key, value]) => {
+      acc[value.uiField] = detectedSettings[value.uiField] ?? value.default;
+      return acc;
+    }, {});
+
+    if (fileType === 'excel' && detectedSettings.sheetNames) {
+      defaultSettings.sheetSelection = detectedSettings.sheetNames[0];
+    }
+
+    setIngestionSettings(defaultSettings);
+    
+    await processFile(file, defaultSettings);
   };
 
   const handleApplyChanges = async () => {
@@ -169,10 +182,18 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
       editable: true,
       type: 'singleSelect',
       valueOptions: ['Identifier', 'Text', 'Numeric', 'Date', 'Other'],
-      valueGetter: (params) => params.row && params.row.id !== undefined ? classifications[params.row.id] || '' : '',
+      valueGetter: (params) => {
+        if (params && params.row && params.row.id !== undefined) {
+          return classifications[params.row.id] || '';
+        }
+        return '';
+      },
       valueSetter: (params) => {
-        handleClassificationChange(params.row.id, params.value);
-        return true;
+        if (params && params.row && params.row.id !== undefined) {
+          handleClassificationChange(params.row.id, params.value);
+          return true;
+        }
+        return false;
       }
     }
   ];
@@ -249,6 +270,7 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
             columns={mappingColumns}
             pageSize={5}
             autoHeight
+            getRowId={(row) => row.id}
           />
         </AccordionDetails>
       </Accordion>
