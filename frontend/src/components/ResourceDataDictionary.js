@@ -1,25 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Accordion, AccordionSummary, AccordionDetails, Button, Alert, LinearProgress } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { DataGrid } from '@mui/x-data-grid';
 import ResourceFileUpload from './ResourceFileUpload';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
-import { DataGrid } from '@mui/x-data-grid';
 import { detectFileType, autoDetectSettings, generateSchema } from '../utils/fileUtils';
 import { getConfigForResourceType } from '../utils/ingestionConfig';
 
-const ResourceDataDictionary = ({ onUpload, onSkip }) => {
+const ResourceDataDictionary = ({ resourceData, onUpload, onSkip }) => {
   const [expandedAccordion, setExpandedAccordion] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [schema, setSchema] = useState(null);
   const [ingestionSettings, setIngestionSettings] = useState({});
   const [fileInfo, setFileInfo] = useState(null);
   const [sampleData, setSampleData] = useState(null);
+  const [rawData, setRawData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [detectedFileType, setDetectedFileType] = useState(null);
   const [currentFile, setCurrentFile] = useState(null);
   const [config, setConfig] = useState({});
   const [classifications, setClassifications] = useState({});
+  const [sourceDataMapping, setSourceDataMapping] = useState([]);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedAccordion(isExpanded ? panel : false);
@@ -46,13 +48,11 @@ const ResourceDataDictionary = ({ onUpload, onSkip }) => {
       setIngestionSettings(combinedSettings);
       setProgress(60);
 
-          const schemaResult = await generateSchema(file, combinedSettings);
-          const schemaWithIds = schemaResult.schema.map((row, index) => ({
-            id: index,
-            ...row
-          }));
-          setSchema(schemaWithIds);
+      const schemaResult = await generateSchema(file, combinedSettings);
+      const schemaWithIds = schemaResult.schema.map((item, index) => ({ ...item, id: index }));
+      setSchema(schemaWithIds);
       setSampleData(schemaResult.sampleData);
+      setRawData(schemaResult.rawData);
       setProgress(80);
 
       setFileInfo({
@@ -102,11 +102,46 @@ const ResourceDataDictionary = ({ onUpload, onSkip }) => {
     }));
   };
 
+  const autoDetectClassifications = (schema) => {
+    const newClassifications = {};
+    schema.forEach((column) => {
+      if (column.name.toLowerCase().includes('id')) {
+        newClassifications[column.id] = 'Identifier';
+      } else if (column.type === 'string') {
+        newClassifications[column.id] = 'Text';
+      } else if (column.type === 'number') {
+        newClassifications[column.id] = 'Numeric';
+      } else if (column.type === 'date') {
+        newClassifications[column.id] = 'Date';
+      } else {
+        newClassifications[column.id] = 'Other';
+      }
+    });
+    setClassifications(newClassifications);
+  };
+
+  useEffect(() => {
+    if (schema) {
+      autoDetectClassifications(schema);
+    }
+  }, [schema]);
+
   const handleClassificationChange = (id, newValue) => {
     setClassifications(prev => ({ ...prev, [id]: newValue }));
   };
 
-  const metadataColumns = [
+  const applyClassifications = () => {
+    const newMapping = schema.map((column) => ({
+      id: column.id,
+      sourceColumn: column.name,
+      dictionaryColumn: column.name,
+      classification: classifications[column.id] || 'Unclassified'
+    }));
+    setSourceDataMapping(newMapping);
+    setExpandedAccordion('mapping');
+  };
+
+  const classificationColumns = [
     { field: 'name', headerName: 'Column Name', width: 150 },
     { field: 'type', headerName: 'Data Type', width: 150 },
     {
@@ -116,12 +151,18 @@ const ResourceDataDictionary = ({ onUpload, onSkip }) => {
       editable: true,
       type: 'singleSelect',
       valueOptions: ['Identifier', 'Text', 'Numeric', 'Date', 'Other'],
-      valueGetter: (params) => params && params.id ? classifications[params.id] || '' : '',
+      valueGetter: (params) => classifications[params.id] || '',
       valueSetter: (params) => {
         handleClassificationChange(params.id, params.value);
         return true;
       }
     }
+  ];
+
+  const mappingColumns = [
+    { field: 'sourceColumn', headerName: 'Source Column', width: 150 },
+    { field: 'dictionaryColumn', headerName: 'Dictionary Column', width: 150 },
+    { field: 'classification', headerName: 'Classification', width: 150 }
   ];
 
   return (
@@ -166,11 +207,31 @@ const ResourceDataDictionary = ({ onUpload, onSkip }) => {
           {schema && (
             <DataGrid
               rows={schema}
-              columns={metadataColumns}
+              columns={classificationColumns}
               pageSize={5}
               autoHeight
             />
           )}
+          <Button onClick={applyClassifications} variant="contained" color="primary" sx={{ mt: 2 }}>
+            Apply Classifications
+          </Button>
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion 
+        expanded={expandedAccordion === 'mapping'} 
+        onChange={handleAccordionChange('mapping')}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          Source Data Mapping
+        </AccordionSummary>
+        <AccordionDetails>
+          <DataGrid
+            rows={sourceDataMapping}
+            columns={mappingColumns}
+            pageSize={5}
+            autoHeight
+          />
         </AccordionDetails>
       </Accordion>
 
