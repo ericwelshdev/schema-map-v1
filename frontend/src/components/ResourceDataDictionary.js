@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Accordion, AccordionSummary, AccordionDetails, Button, Alert, LinearProgress, Autocomplete, TextField, Chip } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { DataGrid } from '@mui/x-data-grid';
@@ -8,8 +8,8 @@ import { detectFileType, autoDetectSettings, generateSchema } from '../utils/fil
 import { getConfigForResourceType } from '../utils/ingestionConfig';
 
 const standardClassifications = [
-  'physical_table_name', 'physical_column_name', 'data_type', 'nullability',
-  'primary_key', 'foreign_key', 'table_description', 'column_description', 'tags'
+  'physical_table_name' , 'logical_table_name'  , 'physical_column_name','logical_column_name', 'column_description', 'data_type', 'nullability',
+  'primary_key', 'foreign_key', 'tags', 'table_description'
 ];
 
 const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {}, onStateChange }) => {
@@ -27,8 +27,10 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
   const [config, setConfig] = useState(savedState.config || {});
   const [classifications, setClassifications] = useState(savedState.classifications || {});
   const [sourceDataMapping, setSourceDataMapping] = useState(savedState.sourceDataMapping || []);
+  const [sourceName, setSourceName] = useState('');
+  const [dataDictionary, setDataDictionary] = useState([]);
 
-  useEffect(() => {
+  const memoizedOnStateChange = useCallback(() => {
     if (onStateChange) {
       onStateChange({
         expandedAccordion,
@@ -41,10 +43,16 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
         detectedFileType,
         config,
         classifications,
-        sourceDataMapping
+        sourceDataMapping,
+        sourceName,
+        dataDictionary
       });
     }
-  }, [expandedAccordion, uploadStatus, schema, ingestionSettings, fileInfo, sampleData, rawData, detectedFileType, config, classifications, sourceDataMapping]);
+  }, [expandedAccordion, uploadStatus, schema, ingestionSettings, fileInfo, sampleData, rawData, detectedFileType, config, classifications, sourceDataMapping, sourceName, dataDictionary, onStateChange]);
+
+  useEffect(() => {
+    memoizedOnStateChange();
+  }, [memoizedOnStateChange]);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedAccordion(isExpanded ? panel : false);
@@ -142,9 +150,9 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
 
   const autoDetectClassifications = (schema) => {
     return schema.reduce((acc, column) => {
-      acc[column.id] = standardClassifications.includes(column.name.toLowerCase().replace(/\s/g, '_'))
-        ? column.name.toLowerCase().replace(/\s/g, '_')
-        : '';
+      acc[column.id] = standardClassifications.find(cls => 
+        column.name.toLowerCase().includes(cls.toLowerCase())
+      ) || '';
       return acc;
     }, {});
   };
@@ -154,15 +162,39 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
   };
 
   const applyClassifications = () => {
-    const newMapping = schema.map((column) => ({
+    const newDataDictionary = schema.map((column) => ({
       id: column.id,
-      sourceColumn: column.name,
-      dictionaryColumn: column.name,
+      columnName: column.name,
       classification: classifications[column.id] || 'Unclassified'
     }));
+    setDataDictionary(newDataDictionary);
+    updateSourceDataMapping();
+  };
+
+  const updateSourceDataMapping = () => {
+    const newMapping = schema.map((column) => {
+      // Find the matching entry in the data dictionary based on column name
+      const dictionaryEntry = dataDictionary.find(entry => entry.columnName === column.name);
+    
+      // Map source schema with data dictionary
+      return {
+        id: column.id,
+        phys_table_name: sourceName, // Set the physical table name from the source
+        phys_column_nm: column.name, // Set the physical column name from the source schema
+        log_table_name: sourceName,  // Set the logical table name from the source (this can be updated based on logic if needed)
+        log_column_name: column.name, // Logical column name from the source schema
+        column_desc: dictionaryEntry?.classification || 'Unclassified',  // Add column description from the data dictionary
+        data_type_cd: column.type,   // Data type from the source schema
+        pk_ind: dictionaryEntry?.primaryKeyInd || false,  // Primary key indicator from the data dictionary
+        null_ind: dictionaryEntry?.nullabilityInd !== undefined ? dictionaryEntry.nullabilityInd : true, // Nullable indicator
+      };
+    });
+  
     setSourceDataMapping(newMapping);
     setExpandedAccordion('mapping');
   };
+  
+  
 
   const classificationColumns = [
     { field: 'name', headerName: 'Column Name', width: 150 },
@@ -189,9 +221,14 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
   ];
 
   const mappingColumns = [
-    { field: 'sourceColumn', headerName: 'Source Column', width: 150 },
-    { field: 'dictionaryColumn', headerName: 'Dictionary Column', width: 150 },
-    { field: 'classification', headerName: 'Classification', width: 150 }
+    { field: 'phys_table_name', headerName: 'Physical Table Name', width: 200 },
+    { field: 'phys_column_nm', headerName: 'Physical Column Name', width: 200 },
+    { field: 'log_table_name', headerName: 'Logical Table Name', width: 200 },
+    { field: 'log_column_name', headerName: 'Logical Column Name', width: 200 },
+    { field: 'column_desc', headerName: 'Column Description', width: 300 },
+    { field: 'data_type_cd', headerName: 'Data Type', width: 150 },
+    { field: 'pk_ind', headerName: 'Primary Key', width: 150, type: 'boolean' },
+    { field: 'null_ind', headerName: 'Nullable', width: 150, type: 'boolean' },
   ];
 
   return (
@@ -256,6 +293,14 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
           Source Data Mapping
         </AccordionSummary>
         <AccordionDetails>
+          <TextField
+            label="Source Name"
+            value={sourceName}
+            onChange={(e) => setSourceName(e.target.value)}
+            fullWidth
+            margin="normal"
+          />
+     
           <DataGrid
             rows={sourceDataMapping}
             columns={mappingColumns}
