@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { Stepper, Step, StepLabel, Button, Box } from '@mui/material';
 import ResourceTypeSelection from './ResourceTypeSelection';
 import ResourceConfiguration from './ResourceConfiguration';
-import ResourceMetadataTagging from './ResourceMetadataTagging';
+import ResourceDataDictionary from './ResourceDataDictionary';
+import ResourceMappingTagging from './ResourceMappingTagging';
+import ResourceSummary from './ResourceSummary';
 
 const ResourceWizard = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [resourceData, setResourceData] = useState({});
 
-  const steps = ['Select Resource Type', 'Configure Resource', 'Metadata Tagging'];
+  const steps = ['Select Resource Type', 'Configure Resource', 'Configure Data Dictionary', 'Mapping and Tagging', 'Summary'];
 
   const handleNext = () => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
@@ -23,13 +25,6 @@ const ResourceWizard = () => {
     handleNext();
   };
 
-  const isStepComplete = (step) => {
-    // Add logic to check if the current step is complete
-    // For example:
-    // return resourceData.hasOwnProperty('someRequiredField');
-    return true; // Placeholder, replace with actual logic
-  };
-
   const getStepContent = (step) => {
     switch (step) {
       case 0:
@@ -37,7 +32,11 @@ const ResourceWizard = () => {
       case 1:
         return <ResourceConfiguration resourceData={resourceData} />;
       case 2:
-        return <ResourceMetadataTagging resourceData={resourceData} />;
+        return <ResourceDataDictionary onUpload={(dictionary) => setResourceData(prev => ({ ...prev, dataDictionary: dictionary }))} />;
+      case 3:
+        return <ResourceMappingTagging resourceData={resourceData} />;
+      case 4:
+        return <ResourceSummary resourceData={resourceData} />;
       default:
         return 'Unknown step';
     }

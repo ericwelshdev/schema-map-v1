@@ -3,26 +3,23 @@ import { Box, Accordion, AccordionSummary, AccordionDetails, Button, Alert, Line
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileUpload from './ResourceFileUpload';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
-import ResourceDataPreview from './ResourceDataPreview';
-import ResourceDataDictionary from './ResourceDataDictionary';
-import ResourceSummary from './ResourceSummary';
+import { DataGrid } from '@mui/x-data-grid';
 import { detectFileType, autoDetectSettings, generateSchema } from '../utils/fileUtils';
 import { getConfigForResourceType } from '../utils/ingestionConfig';
 
-const ResourceConfiguration = ({ resourceData }) => {
+const ResourceDataDictionary = ({ onUpload, onSkip }) => {
   const [expandedAccordion, setExpandedAccordion] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [schema, setSchema] = useState(null);
   const [ingestionSettings, setIngestionSettings] = useState({});
   const [fileInfo, setFileInfo] = useState(null);
   const [sampleData, setSampleData] = useState(null);
-  const [rawData, setRawData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [detectedFileType, setDetectedFileType] = useState(null);
   const [currentFile, setCurrentFile] = useState(null);
   const [config, setConfig] = useState({});
-  const [dataDictionary, setDataDictionary] = useState(null);
+  const [classifications, setClassifications] = useState({});
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedAccordion(isExpanded ? panel : false);
@@ -49,10 +46,13 @@ const ResourceConfiguration = ({ resourceData }) => {
       setIngestionSettings(combinedSettings);
       setProgress(60);
 
-      const schemaResult = await generateSchema(file, combinedSettings);
-      setSchema(schemaResult.schema);
+          const schemaResult = await generateSchema(file, combinedSettings);
+          const schemaWithIds = schemaResult.schema.map((row, index) => ({
+            id: index,
+            ...row
+          }));
+          setSchema(schemaWithIds);
       setSampleData(schemaResult.sampleData);
-      setRawData(schemaResult.rawData);
       setProgress(80);
 
       setFileInfo({
@@ -65,11 +65,12 @@ const ResourceConfiguration = ({ resourceData }) => {
       if (schemaResult.warnings.length > 0) {
         setUploadStatus({ type: 'warning', message: schemaResult.warnings.join('. ') });
       } else {
-        setUploadStatus({ type: 'success', message: 'File successfully ingested.' });
+        setUploadStatus({ type: 'success', message: 'Data dictionary file successfully ingested.' });
       }
 
       setExpandedAccordion('data');
       setProgress(100);
+      onUpload(schemaResult);
     } catch (error) {
       setUploadStatus({ type: 'error', message: error.message });
     } finally {
@@ -81,28 +82,16 @@ const ResourceConfiguration = ({ resourceData }) => {
     setCurrentFile(file);
     const fileType = await detectFileType(file);
     const detectedSettings = await autoDetectSettings(file, fileType);
-    
-    const newConfig = getConfigForResourceType(fileType);
-    setConfig(newConfig);
-    
-    const defaultSettings = Object.entries(newConfig).reduce((acc, [key, value]) => {
-      acc[value.uiField] = detectedSettings[value.uiField] ?? value.default;
-      return acc;
-    }, {});
-
-    if (fileType === 'excel' && detectedSettings.sheetNames) {
-      defaultSettings.sheetSelection = detectedSettings.sheetNames[0];
-    }
-
-    setIngestionSettings(defaultSettings);
-    
-    await processFile(file, defaultSettings);
+    setIngestionSettings(prevSettings => ({
+      ...prevSettings,
+      ...detectedSettings
+    }));
+    await processFile(file, detectedSettings);
   };
 
   const handleApplyChanges = async () => {
     if (currentFile) {
       await processFile(currentFile, ingestionSettings);
-      setExpandedAccordion('data');
     }
   };
 
@@ -113,14 +102,31 @@ const ResourceConfiguration = ({ resourceData }) => {
     }));
   };
 
-  const handleDataDictionaryUpload = (dictionary) => {
-    setDataDictionary(dictionary);
-    setExpandedAccordion('summary');
+  const handleClassificationChange = (id, newValue) => {
+    setClassifications(prev => ({ ...prev, [id]: newValue }));
   };
+
+  const metadataColumns = [
+    { field: 'name', headerName: 'Column Name', width: 150 },
+    { field: 'type', headerName: 'Data Type', width: 150 },
+    {
+      field: 'classification',
+      headerName: 'Classification',
+      width: 150,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: ['Identifier', 'Text', 'Numeric', 'Date', 'Other'],
+      valueGetter: (params) => params && params.id ? classifications[params.id] || '' : '',
+      valueSetter: (params) => {
+        handleClassificationChange(params.id, params.value);
+        return true;
+      }
+    }
+  ];
 
   return (
     <Box sx={{ '& > *': { mb: '1px' } }}>
-      <ResourceFileUpload onUpload={handleFileUpload} type={resourceData.resourceType} />
+      <ResourceFileUpload onUpload={handleFileUpload} type="dataDictionary" />
       
       {loading && <LinearProgress variant="determinate" value={progress} />}
 
@@ -135,7 +141,7 @@ const ResourceConfiguration = ({ resourceData }) => {
         onChange={handleAccordionChange('ingestionSettings')}
       >
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          Source Ingestion Settings
+          Data Dictionary Ingestion Settings
         </AccordionSummary>
         <AccordionDetails>
           <ResourceIngestionSettings 
@@ -154,37 +160,25 @@ const ResourceConfiguration = ({ resourceData }) => {
         onChange={handleAccordionChange('data')}
       >
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          Data
+          Data Dictionary Preview
         </AccordionSummary>
         <AccordionDetails>
-          <ResourceDataPreview 
-            schema={schema} 
-            resourceData={resourceData} 
-            fileInfo={fileInfo}
-            sampleData={sampleData}
-            rawData={rawData}
-          />
+          {schema && (
+            <DataGrid
+              rows={schema}
+              columns={metadataColumns}
+              pageSize={5}
+              autoHeight
+            />
+          )}
         </AccordionDetails>
       </Accordion>
 
-      <Accordion 
-        expanded={expandedAccordion === 'summary'} 
-        onChange={handleAccordionChange('summary')}
-      >
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          Summary
-        </AccordionSummary>
-        <AccordionDetails>
-          {/* <ResourceSummary 
-            resourceData={resourceData} 
-            ingestionSettings={ingestionSettings} 
-            schema={schema}
-            dataDictionary={dataDictionary}
-          /> */}
-        </AccordionDetails>
-      </Accordion>
+      <Button onClick={onSkip} variant="outlined" sx={{ mt: 2 }}>
+        Skip
+      </Button>
     </Box>
   );
 };
 
-export default ResourceConfiguration;
+export default ResourceDataDictionary;
