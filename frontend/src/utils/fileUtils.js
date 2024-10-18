@@ -92,26 +92,30 @@ export const generateSchema = async (file, settings) => {
 };
 
 // Generate schema for CSV files
+
 const generateCSVSchema = async (file, settings) => {
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
       ...settings,
       complete: (results) => {
-        const schema = results.meta.fields.map((field, index) => ({
-          name: field,
-          type: inferDataType(results.data.slice(1, 6).map(row => row[index])),
-          comment: ''
-        }));
-        const sampleData = results.data.slice(1, 11);
+        const schema = results.meta.fields.map((field, index) => {
+          const columnValues = results.data.map(row => row[field]).filter(value => value !== undefined && value !== null);
+          return {
+            name: field,
+            type: inferDataType(columnValues),
+            comment: ''
+          };
+        });
+        const sampleData = results.data.slice(0, 10);
         const warnings = [];
         if (results.errors.length > 0) {
-          warnings.push('Some rows could not be parsed correctly');
+          warnings.push('Some rows could not be parsed correctly -> ',results.errors);
         }
         if (results.data.length > 1000000) {
           warnings.push('Large file detected. Only a sample of the data was processed.');
         }
         const rawData = results.data.slice(0, 100).map(row => 
-          Array.isArray(row) ? row.join(settings.delimiter) : Object.values(row).join(settings.delimiter)
+          Object.values(row).join(settings.delimiter)
         ).join('\n');
         resolve({ schema, sampleData, warnings, rawData });
       },
@@ -119,6 +123,9 @@ const generateCSVSchema = async (file, settings) => {
     });
   });
 };
+
+
+
 
 // Generate schema for JSON files
 const generateJSONSchema = async (file, settings) => {
@@ -181,18 +188,6 @@ export const generateExcelSchema = async (file, settings) => {
   return { schema, sampleData, warnings, rawData };
 };
 
-
-// Infer data type for CSV schema generation
-const inferDataType = (values) => {
-  if (values.every(value => !isNaN(value))) {
-    return 'number';
-  } else if (values.every(value => new Date(value).toString() !== 'Invalid Date')) {
-    return 'date';
-  } else {
-    return 'string';
-  }
-};
-
 // Infer schema from JSON objects
 const inferJSONSchema = (sample) => {
   return Object.keys(sample).map(key => ({
@@ -201,6 +196,79 @@ const inferJSONSchema = (sample) => {
     comment: ''
   }));
 };
+
+// infer data type
+const inferDataType = (values) => {
+  const nonNullValues = values.filter(v => v != null && v.toString().trim() !== '');
+  if (nonNullValues.length === 0) return 'string'; // default to 'string' if all values are null or empty
+
+  const types = nonNullValues.map(value => {
+    const strValue = value.toString().trim();
+
+    // handle integers (including zero)
+    if (/^-?\d+$/.test(strValue)) return 'integer';
+
+    // handle numbers (floats/decimals, including large numbers and small precision)
+    if (/^-?\d+(\.\d+)?$/.test(strValue)) {
+      return Number.isInteger(parseFloat(strValue)) ? 'integer' : 'number';
+    }
+
+    // handle boolean values
+    if (/^(true|false)$/i.test(strValue)) return 'boolean';
+
+    // handle dates
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/.test(strValue) || !isNaN(Date.parse(strValue))) {
+      return 'date';
+    }
+
+    // check for arrays or objects
+    if (Array.isArray(value)) return 'array';
+    if (value !== null && typeof value === 'object') return 'object';
+
+    // default fallback to string
+    return 'string';
+  });
+
+  const uniqueTypes = [...new Set(types)];
+  return uniqueTypes.length === 1 ? uniqueTypes[0] : 'mixed'; // Return 'mixed' only if multiple data types exist
+};
+
+
+
+
+// export const generateSchema = (data) => {
+//   if (Array.isArray(data) && data.length > 0) {
+//     if (typeof data[0] === 'object' && !Array.isArray(data[0])) {
+//       // For tabular data (CSV, Excel, database tables)
+//       return Object.keys(data[0]).map(key => ({
+//         name: key,
+//         type: inferDataType(data.map(row => row[key])),
+//         comment: ''
+//       }));
+//     } else {
+//       // For array data
+//       return [{
+//         name: 'value',
+//         type: inferDataType(data),
+//         comment: ''
+//       }];
+//     }
+//   } else if (typeof data === 'object') {
+//     // For JSON or XML data
+//     return Object.keys(data).map(key => ({
+//       name: key,
+//       type: inferDataType([data[key]]),
+//       comment: ''
+//     }));
+//   }
+//   // Fallback for unexpected data structures
+//   return [{
+//     name: 'value',
+//     type: inferDataType([data]),
+//     comment: ''
+//   }];
+// };
+
 
 // Infer schema from XML objects
 const inferXMLSchema = (sample) => {
