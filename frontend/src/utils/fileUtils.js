@@ -110,7 +110,10 @@ const generateCSVSchema = async (file, settings) => {
         if (results.data.length > 1000000) {
           warnings.push('Large file detected. Only a sample of the data was processed.');
         }
-        resolve({ schema, sampleData, warnings, rawData: results.data.slice(0, 100).map(row => row.join(settings.delimiter)).join('\n') });
+        const rawData = results.data.slice(0, 100).map(row => 
+          Array.isArray(row) ? row.join(settings.delimiter) : Object.values(row).join(settings.delimiter)
+        ).join('\n');
+        resolve({ schema, sampleData, warnings, rawData });
       },
       error: (error) => reject(error)
     });
