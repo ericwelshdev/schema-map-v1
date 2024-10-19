@@ -198,52 +198,73 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
     setDataDictionary(newDataDictionary);
     updateSourceDataMapping();
   };
-    const updateSourceDataMapping = () => {
-    const matchedData = schema.map((column) => {
-      const columnMatches = dataDictionary
-        .filter(entry => entry.physical_table_name.toLowerCase() === sourceName.toLowerCase())
-        .map(entry => {
-          const nameSimilarity = stringSimilarity.compareTwoStrings(
-            column.name.toLowerCase(),
-            entry.physical_column_name.toLowerCase()
-          );
-          const classificationSimilarity = stringSimilarity.compareTwoStrings(
-            classifications[column.id]?.toLowerCase() || '',
-            entry.classification?.toLowerCase() || ''
-          );
-          const totalSimilarity = (nameSimilarity * 0.7) + (classificationSimilarity * 0.3);
+        const updateSourceDataMapping = () => {
+          console.log("Starting updateSourceDataMapping");
+          console.log("Schema:", schema);
+          console.log("Source Name:", sourceName);
+          console.log("Data Dictionary:", dataDictionary);
+
+          const matchedData = schema.map((column) => {
+            console.log("Processing column:", column);
+
+            const columnMatches = dataDictionary
+              .filter(entry => {
+                const match = entry.physical_table_name.toLowerCase() === sourceName.toLowerCase();
+                console.log("Filtering entry:", entry, "Match:", match);
+                console.log("entry.physical_table_name:", match);
+                console.log("sourceName:", sourceName);
+                return match;
+              })
+              .map(entry => {
+                const nameSimilarity = stringSimilarity.compareTwoStrings(
+                  column.name.toLowerCase(),
+                  entry.physical_column_name.toLowerCase()
+                );
+                const classificationSimilarity = stringSimilarity.compareTwoStrings(
+                  classifications[column.id]?.toLowerCase() || '',
+                  entry.classification?.toLowerCase() || ''
+                );
+                const totalSimilarity = (nameSimilarity * 0.7) + (classificationSimilarity * 0.3);
         
-          return {
-            ...entry,
-            similarity: totalSimilarity
-          };
-        });
+                console.log("Entry mapping:", entry, "Name Similarity:", nameSimilarity, "Classification Similarity:", classificationSimilarity, "Total Similarity:", totalSimilarity);
 
-      columnMatches.sort((a, b) => b.similarity - a.similarity);
-      const bestMatch = columnMatches[0];
+                return {
+                  ...entry,
+                  similarity: totalSimilarity
+                };
+              });
 
-      if (bestMatch && bestMatch.similarity > 0.6) {
-        return {
-          sourceColumnName: column.name,
-          sourceDataType: column.type,
-          physical_table_name: bestMatch.physical_table_name,
-          physical_column_name: bestMatch.physical_column_name,
-          logical_table_name: bestMatch.logical_table_name,
-          logical_column_name: bestMatch.logical_column_name,
-          column_description: bestMatch.column_description,
-          data_type: bestMatch.data_type,
-          primary_key: bestMatch.primary_key,
-          foreign_key: bestMatch.foreign_key,
-          nullable: bestMatch.nullable,
-          similarity: bestMatch.similarity
+            console.log("Column matches:", columnMatches);
+
+            columnMatches.sort((a, b) => b.similarity - a.similarity);
+            const bestMatch = columnMatches[0];
+
+            console.log("Best match:", bestMatch);
+
+            if (bestMatch && bestMatch.similarity > 0.6) {
+              return {
+                sourceColumnName: column.name,
+                sourceDataType: column.type,
+                physical_table_name: bestMatch.physical_table_name,
+                physical_column_name: bestMatch.physical_column_name,
+                logical_table_name: bestMatch.logical_table_name,
+                logical_column_name: bestMatch.logical_column_name,
+                column_description: bestMatch.column_description,
+                data_type: bestMatch.data_type,
+                primary_key: bestMatch.primary_key,
+                foreign_key: bestMatch.foreign_key,
+                nullable: bestMatch.nullable,
+                similarity: bestMatch.similarity
+              };
+            }
+            return null;
+          }).filter(Boolean);
+
+          console.log("Final matched data:", matchedData);
+
+          setSourceDataMapping(matchedData);
+          setExpandedAccordion('data');
         };
-      }
-      return null;
-    }).filter(Boolean);
-
-    setSourceDataMapping(matchedData);
-    setExpandedAccordion('mapping');
-};
   
   
 
@@ -300,28 +321,28 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
     </Box>
   );
 
-
-  
+  const handleValidateMapping = () => {
+    updateSourceDataMapping();
+    setExpandedAccordion('data');
+    setActiveTab(3); 
+  };
 
   const renderSchema = () => (
     schema ? (
       <Box sx={{ mt:-3, pb:2, height: 350, width: '100%' }}>
-        <Button size="small" onClick={applyClassifications} startIcon={<SaveIcon />} variant="contained" color="primary" sx={{ mt: 1 }}>Save Classifications</Button>
-        <Button size="small" onClick={applyClassifications} startIcon={<AltRouteIcon />} variant="contained" color="primary" sx={{ ml:1 , mt: 1 }}>Vaildate Mapping</Button>
+        {/* <Button size="small" onClick={applyClassifications} startIcon={<SaveIcon />} variant="contained" color="primary" sx={{ mt: 1 }}>Save Classifications</Button> */}
+        <Button size="small" onClick={handleValidateMapping} startIcon={<AltRouteIcon />} variant="contained" color="primary" sx={{  mt: 1 }}>Validate Mapping</Button>
         <DataGrid
           rows={schema}
           columns={classificationColumns}
           pageSize={5}
-          // autoPageSize="true"
           rowsPerPageOptions={[10, 25, 50]}
           density="compact"
         />
-  
       </Box>
     ) : (
       <Typography>No schema available</Typography>
     )
-
   );
 
   const renderSampleData = () => (
@@ -335,7 +356,6 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
             flex: 1,
           }))}
           pageSize={10}
-
           columnHeaderHeight={40}
           rowHeight={40}
           rowsPerPageOptions={[10, 25, 50]}
@@ -346,7 +366,6 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
       <Typography>No sample data available</Typography>
     )
   );
-
   const renderMapping = () => (
     schema ? (
       <Box sx={{ height: 300, width: '100%', overflow: 'auto' }}>
@@ -357,14 +376,15 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
             fullWidth
             margin="normal"
           />
+          <Button size="small" onClick={handleValidateMapping} startIcon={<AltRouteIcon />} variant="contained" color="primary" sx={{  mt: 1 }}>Validate Mapping</Button>
      
-          <DataGrid
-            rows={sourceDataMapping}
-            columns={mappingColumns}
-            pageSize={5}
-            autoHeight
-            disableSelectionOnClick
-          />
+    <DataGrid
+      rows={sourceDataMapping.map((row, index) => ({ ...row, id: index }))}
+      columns={mappingColumns}
+      pageSize={5}
+      autoHeight
+      disableSelectionOnClick
+    />
       </Box>
     ) : (
       <Typography>No schema available</Typography>
