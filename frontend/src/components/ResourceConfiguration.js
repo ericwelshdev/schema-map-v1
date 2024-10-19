@@ -4,8 +4,6 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileUpload from './ResourceFileUpload';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataPreview from './ResourceDataPreview';
-import ResourceDataDictionary from './ResourceDataDictionary';
-import ResourceSummary from './ResourceSummary';
 import { detectFileType, autoDetectSettings, generateSchema } from '../utils/fileUtils';
 import { getConfigForResourceType } from '../utils/ingestionConfig';
 
