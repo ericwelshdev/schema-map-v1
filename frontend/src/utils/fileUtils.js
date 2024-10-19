@@ -93,7 +93,30 @@ export const generateSchema = async (file, settings) => {
 
 // Generate schema for CSV files
 
+const formatIngestionSettings = (settings) => {
+  const formattedSettings = {};
+
+  for (const [key, value] of Object.entries(settings)) {
+    if (value !== undefined) {
+      if (typeof value === 'object' && value.callArgField) {
+        formattedSettings[value.callArgField] = value.value;
+      } else {
+        formattedSettings[key] = value;
+      }
+    }
+  }
+  console.log('settings', settings);
+  console.log('formattedSettings', formattedSettings);
+  return formattedSettings;
+};
+
+
+
+
 const generateCSVSchema = async (file, settings) => {
+  console.log('settings', settings);
+  const formattedSettings = formatIngestionSettings(settings);
+  // console.log('formattedSettings', formattedSettings);
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
       ...settings,
@@ -232,42 +255,6 @@ const inferDataType = (values) => {
   const uniqueTypes = [...new Set(types)];
   return uniqueTypes.length === 1 ? uniqueTypes[0] : 'mixed'; // Return 'mixed' only if multiple data types exist
 };
-
-
-
-
-// export const generateSchema = (data) => {
-//   if (Array.isArray(data) && data.length > 0) {
-//     if (typeof data[0] === 'object' && !Array.isArray(data[0])) {
-//       // For tabular data (CSV, Excel, database tables)
-//       return Object.keys(data[0]).map(key => ({
-//         name: key,
-//         type: inferDataType(data.map(row => row[key])),
-//         comment: ''
-//       }));
-//     } else {
-//       // For array data
-//       return [{
-//         name: 'value',
-//         type: inferDataType(data),
-//         comment: ''
-//       }];
-//     }
-//   } else if (typeof data === 'object') {
-//     // For JSON or XML data
-//     return Object.keys(data).map(key => ({
-//       name: key,
-//       type: inferDataType([data[key]]),
-//       comment: ''
-//     }));
-//   }
-//   // Fallback for unexpected data structures
-//   return [{
-//     name: 'value',
-//     type: inferDataType([data]),
-//     comment: ''
-//   }];
-// };
 
 
 // Infer schema from XML objects

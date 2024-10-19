@@ -111,44 +111,8 @@ export const csvConfig = {
       return '';
     }
   },
-  header: {
-    order: 8,
-    default: true,
-    uiField: 'includeHeader',
-    uiDisplayName: 'Include Header',
-    uiType: 'boolean',
-    callArgField: 'header',
-    autoDetect: async (file) => {
-      // Implement auto-detection logic
-      return true;
-    }
-  },
-  dynamicTyping: {
-    order: 9,
-    default: false,
-    uiField: 'dynamicTyping',
-    uiDisplayName: 'Dynamic Typing',
-    uiType: 'boolean',
-    callArgField: 'dynamicTyping',
-    autoDetect: async (file) => {
-      // Implement auto-detection logic
-      return false;
-    }
-  },
-  skipEmptyLines: {
-    order: 10,
-    default: false,
-    uiField: 'skipEmptyLines',
-    uiDisplayName: 'Skip Empty Lines',
-    uiType: 'boolean',
-    callArgField: 'skipEmptyLines',
-    autoDetect: async (file) => {
-      // Implement auto-detection logic
-     return true;
-    }
-  },
   encoding: {
-    order: 11,
+    order: 8,
     default: 'UTF-8',
     uiField: 'encoding',
     uiDisplayName: 'Encoding',
@@ -164,6 +128,43 @@ export const csvConfig = {
       return 'UTF-8';
     }
   },
+  header: {
+    order: 9,
+    default: true,
+    uiField: 'includeHeader',
+    uiDisplayName: 'Include Header',
+    uiType: 'boolean',
+    callArgField: 'header',
+    autoDetect: async (file) => {
+      // Implement auto-detection logic
+      return true;
+    }
+  },
+  dynamicTyping: {
+    order: 10,
+    default: false,
+    uiField: 'dynamicTyping',
+    uiDisplayName: 'Dynamic Typing',
+    uiType: 'boolean',
+    callArgField: 'dynamicTyping',
+    autoDetect: async (file) => {
+      // Implement auto-detection logic
+      return false;
+    }
+  },
+  skipEmptyLines: {
+    order: 11,
+    default: false,
+    uiField: 'skipEmptyLines',
+    uiDisplayName: 'Skip Empty Lines',
+    uiType: 'boolean',
+    callArgField: 'skipEmptyLines',
+    autoDetect: async (file) => {
+      // Implement auto-detection logic
+     return true;
+    }
+  },
+
   fastMode: {
     order: 12,
     default: false,

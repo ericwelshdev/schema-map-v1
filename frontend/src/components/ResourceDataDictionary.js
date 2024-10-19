@@ -38,7 +38,8 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
   const [dataDictionary, setDataDictionary] = useState([]);
   const [activeTab, setActiveTab] = useState(0);
   const [uploadedFileName, setUploadedFileName] = useState('');
-
+  const [sourceAltInputName, setSourceAltInputName] = useState('');
+  const [sourceNameAlert, setSourceNameAlert] = useState(null);
 
 
   const memoizedOnStateChange = useCallback(() => {
@@ -213,85 +214,106 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
     updateSourceDataMapping();
   };
   const updateSourceDataMapping = () => {
-    console.log("Starting updateSourceDataMapping");
-    console.log("Source Schema:", savedState.sourceSchema);
-    console.log("Data Dictionary Schema:", dataDictionarySchema);
-    console.log("Classifications:", classifications);
-    console.log("Source Name:", savedState.sourceInput);
-    console.log("Source Alt Name:", sourceAltInput);
+  console.log("Starting updateSourceDataMapping");
+  console.log("Source Schema:", savedState.sourceSchema);
+  console.log("Data Dictionary Schema:", dataDictionarySchema);
+  console.log("Classifications:", classifications);
+  console.log("Source Name:", savedState.sourceInput);
+  console.log("Source Alt Name:", sourceAltInputName);
 
-    const classifiedColumns = dataDictionarySchema.reduce((acc, column) => {
-      if (classifications[column.id] === 'physical_table_name' || classifications[column.id] === 'physical_column_name') {
-        acc[classifications[column.id]] = column.name;
-      }
-      return acc;
-    }, {});
+  const sourceName = sourceAltInputName || savedState.sourceInput;
+  const physTableNameColumn = dataDictionarySchema.find(col => classifications[col.id] === 'physical_table_name');
 
-    console.log("Classified Columns:", classifiedColumns);
+  if (!physTableNameColumn) {
+    setSourceNameAlert("No physical table name column classified in the data dictionary.");
+    return;
+  }
+  console.log("physTableNameColumn:", physTableNameColumn);
 
-    const matchedData = savedState.sourceSchema.map((sourceColumn) => {
-      console.log("Processing source column:", sourceColumn);
+  const tableExists = dataDictionary.some(entry =>
+    entry[physTableNameColumn.name]?.toLowerCase() === sourceName.toLowerCase()
+  );
 
-      const columnMatches = dataDictionarySchema.filter(entry => {
-        const tableNameMatch = entry[classifiedColumns.physical_table_name]?.toLowerCase() === savedState.sourceAltInput.toLowerCase();
-        const columnNameMatch = entry[classifiedColumns.physical_column_name]?.toLowerCase() === sourceColumn.name.toLowerCase();
-        return tableNameMatch && columnNameMatch;
+  if (!tableExists) {
+    setSourceNameAlert(`Table "${sourceName}" not found in the data dictionary. Please provide an alternative name.`);
+    return;
+  }
+
+  setSourceNameAlert(null);
+  
+
+  const classifiedColumns = dataDictionarySchema.reduce((acc, column) => {
+    if (classifications[column.id] === 'physical_table_name' || classifications[column.id] === 'physical_column_name') {
+      acc[classifications[column.id]] = column.name;
+    }
+    return acc;
+  }, {});
+
+  console.log("Classified Columns:", classifiedColumns);
+
+  const matchedData = savedState.sourceSchema.map((sourceColumn) => {
+    console.log("Processing source column:", sourceColumn);
+
+    const columnMatches = dataDictionarySchema.filter(entry => {
+      const tableNameMatch = entry[classifiedColumns.physical_table_name]?.toLowerCase() === sourceName.toLowerCase();
+      const columnNameMatch = entry[classifiedColumns.physical_column_name]?.toLowerCase() === sourceColumn.name.toLowerCase();
+      return tableNameMatch && columnNameMatch;
+    });
+
+    console.log("Exact Column Matches:", columnMatches);
+
+    if (columnMatches.length === 0) {
+      // If no exact match, use similarity
+      const similarityMatches = dataDictionarySchema.map(entry => {
+        const tableNameSimilarity = stringSimilarity.compareTwoStrings(
+          sourceName.toLowerCase(),
+          entry[classifiedColumns.physical_table_name]?.toLowerCase() || ''
+        );
+        const columnNameSimilarity = stringSimilarity.compareTwoStrings(
+          sourceColumn.name.toLowerCase(),
+          entry[classifiedColumns.physical_column_name]?.toLowerCase() || ''
+        );
+        const totalSimilarity = (tableNameSimilarity * 0.4) + (columnNameSimilarity * 0.6);
+
+        return {
+          ...entry,
+          similarity: totalSimilarity
+        };
       });
 
-      console.log("Exact Column Matches:", columnMatches);
+      similarityMatches.sort((a, b) => b.similarity - a.similarity);
+      columnMatches.push(similarityMatches[0]);
+    }
 
-      if (columnMatches.length === 0) {
-        // If no exact match, use similarity
-        const similarityMatches = dataDictionarySchema.map(entry => {
-          const tableNameSimilarity = stringSimilarity.compareTwoStrings(
-            savedState.sourceAltInput.toLowerCase(),
-            entry[classifiedColumns.physical_table_name]?.toLowerCase() || ''
-          );
-          const columnNameSimilarity = stringSimilarity.compareTwoStrings(
-            sourceColumn.name.toLowerCase(),
-            entry[classifiedColumns.physical_column_name]?.toLowerCase() || ''
-          );
-          const totalSimilarity = (tableNameSimilarity * 0.4) + (columnNameSimilarity * 0.6);
+    console.log("Final Column Matches:", columnMatches);
 
-          return {
-            ...entry,
-            similarity: totalSimilarity
-          };
-        });
+    const bestMatch = columnMatches[0];
 
-        similarityMatches.sort((a, b) => b.similarity - a.similarity);
-        columnMatches.push(similarityMatches[0]);
-      }
+    if (bestMatch && (bestMatch.similarity > 0.6 || columnMatches.length === 1)) {
+      return {
+        sourceColumnName: sourceColumn.name,
+        sourceDataType: sourceColumn.type,
+        physical_table_name: bestMatch[classifiedColumns.physical_table_name],
+        physical_column_name: bestMatch[classifiedColumns.physical_column_name],
+        logical_table_name: bestMatch.logical_table_name,
+        logical_column_name: bestMatch.logical_column_name,
+        column_description: bestMatch.column_description,
+        data_type: bestMatch.data_type,
+        primary_key: bestMatch.primary_key,
+        foreign_key: bestMatch.foreign_key,
+        nullable: bestMatch.nullable,
+        similarity: bestMatch.similarity || 1
+      };
+    }
+    return null;
+  }).filter(Boolean);
 
-      console.log("Final Column Matches:", columnMatches);
+  console.log("Final Matched Data:", matchedData);
 
-      const bestMatch = columnMatches[0];
-
-      if (bestMatch && (bestMatch.similarity > 0.6 || columnMatches.length === 1)) {
-        return {
-          sourceColumnName: sourceColumn.name,
-          sourceDataType: sourceColumn.type,
-          physical_table_name: bestMatch[classifiedColumns.physical_table_name],
-          physical_column_name: bestMatch[classifiedColumns.physical_column_name],
-          logical_table_name: bestMatch.logical_table_name,
-          logical_column_name: bestMatch.logical_column_name,
-          column_description: bestMatch.column_description,
-          data_type: bestMatch.data_type,
-          primary_key: bestMatch.primary_key,
-          foreign_key: bestMatch.foreign_key,
-          nullable: bestMatch.nullable,
-          similarity: bestMatch.similarity || 1
-        };
-      }
-      return null;
-    }).filter(Boolean);
-
-    console.log("Final Matched Data:", matchedData);
-
-    setSourceDataMapping(matchedData);
-    setExpandedAccordion('data');
-    setActiveTab(3);
-  };
+  setSourceDataMapping(matchedData);
+  setExpandedAccordion('data');
+  setActiveTab(3);
+};
   const classificationColumns = [
     { field: 'name', headerName: 'Column Name', width: 150 },
     { field: 'type', headerName: 'Data Type', width: 150 },
@@ -393,20 +415,24 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
   const renderMapping = () => (
     dataDictionarySchema ? (
       <Box component="form" sx={{ height: 300, width: '100%', overflow: 'auto' }} >
+          {sourceNameAlert && (<Alert severity="warning">{sourceNameAlert}</Alert>)}
   <Paper
   component="form"
   sx={{  display: 'flex', alignItems: 'center', width: 400 }}
 >
 
+
   <TextField 
     sx={{ flex: 1 }}
     size="small"
-    id="sourceAltInputName"
+    onChange={(e) => setSourceAltInputName(e.target.value)}
     placeholder="Supply source name"
     // helperText="Must provide a source name as it appears in the data dictionary"
     required="true"
     inputProps={{ 'aria-label': 'Supply source name as it appears in the data dictionar' }}
   />
+  <Divider sx={{ height: 28, m: 0.5 }} orientation="vertical" />
+ 
   <IconButton onClick={handleValidateMapping} color="primary"  aria-label="directions">
     <AltRouteIcon /> <Typography sx={{ p: '6px' }}> Map Data Dictionary </Typography>
   </IconButton>
