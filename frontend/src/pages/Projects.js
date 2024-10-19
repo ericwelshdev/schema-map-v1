@@ -10,7 +10,7 @@ import {
 import { DataGrid } from '@mui/x-data-grid';
 import { ViewModule, ViewList, Edit, FileCopy, Share, Delete } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useView } from '../context/ViewContext';
+import { useView } from '../contexts/ViewContext';
 
 const Projects = () => {
   const { projectsView, setProjectsView } = useView();

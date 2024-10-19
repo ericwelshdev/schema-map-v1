@@ -33,10 +33,13 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
   const [config, setConfig] = useState(savedState.config || {});
   const [classifications, setClassifications] = useState(savedState.classifications || {});
   const [sourceDataMapping, setSourceDataMapping] = useState(savedState.sourceDataMapping || []);
-  const [sourceName, setSourceName] = useState('');
+  const [sourceInput, setSourceInput] = useState(savedState.fileInfo || null);
+  const [sourceAltInput, setSourceAltInput] = useState('');
   const [dataDictionary, setDataDictionary] = useState([]);
   const [activeTab, setActiveTab] = useState(0);
   const [uploadedFileName, setUploadedFileName] = useState('');
+
+
 
   const memoizedOnStateChange = useCallback(() => {
     if (onStateChange) {
@@ -54,16 +57,19 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
         config,
         classifications,
         sourceDataMapping,
-        sourceName,
+        sourceInput,
+        sourceAltInput,
         dataDictionary
       });
     }
-  }, [expandedAccordion, uploadStatus, schema, sourceSchema, dataDictionarySchema, ingestionSettings, fileInfo, sampleData, rawData, detectedFileType, config, classifications, sourceDataMapping, sourceName, dataDictionary, onStateChange]);
+  }, [expandedAccordion, uploadStatus, schema, sourceSchema, dataDictionarySchema, ingestionSettings, fileInfo, sampleData, rawData, detectedFileType, config, classifications, sourceDataMapping, sourceInput,sourceAltInput, dataDictionary, onStateChange]);
 
 
 
   useEffect(() => {
     memoizedOnStateChange();
+   
+
   }, [memoizedOnStateChange]);
 
 
@@ -208,10 +214,11 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
   };
   const updateSourceDataMapping = () => {
     console.log("Starting updateSourceDataMapping");
-    console.log("Source Schema:", sourceSchema);
+    console.log("Source Schema:", savedState.sourceSchema);
     console.log("Data Dictionary Schema:", dataDictionarySchema);
     console.log("Classifications:", classifications);
-    console.log("Source Name:", sourceName);
+    console.log("Source Name:", savedState.sourceInput);
+    console.log("Source Alt Name:", sourceAltInput);
 
     const classifiedColumns = dataDictionarySchema.reduce((acc, column) => {
       if (classifications[column.id] === 'physical_table_name' || classifications[column.id] === 'physical_column_name') {
@@ -222,11 +229,11 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
 
     console.log("Classified Columns:", classifiedColumns);
 
-    const matchedData = dataDictionarySchema.map((sourceColumn) => {
+    const matchedData = savedState.sourceSchema.map((sourceColumn) => {
       console.log("Processing source column:", sourceColumn);
 
       const columnMatches = dataDictionarySchema.filter(entry => {
-        const tableNameMatch = entry[classifiedColumns.physical_table_name]?.toLowerCase() === sourceName.toLowerCase();
+        const tableNameMatch = entry[classifiedColumns.physical_table_name]?.toLowerCase() === savedState.sourceAltInput.toLowerCase();
         const columnNameMatch = entry[classifiedColumns.physical_column_name]?.toLowerCase() === sourceColumn.name.toLowerCase();
         return tableNameMatch && columnNameMatch;
       });
@@ -237,7 +244,7 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
         // If no exact match, use similarity
         const similarityMatches = dataDictionarySchema.map(entry => {
           const tableNameSimilarity = stringSimilarity.compareTwoStrings(
-            sourceName.toLowerCase(),
+            savedState.sourceAltInput.toLowerCase(),
             entry[classifiedColumns.physical_table_name]?.toLowerCase() || ''
           );
           const columnNameSimilarity = stringSimilarity.compareTwoStrings(
@@ -323,21 +330,19 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
     { field: 'nullable', headerName: 'Nullable', width: 120, type: 'boolean' },
     { field: 'similarity', headerName: 'Similarity Score', width: 150, type: 'number' },
   ];
-
-  const renderGeneralInfo = () => (
-    <Box>
-      <Typography variant="h6">File Information</Typography>
-      {fileInfo && (
-        <>
-          <Typography variant="body2">Name: {fileInfo.name}</Typography>
-          <Typography variant="body2">Type: {fileInfo.type}</Typography>
-          <Typography variant="body2">Size: {fileInfo.size} bytes</Typography>
-          <Typography variant="body2">Last Modified: {fileInfo.lastModified}</Typography>
-        </>
-      )}
-    </Box>
-  );
-
+    const renderGeneralInfo = () => (
+      <Box>
+        <Typography variant="h6">File Information</Typography>
+        {fileInfo && (
+          <>
+            <Typography variant="body2">Name: {fileInfo.name || 'N/A'}</Typography>
+            <Typography variant="body2">Type: {fileInfo.type || 'N/A'}</Typography>
+            <Typography variant="body2">Size: {fileInfo.size ? `${fileInfo.size} bytes` : 'N/A'}</Typography>
+            <Typography variant="body2">Last Modified: {fileInfo.lastModified || 'N/A'}</Typography>
+          </>
+        )}
+      </Box>
+    );
   const handleValidateMapping = () => {
     updateSourceDataMapping();
     setExpandedAccordion('data');
@@ -345,12 +350,12 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
   };
 
   const renderSchema = () => (
-    schema ? (
+    dataDictionarySchema ? (
       <Box sx={{ mt:-3, pb:2, height: 350, width: '100%' }}>
         {/* <Button size="small" onClick={applyClassifications} startIcon={<SaveIcon />} variant="contained" color="primary" sx={{ mt: 1 }}>Save Classifications</Button> */}
         <Button size="small" onClick={handleValidateMapping} startIcon={<AltRouteIcon />} variant="contained" color="primary" sx={{  mt: 1 }}>Validate Mapping</Button>
         <DataGrid
-          rows={schema}
+          rows={dataDictionarySchema}
           columns={classificationColumns}
           pageSize={5}
           rowsPerPageOptions={[10, 25, 50]}
@@ -367,7 +372,7 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
       <Box sx={{ mt:-3, height: 300, width: '100%', overflow: 'auto' }}>
         <DataGrid
           rows={sampleData.map((row, index) => ({ id: index, ...row }))}
-          columns={schema.map(col => ({
+          columns={dataDictionarySchema.map(col => ({
             field: col.name,
             headerName: col.name,
             flex: 1,
@@ -386,7 +391,7 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
 
 
   const renderMapping = () => (
-    schema ? (
+    dataDictionarySchema ? (
       <Box component="form" sx={{ height: 300, width: '100%', overflow: 'auto' }} >
   <Paper
   component="form"
@@ -396,6 +401,7 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
   <TextField 
     sx={{ flex: 1 }}
     size="small"
+    id="sourceAltInputName"
     placeholder="Supply source name"
     // helperText="Must provide a source name as it appears in the data dictionary"
     required="true"

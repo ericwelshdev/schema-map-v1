@@ -54,9 +54,13 @@ const ResourceWizard = () => {
         />;
       case 2:
         return <ResourceDataDictionary 
-          savedState={wizardState.dataDictionary}
+          savedState={{
+            ...wizardState.dataDictionary,
+            sourceSchema: wizardState.configuration.sourceSchema,
+            sourceInput: wizardState.configuration.sourceInput,
+            currentFile: wizardState.configuration.currentFile
+          }}
           onStateChange={(newState) => updateWizardState('dataDictionary', newState)}
-          onSkip={handleSkip}
         />;
       case 3:
         return <ResourceMappingTagging 

@@ -5,7 +5,7 @@ import { Tabs, Tab, Box, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useLocation } from 'react-router-dom';
 import ProjectDetail from './ProjectDetail';
-import { useWorkspace } from '../context/WorkspaceContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 
 const Workspace = () => {
   const location = useLocation();

@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Accordion, AccordionSummary, AccordionDetails, Button, Alert, LinearProgress } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileUpload from './ResourceFileUpload';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataPreview from './ResourceDataPreview';
-import ResourceSummary from './ResourceSummary';
 import { detectFileType, autoDetectSettings, generateSchema } from '../utils/fileUtils';
 import { getConfigForResourceType } from '../utils/ingestionConfig';
 
@@ -18,35 +17,40 @@ const ResourceConfiguration = ({ savedState = {}, onStateChange }) => {
     config: savedState.config || {},
     ingestionSettings: savedState.ingestionSettings || {},
     schema: null,
+    sourceSchema: null,
+    sourceInput: null,
     fileInfo: null,
     sampleData: null,
     rawData: null,
     currentFile: null,
-    dataDictionary: null,
     ...savedState
   });
+
+  const updateState = useCallback((newState) => {
+    setState(prevState => ({ ...prevState, ...newState }));
+  }, []);
 
   useEffect(() => {
     if (state.resourceType) {
       const defaultConfig = getConfigForResourceType(state.resourceType);
-      setState(prevState => ({
-        ...prevState,
+      updateState({
         config: defaultConfig,
-        ingestionSettings: { ...defaultConfig, ...prevState.ingestionSettings }
-      }));
+        ingestionSettings: { ...defaultConfig, ...state.ingestionSettings }
+      });
     }
-  }, [state.resourceType]);
+  }, [state.resourceType, updateState, state.ingestionSettings]);
 
   useEffect(() => {
     onStateChange(state);
+    
   }, [state, onStateChange]);
 
-  const handleAccordionChange = (panel) => (event, isExpanded) => {
-    setState(prevState => ({ ...prevState, expandedAccordion: isExpanded ? panel : false }));
-  };
+  const handleAccordionChange = useCallback((panel) => (event, isExpanded) => {
+    updateState({ expandedAccordion: isExpanded ? panel : false });
+  }, [updateState]);
 
-  const processFile = async (file, settings) => {
-    setState(prevState => ({ ...prevState, loading: true, progress: 0 }));
+  const processFile = useCallback(async (file, settings) => {
+    updateState({ loading: true, progress: 0 });
     try {
       const fileType = await detectFileType(file);
       const autoDetectedSettings = await autoDetectSettings(file, fileType);
@@ -60,14 +64,14 @@ const ResourceConfiguration = ({ savedState = {}, onStateChange }) => {
 
       const schemaResult = await generateSchema(file, combinedSettings);
       
-      setState(prevState => ({
-        ...prevState,
+      updateState({
         loading: false,
         progress: 100,
         uploadStatus: { type: 'success', message: 'File successfully ingested.' },
         config: newConfig,
         ingestionSettings: combinedSettings,
         schema: schemaResult.schema,
+        sourceSchema: schemaResult.schema,        
         fileInfo: {
           name: file.name,
           type: file.type,
@@ -77,18 +81,23 @@ const ResourceConfiguration = ({ savedState = {}, onStateChange }) => {
         sampleData: schemaResult.sampleData,
         rawData: schemaResult.rawData,
         expandedAccordion: 'data'
-      }));
+      });
+      
     } catch (error) {
-      setState(prevState => ({
-        ...prevState,
+      updateState({
         loading: false,
         uploadStatus: { type: 'error', message: error.message }
-      }));
+      });
     }
-  };
+  }, [updateState]);
 
-  const handleFileUpload = async (file) => {
-    setState(prevState => ({ ...prevState, currentFile: file }));
+  const handleFileUpload = useCallback(async (file) => {
+    const fileName = file.name.split('.').slice(0, -1).join('.');
+    updateState({ 
+      currentFile: file,
+      sourceInput: fileName
+    });
+    
     const fileType = await detectFileType(file);
     const detectedSettings = await autoDetectSettings(file, fileType);
     
@@ -104,20 +113,19 @@ const ResourceConfiguration = ({ savedState = {}, onStateChange }) => {
     }
 
     await processFile(file, defaultSettings);
-  };
+  }, [processFile, updateState]);
 
-  const handleApplyChanges = async () => {
+  const handleApplyChanges = useCallback(async () => {
     if (state.currentFile) {
       await processFile(state.currentFile, state.ingestionSettings);
     }
-  };
+  }, [state.currentFile, state.ingestionSettings, processFile]);
 
-  const handleSettingChange = (field, value) => {
-    setState(prevState => ({
-      ...prevState,
-      ingestionSettings: { ...prevState.ingestionSettings, [field]: value }
-    }));
-  };
+  const handleSettingChange = useCallback((field, value) => {
+    updateState({
+      ingestionSettings: { ...state.ingestionSettings, [field]: value }
+    });
+  }, [state.ingestionSettings, updateState]);
 
   return (
     <Box sx={{ '& > *': { mb: '1px' } }}>

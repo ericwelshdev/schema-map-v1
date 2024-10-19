@@ -22,9 +22,9 @@ import Admin from './pages/Admin';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import { SnackbarProvider } from 'notistack';
-import { ViewProvider } from './context/ViewContext';
+import { ViewProvider } from './contexts/ViewContext';
 import { userConfig } from './config/userConfig';
-import { WorkspaceProvider } from './context/WorkspaceContext';
+import { WorkspaceProvider } from './contexts/WorkspaceContext';
 
 
   const theme = createTheme({
