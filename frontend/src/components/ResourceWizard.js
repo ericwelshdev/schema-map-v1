@@ -8,12 +8,14 @@ import ResourceSummary from './ResourceSummary';
 
 const ResourceWizard = () => {
   const [activeStep, setActiveStep] = useState(0);
-  const [resourceData, setResourceData] = useState({});
-  const [configurationState, setConfigurationState] = useState({});
-  const [dataDictionaryState, setDataDictionaryState] = useState({});
-  const [mappingTaggingState, setMappingTaggingState] = useState({});
+  const [wizardState, setWizardState] = useState({
+    resourceType: {},
+    configuration: {},
+    dataDictionary: {},
+    mappingTagging: {}
+  });
 
-  const steps = ['Select Resource Type', 'Configure Resource', 'Configure Data Dictionary', 'Mapping and Tagging', 'Summary'];
+  const steps = ['Select Resource Type', 'Configure Resource', 'Data Dictionary', 'Mapping & Tagging', 'Summary'];
 
   const handleNext = () => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
@@ -27,60 +29,37 @@ const ResourceWizard = () => {
     setActiveStep(step);
   };
 
-  const handleResourceTypeSelection = (data) => {
-    setResourceData(data);
-    handleNext();
-  };
-
-  const handleConfigurationStateChange = (newState) => {
-    setConfigurationState(newState);
-  };
-
-  const handleDataDictionaryStateChange = (newState) => {
-    setDataDictionaryState(newState);
-  };
-
-  const handleMappingTaggingStateChange = (newState) => {
-    setMappingTaggingState(newState);
+  const updateWizardState = (step, newState) => {
+    setWizardState(prevState => ({
+      ...prevState,
+      [step]: { ...prevState[step], ...newState }
+    }));
   };
 
   const getStepContent = (step) => {
     switch (step) {
       case 0:
-        return <ResourceTypeSelection onComplete={handleResourceTypeSelection} />;
+        return <ResourceTypeSelection 
+          savedState={wizardState.resourceType} 
+          onStateChange={(newState) => updateWizardState('resourceType', newState)} 
+        />;
       case 1:
-        return (
-          <ResourceConfiguration
-            resourceData={resourceData}
-            savedState={configurationState}
-            onStateChange={handleConfigurationStateChange}
-          />
-        );
+        return <ResourceConfiguration 
+          savedState={wizardState.configuration}
+          onStateChange={(newState) => updateWizardState('configuration', newState)}
+        />;
       case 2:
-        return (
-          <ResourceDataDictionary
-            resourceData={resourceData}
-            savedState={dataDictionaryState}
-            onStateChange={handleDataDictionaryStateChange}
-          />
-        );
+        return <ResourceDataDictionary 
+          savedState={wizardState.dataDictionary}
+          onStateChange={(newState) => updateWizardState('dataDictionary', newState)}
+        />;
       case 3:
-        return (
-          <ResourceMappingTagging
-            resourceData={resourceData}
-            savedState={mappingTaggingState}
-            onStateChange={handleMappingTaggingStateChange}
-          />
-        );
+        return <ResourceMappingTagging 
+          savedState={wizardState.mappingTagging}
+          onStateChange={(newState) => updateWizardState('mappingTagging', newState)}
+        />;
       case 4:
-        return (
-          <ResourceSummary
-            resourceData={resourceData}
-            configurationState={configurationState}
-            dataDictionaryState={dataDictionaryState}
-            mappingTaggingState={mappingTaggingState}
-          />
-        );
+        return <ResourceSummary wizardState={wizardState} />;
       default:
         return 'Unknown step';
     }
@@ -101,7 +80,6 @@ const ResourceWizard = () => {
         {activeStep === steps.length ? (
           <Box>
             <p>All steps completed</p>
-            {/* Add final submission logic here */}
           </Box>
         ) : (
           <Box>
@@ -111,12 +89,12 @@ const ResourceWizard = () => {
                 color="inherit"
                 disabled={activeStep === 0}
                 onClick={handleBack}
-                sx={{ mr: 1 }}
+                variant="outlined" sx={{ mt: 1 }}
               >
                 Back
               </Button>
               <Box sx={{ flex: '1 1 auto' }} />
-              <Button onClick={handleNext}>
+              <Button onClick={handleNext} variant="outlined" sx={{ mt: 1 }}>
                 {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
               </Button>
             </Box>

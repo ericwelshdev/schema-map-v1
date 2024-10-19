@@ -1,42 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Accordion, AccordionSummary, AccordionDetails, Button, Alert, LinearProgress } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileUpload from './ResourceFileUpload';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataPreview from './ResourceDataPreview';
+import ResourceSummary from './ResourceSummary';
 import { detectFileType, autoDetectSettings, generateSchema } from '../utils/fileUtils';
 import { getConfigForResourceType } from '../utils/ingestionConfig';
 
-const ResourceConfiguration = ({ resourceData }) => {
-  const [expandedAccordion, setExpandedAccordion] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState(null);
-  const [schema, setSchema] = useState(null);
-  const [ingestionSettings, setIngestionSettings] = useState({});
-  const [fileInfo, setFileInfo] = useState(null);
-  const [sampleData, setSampleData] = useState(null);
-  const [rawData, setRawData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [detectedFileType, setDetectedFileType] = useState(null);
-  const [currentFile, setCurrentFile] = useState(null);
-  const [config, setConfig] = useState({});
-  const [dataDictionary, setDataDictionary] = useState(null);
+const ResourceConfiguration = ({ savedState = {}, onStateChange }) => {
+  const [state, setState] = useState({
+    resourceType: savedState.resourceType || '',
+    expandedAccordion: savedState.expandedAccordion || 'fileUpload',
+    loading: false,
+    progress: 0,
+    uploadStatus: null,
+    config: savedState.config || {},
+    ingestionSettings: savedState.ingestionSettings || {},
+    schema: null,
+    fileInfo: null,
+    sampleData: null,
+    rawData: null,
+    currentFile: null,
+    dataDictionary: null,
+    ...savedState
+  });
+
+  useEffect(() => {
+    if (state.resourceType) {
+      const defaultConfig = getConfigForResourceType(state.resourceType);
+      setState(prevState => ({
+        ...prevState,
+        config: defaultConfig,
+        ingestionSettings: { ...defaultConfig, ...prevState.ingestionSettings }
+      }));
+    }
+  }, [state.resourceType]);
+
+  useEffect(() => {
+    onStateChange(state);
+  }, [state, onStateChange]);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
-    setExpandedAccordion(isExpanded ? panel : false);
+    setState(prevState => ({ ...prevState, expandedAccordion: isExpanded ? panel : false }));
   };
 
   const processFile = async (file, settings) => {
-    setLoading(true);
-    setProgress(0);
+    setState(prevState => ({ ...prevState, loading: true, progress: 0 }));
     try {
       const fileType = await detectFileType(file);
-      setDetectedFileType(fileType);
-      setProgress(20);
       const autoDetectedSettings = await autoDetectSettings(file, fileType);
-      setProgress(40);
       const newConfig = getConfigForResourceType(fileType);
-      setConfig(newConfig);
       
       const combinedSettings = {
         ...newConfig,
@@ -44,44 +58,41 @@ const ResourceConfiguration = ({ resourceData }) => {
         ...settings
       };
 
-      setIngestionSettings(combinedSettings);
-      setProgress(60);
-
       const schemaResult = await generateSchema(file, combinedSettings);
-      setSchema(schemaResult.schema);
-      setSampleData(schemaResult.sampleData);
-      setRawData(schemaResult.rawData);
-      setProgress(80);
-
-      setFileInfo({
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        lastModified: new Date(file.lastModified).toLocaleString(),
-      });
-
-      if (schemaResult.warnings.length > 0) {
-        setUploadStatus({ type: 'warning', message: schemaResult.warnings.join('. ') });
-      } else {
-        setUploadStatus({ type: 'success', message: 'File successfully ingested.' });
-      }
-
-      setExpandedAccordion('data');
-      setProgress(100);
+      
+      setState(prevState => ({
+        ...prevState,
+        loading: false,
+        progress: 100,
+        uploadStatus: { type: 'success', message: 'File successfully ingested.' },
+        config: newConfig,
+        ingestionSettings: combinedSettings,
+        schema: schemaResult.schema,
+        fileInfo: {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          lastModified: new Date(file.lastModified).toLocaleString(),
+        },
+        sampleData: schemaResult.sampleData,
+        rawData: schemaResult.rawData,
+        expandedAccordion: 'data'
+      }));
     } catch (error) {
-      setUploadStatus({ type: 'error', message: error.message });
-    } finally {
-      setLoading(false);
+      setState(prevState => ({
+        ...prevState,
+        loading: false,
+        uploadStatus: { type: 'error', message: error.message }
+      }));
     }
   };
 
   const handleFileUpload = async (file) => {
-    setCurrentFile(file);
+    setState(prevState => ({ ...prevState, currentFile: file }));
     const fileType = await detectFileType(file);
     const detectedSettings = await autoDetectSettings(file, fileType);
     
     const newConfig = getConfigForResourceType(fileType);
-    setConfig(newConfig);
     
     const defaultSettings = Object.entries(newConfig).reduce((acc, [key, value]) => {
       acc[value.uiField] = detectedSettings[value.uiField] ?? value.default;
@@ -92,44 +103,36 @@ const ResourceConfiguration = ({ resourceData }) => {
       defaultSettings.sheetSelection = detectedSettings.sheetNames[0];
     }
 
-    setIngestionSettings(defaultSettings);
-    
     await processFile(file, defaultSettings);
   };
 
   const handleApplyChanges = async () => {
-    if (currentFile) {
-      await processFile(currentFile, ingestionSettings);
-      setExpandedAccordion('data');
+    if (state.currentFile) {
+      await processFile(state.currentFile, state.ingestionSettings);
     }
   };
 
   const handleSettingChange = (field, value) => {
-    setIngestionSettings(prevSettings => ({
-      ...prevSettings,
-      [field]: value
+    setState(prevState => ({
+      ...prevState,
+      ingestionSettings: { ...prevState.ingestionSettings, [field]: value }
     }));
-  };
-
-  const handleDataDictionaryUpload = (dictionary) => {
-    setDataDictionary(dictionary);
-    setExpandedAccordion('summary');
   };
 
   return (
     <Box sx={{ '& > *': { mb: '1px' } }}>
-      <ResourceFileUpload onUpload={handleFileUpload} type={resourceData.resourceType} />
+      <ResourceFileUpload onUpload={handleFileUpload} type={state.resourceType} />
       
-      {loading && <LinearProgress variant="determinate" value={progress} />}
+      {state.loading && <LinearProgress variant="determinate" value={state.progress} />}
 
-      {uploadStatus && (
-        <Alert severity={uploadStatus.type} sx={{ mt: '1px', mb: '1px' }}>
-          {uploadStatus.message}
+      {state.uploadStatus && (
+        <Alert severity={state.uploadStatus.type} sx={{ mt: '1px', mb: '1px' }}>
+          {state.uploadStatus.message}
         </Alert>
       )}
 
       <Accordion 
-        expanded={expandedAccordion === 'ingestionSettings'} 
+        expanded={state.expandedAccordion === 'ingestionSettings'} 
         onChange={handleAccordionChange('ingestionSettings')}
       >
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -137,8 +140,8 @@ const ResourceConfiguration = ({ resourceData }) => {
         </AccordionSummary>
         <AccordionDetails>
           <ResourceIngestionSettings 
-            config={config}
-            ingestionSettings={ingestionSettings}
+            config={state.config}
+            ingestionSettings={state.ingestionSettings}
             onSettingChange={handleSettingChange}
           />
           <Button onClick={handleApplyChanges} variant="contained" color="primary" sx={{ mt: 2 }}>
@@ -148,7 +151,7 @@ const ResourceConfiguration = ({ resourceData }) => {
       </Accordion>
 
       <Accordion 
-        expanded={expandedAccordion === 'data'} 
+        expanded={state.expandedAccordion === 'data'} 
         onChange={handleAccordionChange('data')}
       >
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -156,17 +159,17 @@ const ResourceConfiguration = ({ resourceData }) => {
         </AccordionSummary>
         <AccordionDetails>
           <ResourceDataPreview 
-            schema={schema} 
-            resourceData={resourceData} 
-            fileInfo={fileInfo}
-            sampleData={sampleData}
-            rawData={rawData}
+            schema={state.schema} 
+            resourceData={state}
+            fileInfo={state.fileInfo}
+            sampleData={state.sampleData}
+            rawData={state.rawData}
           />
         </AccordionDetails>
       </Accordion>
 
       <Accordion 
-        expanded={expandedAccordion === 'summary'} 
+        expanded={state.expandedAccordion === 'summary'} 
         onChange={handleAccordionChange('summary')}
       >
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -174,10 +177,10 @@ const ResourceConfiguration = ({ resourceData }) => {
         </AccordionSummary>
         <AccordionDetails>
           {/* <ResourceSummary 
-            resourceData={resourceData} 
-            ingestionSettings={ingestionSettings} 
-            schema={schema}
-            dataDictionary={dataDictionary}
+            resourceData={state} 
+            ingestionSettings={state.ingestionSettings} 
+            schema={state.schema}
+            dataDictionary={state.dataDictionary}
           /> */}
         </AccordionDetails>
       </Accordion>

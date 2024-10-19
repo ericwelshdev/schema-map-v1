@@ -103,7 +103,7 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
 
       setExpandedAccordion('data');
       setProgress(100);
-      onUpload(schemaResult);
+      // onUpload(schemaResult);
 
       // Auto-detect classifications
       const autoDetectedClassifications = autoDetectClassifications(schemaWithIds);
