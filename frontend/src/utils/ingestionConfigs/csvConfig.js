@@ -22,20 +22,9 @@ const quoteCharOptions = [
 ];
 
 export const csvConfig = {
-  header: {
-    order: 1,
-    default: true,
-    uiField: 'includeHeader',
-    uiDisplayName: 'Include Header',
-    uiType: 'boolean',
-    callArgField: 'header',
-    autoDetect: async (file) => {
-      // Implement auto-detection logic
-      return true;
-    }
-  },
+
   skipFirstNLines: {
-    order: 2,
+    order: 1,
     default: 0,
     uiField: 'skipFirstNLines',
     uiDisplayName: 'Skip First N Lines',
@@ -47,7 +36,7 @@ export const csvConfig = {
     }
   },
     previewNRows: {
-      order: 3,
+      order: 2,
       default: 100,
       uiField: 'previewNRows',
       uiDisplayName: 'Preview N Rows',
@@ -59,7 +48,7 @@ export const csvConfig = {
       }
     },
   delimiter: {
-    order: 4,
+    order: 3,
     default: ',',
     uiField: 'columnDelimiter',
     uiDisplayName: 'Column Delimiter',
@@ -72,7 +61,7 @@ export const csvConfig = {
     }
   },
   newline: {
-    order: 5,
+    order: 4,
     default: '\n',
     uiField: 'rowDelimiter',
     uiDisplayName: 'Row Delimiter',
@@ -85,7 +74,7 @@ export const csvConfig = {
     }
   },
   quoteChar: {
-    order: 6,
+    order: 5,
     default: '"',
     uiField: 'quoteChar',
     uiDisplayName: 'Quote Character',
@@ -98,7 +87,7 @@ export const csvConfig = {
     }
   },
   escapeChar: {
-    order: 7,
+    order: 6,
     default: '"',
     uiField: 'escapeChar',
     uiDisplayName: 'Escape Character',
@@ -111,7 +100,7 @@ export const csvConfig = {
     }
   },
   commentChar: {
-    order: 8,
+    order: 7,
     default: '',
     uiField: 'commentChar',
     uiDisplayName: 'Comment Character',
@@ -120,6 +109,18 @@ export const csvConfig = {
     autoDetect: async (file) => {
       // Implement auto-detection logic
       return '';
+    }
+  },
+  header: {
+    order: 8,
+    default: true,
+    uiField: 'includeHeader',
+    uiDisplayName: 'Include Header',
+    uiType: 'boolean',
+    callArgField: 'header',
+    autoDetect: async (file) => {
+      // Implement auto-detection logic
+      return true;
     }
   },
   dynamicTyping: {

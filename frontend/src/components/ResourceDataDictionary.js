@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Accordion, AccordionSummary, AccordionDetails, Button, Alert, LinearProgress, Autocomplete, TextField, Chip } from '@mui/material';
+import { Box, Accordion, AccordionSummary, AccordionDetails, Button, Alert, LinearProgress, Autocomplete, TextField, Chip, Tabs, Tab, Typography } from '@mui/material';
+import SaveIcon from '@mui/icons-material/Save';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AltRouteIcon from '@mui/icons-material/AltRoute';
 import { DataGrid } from '@mui/x-data-grid';
 import ResourceFileUpload from './ResourceFileUpload';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
@@ -15,7 +17,7 @@ const standardClassifications = [
 ];
 
 const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {}, onStateChange }) => {
-  const [expandedAccordion, setExpandedAccordion] = useState(savedState.expandedAccordion || false);
+  const [expandedAccordion, setExpandedAccordion] = useState(savedState.expandedAccordion || 'fileUpload');
   const [uploadStatus, setUploadStatus] = useState(savedState.uploadStatus || null);
   const [schema, setSchema] = useState(savedState.schema || null);
   const [ingestionSettings, setIngestionSettings] = useState(savedState.ingestionSettings || {});
@@ -31,6 +33,8 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
   const [sourceDataMapping, setSourceDataMapping] = useState(savedState.sourceDataMapping || []);
   const [sourceName, setSourceName] = useState('');
   const [dataDictionary, setDataDictionary] = useState([]);
+  const [activeTab, setActiveTab] = useState(0);
+  const [uploadedFileName, setUploadedFileName] = useState('');
 
   const memoizedOnStateChange = useCallback(() => {
     if (onStateChange) {
@@ -56,9 +60,15 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
     memoizedOnStateChange();
   }, [memoizedOnStateChange]);
 
+
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedAccordion(isExpanded ? panel : false);
   };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
 
   const processFile = async (file, settings) => {
     setLoading(true);
@@ -117,6 +127,7 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
 
   const handleFileUpload = async (file) => {
     setCurrentFile(file);
+    setUploadedFileName(file.name);
     const fileType = await detectFileType(file);
     const detectedSettings = await autoDetectSettings(file, fileType);
     
@@ -135,7 +146,11 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
     setIngestionSettings(defaultSettings);
     
     await processFile(file, defaultSettings);
+    setExpandedAccordion('data');
+    setActiveTab(1); // Activate the schema tab
   };
+
+
 
   const handleApplyChanges = async () => {
     if (currentFile) {
@@ -183,59 +198,52 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
     setDataDictionary(newDataDictionary);
     updateSourceDataMapping();
   };
+    const updateSourceDataMapping = () => {
+    const matchedData = schema.map((column) => {
+      const columnMatches = dataDictionary
+        .filter(entry => entry.physical_table_name.toLowerCase() === sourceName.toLowerCase())
+        .map(entry => {
+          const nameSimilarity = stringSimilarity.compareTwoStrings(
+            column.name.toLowerCase(),
+            entry.physical_column_name.toLowerCase()
+          );
+          const classificationSimilarity = stringSimilarity.compareTwoStrings(
+            classifications[column.id]?.toLowerCase() || '',
+            entry.classification?.toLowerCase() || ''
+          );
+          const totalSimilarity = (nameSimilarity * 0.7) + (classificationSimilarity * 0.3);
+        
+          return {
+            ...entry,
+            similarity: totalSimilarity
+          };
+        });
 
-  const updateSourceDataMapping = () => {
-    // Initialize a mapping for all the best matches based on similarity scores
-    const allMatches = schema.map((column) => {
-        const columnMatches = dataDictionary
-            
-            .filter(entry => entry.physical_table_name === sourceName) // Ensure we're matching the correct table
-            .map(entry => ({
-                ...entry,
-                similarity: stringSimilarity.compareTwoStrings(column.name.toLowerCase(), entry.physical_column_name.toLowerCase()
-              )
-              
-            }));
-            console.log("columnMatches",columnMatches)  
-        // Filter matches by similarity score, we can set a threshold if necessary
-        const validMatches = columnMatches.filter(match => match.similarity > 0.3); // Adjust threshold as needed
+      columnMatches.sort((a, b) => b.similarity - a.similarity);
+      const bestMatch = columnMatches[0];
 
-        // Sort matches by similarity score
-        validMatches.sort((a, b) => b.similarity - a.similarity);
-
-        // Get the best match or return a default if none are found
-        const bestMatch = validMatches[0] || {
-            physical_column_name: 'Unclassified',
-            similarity: 0,
-            physical_table_name: sourceName,
-            // Add other default properties as needed
-        };
-
+      if (bestMatch && bestMatch.similarity > 0.6) {
         return {
-            id: column.id,
-            phys_table_name: bestMatch.physical_table_name,
-            phys_column_nm: column.name,
-            log_table_name: sourceName,
-            log_column_name: column.name,
-            column_desc: bestMatch.physical_column_name,
-            data_type_cd: column.type,
-            pk_ind: bestMatch.primary_key || false, // Use appropriate field from best match
-            null_ind: bestMatch.nullability || true,
-            similarity: bestMatch.similarity // Keep track of the similarity score
+          sourceColumnName: column.name,
+          sourceDataType: column.type,
+          physical_table_name: bestMatch.physical_table_name,
+          physical_column_name: bestMatch.physical_column_name,
+          logical_table_name: bestMatch.logical_table_name,
+          logical_column_name: bestMatch.logical_column_name,
+          column_description: bestMatch.column_description,
+          data_type: bestMatch.data_type,
+          primary_key: bestMatch.primary_key,
+          foreign_key: bestMatch.foreign_key,
+          nullable: bestMatch.nullable,
+          similarity: bestMatch.similarity
         };
-    });
+      }
+      return null;
+    }).filter(Boolean);
 
-    // Remove duplicates and keep only the best matches for each physical column
-    const filteredMapping = allMatches.filter((item, index, self) =>
-        index === self.findIndex((t) => (
-            t.phys_column_nm === item.phys_column_nm && t.phys_table_name === item.phys_table_name
-        ))
-    );
-
-    setSourceDataMapping(filteredMapping);
+    setSourceDataMapping(matchedData);
     setExpandedAccordion('mapping');
 };
-
   
   
 
@@ -264,27 +272,130 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
   ];
 
   const mappingColumns = [
-    { field: 'phys_table_name', headerName: 'Physical Table Name', width: 200 },
-    { field: 'phys_column_nm', headerName: 'Physical Column Name', width: 200 },
-    { field: 'log_table_name', headerName: 'Logical Table Name', width: 200 },
-    { field: 'log_column_name', headerName: 'Logical Column Name', width: 200 },
-    { field: 'column_desc', headerName: 'Column Description', width: 300 },
-    { field: 'data_type_cd', headerName: 'Data Type', width: 150 },
-    { field: 'pk_ind', headerName: 'Primary Key', width: 150, type: 'boolean' },
-    { field: 'null_ind', headerName: 'Nullable', width: 150, type: 'boolean' },
+    { field: 'sourceColumnName', headerName: 'Source Column Name', width: 180 },
+    { field: 'sourceDataType', headerName: 'Source Data Type', width: 150 },
+    { field: 'physical_table_name', headerName: 'Physical Table Name', width: 180 },
+    { field: 'physical_column_name', headerName: 'Physical Column Name', width: 180 },
+    { field: 'logical_table_name', headerName: 'Logical Table Name', width: 180 },
+    { field: 'logical_column_name', headerName: 'Logical Column Name', width: 180 },
+    { field: 'column_description', headerName: 'Column Description', width: 200 },
+    { field: 'data_type', headerName: 'Data Type', width: 120 },
+    { field: 'primary_key', headerName: 'Primary Key', width: 120, type: 'boolean' },
+    { field: 'foreign_key', headerName: 'Foreign Key', width: 120, type: 'boolean' },
+    { field: 'nullable', headerName: 'Nullable', width: 120, type: 'boolean' },
+    { field: 'similarity', headerName: 'Similarity Score', width: 150, type: 'number' },
   ];
+
+  const renderGeneralInfo = () => (
+    <Box>
+      <Typography variant="h6">File Information</Typography>
+      {fileInfo && (
+        <>
+          <Typography variant="body2">Name: {fileInfo.name}</Typography>
+          <Typography variant="body2">Type: {fileInfo.type}</Typography>
+          <Typography variant="body2">Size: {fileInfo.size} bytes</Typography>
+          <Typography variant="body2">Last Modified: {fileInfo.lastModified}</Typography>
+        </>
+      )}
+    </Box>
+  );
+
+
+  
+
+  const renderSchema = () => (
+    schema ? (
+      <Box sx={{ mt:-3, pb:2, height: 350, width: '100%' }}>
+        <Button size="small" onClick={applyClassifications} startIcon={<SaveIcon />} variant="contained" color="primary" sx={{ mt: 1 }}>Save Classifications</Button>
+        <Button size="small" onClick={applyClassifications} startIcon={<AltRouteIcon />} variant="contained" color="primary" sx={{ ml:1 , mt: 1 }}>Vaildate Mapping</Button>
+        <DataGrid
+          rows={schema}
+          columns={classificationColumns}
+          pageSize={5}
+          // autoPageSize="true"
+          rowsPerPageOptions={[10, 25, 50]}
+          density="compact"
+        />
+  
+      </Box>
+    ) : (
+      <Typography>No schema available</Typography>
+    )
+
+  );
+
+  const renderSampleData = () => (
+    sampleData ? (
+      <Box sx={{ mt:-3, height: 300, width: '100%', overflow: 'auto' }}>
+        <DataGrid
+          rows={sampleData.map((row, index) => ({ id: index, ...row }))}
+          columns={schema.map(col => ({
+            field: col.name,
+            headerName: col.name,
+            flex: 1,
+          }))}
+          pageSize={10}
+
+          columnHeaderHeight={40}
+          rowHeight={40}
+          rowsPerPageOptions={[10, 25, 50]}
+          density="compact"
+        />
+      </Box>
+    ) : (
+      <Typography>No sample data available</Typography>
+    )
+  );
+
+  const renderMapping = () => (
+    schema ? (
+      <Box sx={{ height: 300, width: '100%', overflow: 'auto' }}>
+                <TextField
+            label="Source Name"
+            value={sourceName}
+            onChange={(e) => setSourceName(e.target.value)}
+            fullWidth
+            margin="normal"
+          />
+     
+          <DataGrid
+            rows={sourceDataMapping}
+            columns={mappingColumns}
+            pageSize={5}
+            autoHeight
+            disableSelectionOnClick
+          />
+      </Box>
+    ) : (
+      <Typography>No schema available</Typography>
+    )
+
+  );  
+
+
 
   return (
     <Box sx={{ '& > *': { mb: '1px' } }}>
-      <ResourceFileUpload onUpload={handleFileUpload} type="dataDictionary" />
-      
-      {loading && <LinearProgress variant="determinate" value={progress} />}
+
+        <Accordion defaultExpanded
+              expanded={expandedAccordion === 'fileUpload'} 
+              onChange={handleAccordionChange('fileUpload')}
+            >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+        File Upload {uploadedFileName && `- ${uploadedFileName} (${uploadStatus ? uploadStatus.type : 'Pending'})`}
+        </AccordionSummary>
+        <AccordionDetails sx={{ mt:-3 }}>
+        <ResourceFileUpload onUpload={handleFileUpload} type="dataDictionary" />
+        {loading && <LinearProgress variant="determinate" value={progress} />}
+        </AccordionDetails>
+      </Accordion>
 
       {uploadStatus && (
         <Alert severity={uploadStatus.type} sx={{ mt: '1px', mb: '1px' }}>
           {uploadStatus.message}
         </Alert>
       )}
+
 
       <Accordion 
         expanded={expandedAccordion === 'ingestionSettings'} 
@@ -313,50 +424,23 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
           Data Dictionary Preview
         </AccordionSummary>
         <AccordionDetails>
-          {schema && (
-            <DataGrid
-              rows={schema}
-              columns={classificationColumns}
-              pageSize={5}
-              autoHeight
-              disableSelectionOnClick
-            />
-          )}
-          <Button onClick={applyClassifications} variant="contained" color="primary" sx={{ mt: 2 }}>
-            Apply Classifications
-          </Button>
+
+
+        <Tabs value={activeTab} onChange={handleTabChange}>
+        <Tab label="General" />
+        <Tab label="Schema" />
+        <Tab label="Sample Data" />
+        <Tab label="Data Dictionary" />
+      </Tabs>
+
+      <Box sx={{ p: 3 }}>
+        {activeTab === 0 && renderGeneralInfo()}
+        {activeTab === 1 && renderSchema()}
+        {activeTab === 2 && renderSampleData()}
+        {activeTab === 3 && renderMapping()}
+      </Box>          
         </AccordionDetails>
       </Accordion>
-
-      <Accordion 
-        expanded={expandedAccordion === 'mapping'} 
-        onChange={handleAccordionChange('mapping')}
-      >
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          Source Data Mapping
-        </AccordionSummary>
-        <AccordionDetails>
-          <TextField
-            label="Source Name"
-            value={sourceName}
-            onChange={(e) => setSourceName(e.target.value)}
-            fullWidth
-            margin="normal"
-          />
-     
-          <DataGrid
-            rows={sourceDataMapping}
-            columns={mappingColumns}
-            pageSize={5}
-            autoHeight
-            disableSelectionOnClick
-          />
-        </AccordionDetails>
-      </Accordion>
-
-      <Button onClick={onSkip} variant="outlined" sx={{ mt: 2 }}>
-        Skip
-      </Button>
     </Box>
   );
 };

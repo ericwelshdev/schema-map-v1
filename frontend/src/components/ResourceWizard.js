@@ -36,6 +36,10 @@ const ResourceWizard = () => {
     }));
   };
 
+  const handleSkip = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+  };
+
   const getStepContent = (step) => {
     switch (step) {
       case 0:
@@ -52,11 +56,13 @@ const ResourceWizard = () => {
         return <ResourceDataDictionary 
           savedState={wizardState.dataDictionary}
           onStateChange={(newState) => updateWizardState('dataDictionary', newState)}
+          onSkip={handleSkip}
         />;
       case 3:
         return <ResourceMappingTagging 
           savedState={wizardState.mappingTagging}
           onStateChange={(newState) => updateWizardState('mappingTagging', newState)}
+          onSkip={handleSkip}
         />;
       case 4:
         return <ResourceSummary wizardState={wizardState} />;
@@ -97,6 +103,11 @@ const ResourceWizard = () => {
               <Button onClick={handleNext} variant="outlined" sx={{ mt: 1 }}>
                 {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
               </Button>
+              {(activeStep === 2 || activeStep === 3) && (
+                <Button onClick={handleSkip} variant="outlined" sx={{ mt: 1 }}>
+                  Skip
+                </Button>
+              )}
             </Box>
           </Box>
         )}
