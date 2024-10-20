@@ -10,15 +10,25 @@ import ResourceDataPreview from './ResourceDataPreview';
 const ResourceConfiguration = ({ savedState, onStateChange }) => {
   const [ingestionConfig, setIngestionConfig] = useState(savedState);
 
-  const handleConfigChange = useCallback((updates) => {
-    setIngestionConfig(prevConfig => {
-      const newConfig = { ...prevConfig, ...updates };
-      if (updates.schema) {
-        newConfig.expandedAccordion = 'ingestionSettings';
-      }
-      return newConfig;
-    });
-  }, []);
+  // const handleConfigChange = useCallback((updates) => {
+  //   setIngestionConfig(prevConfig => {
+  //     const newConfig = { ...prevConfig, ...updates };
+  //     if (updates.schema) {
+  //       newConfig.expandedAccordion = 'ingestionSettings';
+  //     }
+  //     return newConfig;
+  //   });
+  // }, []);
+
+  const handleConfigChange = (updates) => {
+    const newState = { ...ingestionConfig, ...updates };
+    if (updates.schema) {
+      newState.expandedAccordion = 'data';
+      newState.activeDataPreviewTab = 1;
+    }
+    setIngestionConfig(newState);
+    onStateChange(newState);
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {

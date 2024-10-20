@@ -35,11 +35,11 @@ const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData, rawDa
       <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
         <DataGrid
           rows={schema.map((col, index) => ({ id: index, ...col, order: index + 1 }))}
-          columns={schemaColumns}
-          pageSize={10}
+          columns={schemaColumns}          
+          autoPageSize
           rowsPerPageOptions={[10, 25, 50]}
-          autoHeight
           density="compact"
+          autosizeOptions={{ columns: schema.map(col => col.name) }}
         />
       </Box>
     ) : (
@@ -58,11 +58,18 @@ const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData, rawDa
       <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
         <DataGrid
           rows={sampleData.map((row, index) => ({ id: index, ...row }))}
-          columns={sampleDataColumns}
-          pageSize={10}
+          columns={schema.map(col => ({
+            field: col.name,
+            headerName: col.name,
+            flex: 1,
+          }))}
+          autoPageSize
           rowsPerPageOptions={[10, 25, 50]}
-          autoHeight
+          columnHeaderHeight={40}
+          rowHeight={40}
           density="compact"
+          autosizeOptions={{ columns: schema.map(col => col.name) }}
+          disableExtendRowFullWidth ={false}
         />
       </Box>
     ) : (
@@ -84,7 +91,7 @@ const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData, rawDa
   );
 
   return (
-    <Box>
+    <Box sx={{ ml: -2 }}>
       <Tabs value={tabValue} onChange={handleTabChange}>
         <Tab label="General" />
         <Tab label="Schema" />

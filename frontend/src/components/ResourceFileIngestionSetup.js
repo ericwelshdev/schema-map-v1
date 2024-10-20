@@ -1,16 +1,16 @@
+
 import React, { useState, useCallback } from 'react';
 import { Box, Card, CardContent, Typography, LinearProgress, Alert } from '@mui/material';
 import { Upload } from 'lucide-react';
-import { detectFileType, autoDetectSettings, generateSchema } from '../utils/fileUtils';
-import { getConfigForResourceType } from '../utils/ingestionConfig';
-import ResourceIngestionSettings from './ResourceIngestionSettings';
+import { processFile  } from '../utils/fileUtils';
 
-const ResourceFileIngestionSetup = ({ ingestionConfig, onConfigChange }) => {
-  const [state, setState] = useState({
-    loading: false,
-    progress: 0,
-    showIngestionSettings: false,
-  });
+
+const ResourceFileIngestionSetup = ({ onConfigChange }) => {
+  const [progress, setProgress] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState(null);
+
+
   const [isDragging, setIsDragging] = useState(false);
   const fileTypes = [".txt", ".csv", ".xls", ".xlsx", ".json", ".xml", ".parquet", ".snappy", ".hive"];
 
@@ -49,72 +49,27 @@ const ResourceFileIngestionSetup = ({ ingestionConfig, onConfigChange }) => {
   };
 
 
-  const updateState = useCallback((newState) => {
-    console.log('Updating state:', newState);
-    setState((prevState) => ({ ...prevState, ...newState }));
-  }, []);
+  const handleFileUpload = async (file) => {
+    setLoading(true);
+    setProgress(0);
+    setUploadStatus(null);
 
-  const processFile = useCallback(async (file, settings) => {
-    console.log('Processing file:', file.name);
-    updateState({ loading: true, progress: 0 });
+    const updateProgress = (value) => {
+      setProgress(value);
+    };
 
     try {
-      const fileType = await detectFileType(file);
-      console.log('Detected file type:', fileType);
-      updateState({ progress: 20 });
-
-      const autoDetectedSettings = await autoDetectSettings(file, fileType);
-      console.log('Auto-detected settings:', autoDetectedSettings);
-      updateState({ progress: 40 });
-
-      const newConfig = getConfigForResourceType(fileType);
-      console.log('New config:', newConfig);
-      updateState({ progress: 60 });
-      
-      const combinedSettings = {
-        ...newConfig,
-        ...autoDetectedSettings,
-        ...settings
-      };
-      console.log('Combined settings:', combinedSettings);
-
-      const schemaResult = await generateSchema(file, combinedSettings);
-      console.log('Schema result:', schemaResult);
-      updateState({ progress: 80 });
-      
-      updateState({
-        loading: false,
-        progress: 100,
-        uploadStatus: { type: 'success', message: 'File successfully ingested.' },
-        config: newConfig,
-        ingestionSettings: combinedSettings,
-        schema: schemaResult.schema,
-        sourceSchema: schemaResult.schema,        
-        fileInfo: {
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          lastModified: new Date(file.lastModified).toLocaleString(),
-        },
-        sampleData: schemaResult.sampleData,
-        rawData: schemaResult.rawData,
-        expandedAccordion: 'data',
-        showIngestionSettings: true
-      });
-      console.log('File processing completed successfully');
-      
+      const result = await processFile(file, {}, true, updateProgress);
+      setUploadStatus(result.uploadStatus);
+      onConfigChange(result);
     } catch (error) {
-      console.error('Error processing file:', error);
-      updateState({
-        loading: false,
+      setUploadStatus({ type: 'error', message: error.message });
+      onConfigChange({
         uploadStatus: { type: 'error', message: error.message }
       });
+    } finally {
+      setLoading(false);
     }
-  }, [updateState]);
-
-  const handleFileUpload = (file) => {
-    console.log('File upload initiated:', file.name);
-    processFile(file);
   };
 
   return (
@@ -156,17 +111,11 @@ const ResourceFileIngestionSetup = ({ ingestionConfig, onConfigChange }) => {
           </label>
         </CardContent>
       </Card>
-      {state.loading && <LinearProgress variant="determinate" value={state.progress} sx={{ mt: 2, mb: 2 }} />}
-      {state.uploadStatus && (
-        <Alert severity={state.uploadStatus.type} sx={{ mt: 2, mb: 2 }}>
-          {state.uploadStatus.message}
+      {loading && <LinearProgress variant="determinate" value={progress} sx={{ mt: 2, mb: 2 }} />}
+      {uploadStatus && (
+        <Alert severity={uploadStatus.type} sx={{ mt: 2, mb: 2 }}>
+          {uploadStatus.message}
         </Alert>
-      )}
-      {state.showIngestionSettings && (
-        <ResourceIngestionSettings
-          ingestionConfig={state.ingestionSettings}
-          onConfigChange={onConfigChange}
-        />
       )}
     </Box>
   );

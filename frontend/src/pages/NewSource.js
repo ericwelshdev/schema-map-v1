@@ -11,8 +11,9 @@ const NewSource = () => {
         <Typography color="textPrimary">New Source</Typography>
       </Breadcrumbs>
   
-      
-      <ResourceWizard />
+     <Box sx={{ ml:-3}}>
+      <ResourceWizard  />
+</Box>
     </Box>
   );
 };

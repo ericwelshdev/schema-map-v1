@@ -1,6 +1,7 @@
 import React from 'react';
-import { Grid, TextField, MenuItem, FormControlLabel, Switch } from '@mui/material';
+import { Grid, Box, Button, TextField, MenuItem, FormControlLabel, Switch } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { processFile } from '../utils/fileUtils';
 
 const SmallTextField = styled(TextField)({
   '& .MuiInputBase-input': {
@@ -19,6 +20,22 @@ const ResourceIngestionSettings = ({ ingestionConfig, onConfigChange }) => {
         [field]: value
       }
     });
+  };
+
+  const handleApplyChanges = async () => {
+    const updatedSettings = {
+      ...ingestionConfig.ingestionSettings,
+      ...ingestionConfig.ingestionAppliedProperties
+    };
+
+    try {
+      const result = await processFile(ingestionConfig.fileInfo.file, updatedSettings, false);
+      onConfigChange(result);
+    } catch (error) {
+      onConfigChange({
+        uploadStatus: { type: 'error', message: `Error applying changes: ${error.message}` }
+      });
+    }
   };
 
   const renderField = (key, fieldConfig) => {
@@ -78,15 +95,25 @@ const ResourceIngestionSettings = ({ ingestionConfig, onConfigChange }) => {
   };
 
   return (
-    <Grid container spacing={1}>
-      {ingestionConfig.ingestionConfig && Object.entries(ingestionConfig.ingestionConfig)
-        .sort((a, b) => a[1].order - b[1].order)
-        .map(([key, fieldConfig]) => (
-          <Grid item xs={4} key={key}>
-            {renderField(key, fieldConfig)}
-          </Grid>
-        ))}
-    </Grid>
+    <Box>
+      <Grid container spacing={1}>
+        {ingestionConfig.ingestionConfig && Object.entries(ingestionConfig.ingestionConfig)
+          .sort((a, b) => a[1].order - b[1].order)
+          .map(([key, fieldConfig]) => (
+            <Grid item xs={4} key={key}>
+              {renderField(key, fieldConfig)}
+            </Grid>
+          ))}
+      </Grid>
+      <Button 
+        variant="contained" 
+        color="primary" 
+        onClick={handleApplyChanges} 
+        sx={{ mt: 2 }}
+      >
+        Apply Changes
+      </Button>
+    </Box>
   );
 };
 

@@ -1,6 +1,7 @@
 import Papa from 'papaparse';
 import { parse } from 'fast-xml-parser';  // Use fast-xml-parser for XML parsing
 import * as XLSX from 'xlsx';
+import { getConfigForResourceType } from './ingestionConfig';
 
 // Detects the file type based on the file extension
 export const detectFileType = (file) => {
@@ -93,7 +94,8 @@ export const generateSchema = async (file, settings) => {
 
 // Generate schema for CSV files
 
-const formatIngestionSettings = (settings) => {
+const getIngestionedValueSettings = (fileType, settings) => {
+  const defaultConfig = getConfigForResourceType(fileType);
   const formattedSettings = {};
 
   for (const [key, value] of Object.entries(settings)) {
@@ -111,11 +113,38 @@ const formatIngestionSettings = (settings) => {
 };
 
 
+export const getDefaultIngestionSettings = (fileType, detectedSettings) => {
+  const defaultConfig = getConfigForResourceType(fileType);
+  const formattedSettings = {};
+
+  for (const [key, value] of Object.entries(defaultConfig)) {
+    if (value.callArgField) {
+      formattedSettings[value.callArgField] = detectedSettings[value.uiField] ?? value.default;
+    } else {
+      formattedSettings[key] = detectedSettings[value.uiField] ?? value.default;
+    }
+  }
+
+  return formattedSettings;
+};
+
+const mapUiFieldsToCallArgFields = (settings, config) => {
+  const mappedSettings = {};
+  for (const [key, value] of Object.entries(config)) {
+    if (value.uiField && value.callArgField && settings.hasOwnProperty(value.uiField)) {
+      mappedSettings[value.callArgField] = settings[value.uiField];
+    } else if (settings.hasOwnProperty(key)) {
+      mappedSettings[key] = settings[key];
+    }
+  }
+  return mappedSettings;
+};
+
 
 
 const generateCSVSchema = async (file, settings) => {
   console.log('settings', settings);
-  const formattedSettings = formatIngestionSettings(settings);
+  // const formattedSettings = getIngestionedSettings(settings);
   // console.log('formattedSettings', formattedSettings);
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
@@ -129,7 +158,16 @@ const generateCSVSchema = async (file, settings) => {
             comment: ''
           };
         });
-        const sampleData = results.data.slice(0, 10);
+        
+        console.log('results.data.length:', results.data.length);
+        const sampleData = results.data.slice(0, 100);
+        if (settings.preview <100){
+          sampleData = results.data;
+        }
+    
+
+        // const data = results.data;
+        // const sampleData = results.data.slice(0, 10);
         const warnings = [];
         if (results.errors.length > 0) {
           warnings.push('Some rows could not be parsed correctly -> ',results.errors);
@@ -264,4 +302,66 @@ const inferXMLSchema = (sample) => {
     type: typeof sample[key] === 'object' ? 'object' : 'string',
     comment: ''
   }));
+};
+
+
+
+export const processFile = async (file, settings = {}, isInitialIngestion = true, progressCallback = () => {}) => {
+  try {
+    progressCallback(20);
+    console.log('Processing file:', file.name);
+    const fileType = await detectFileType(file);
+    console.log('Detected file type:', fileType);
+    const autoDetectedSettings = await autoDetectSettings(file, fileType);
+    console.log('Auto-detected settings:', autoDetectedSettings);
+    progressCallback(40);
+    const newConfig = getConfigForResourceType(fileType);
+    console.log('New config:', newConfig);
+    
+    let formattedSettings;
+    console.log('isInitialIngestion:', isInitialIngestion);
+    if (isInitialIngestion) {
+      formattedSettings = getDefaultIngestionSettings(fileType, autoDetectedSettings);
+      console.log('formattedSettings_int:', formattedSettings);
+    } else {
+      const mappedSettings = mapUiFieldsToCallArgFields(settings, newConfig);
+      formattedSettings = { ...getIngestionedValueSettings(fileType, autoDetectedSettings), ...mappedSettings };
+      console.log('formattedSettings_post:', formattedSettings);
+    }
+    progressCallback(80);
+    const schemaResult = await generateSchema(file, formattedSettings);
+    console.log('Schema result:', schemaResult);
+    console.log('File processing completed successfully');
+    progressCallback(100);
+    return {
+      loading: false,
+      progress: 100,
+      uploadStatus: { type: 'success', message: 'File successfully processed.' },
+      ingestionConfig: newConfig,
+      ingestionSettings: formattedSettings,
+      schema: schemaResult.schema,
+      sourceSchema: schemaResult.schema,        
+      fileInfo: {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        lastModified: new Date(file.lastModified).toLocaleString(),
+        file: file,
+      },
+      sampleData: schemaResult.sampleData,
+      rawData: schemaResult.rawData,
+      expandedAccordion: isInitialIngestion ? 'ingestionSettings' : 'data'
+    };
+    
+  } catch (error) {
+    return {
+      loading: false,
+      progress: 0,
+      uploadStatus: { 
+        type: 'error', 
+        message: `Error processing file: ${error.message}` 
+      },
+      expandedAccordion: 'ingestionSetup'
+    };
+  }
 };
