@@ -11,7 +11,16 @@ const SmallTextField = styled(TextField)({
   },
 });
 
-const ResourceIngestionSettings = ({ config, ingestionSettings, onSettingChange }) => {
+const ResourceIngestionSettings = ({ ingestionConfig, onConfigChange }) => {
+  const handleSettingChange = (field, value) => {
+    onConfigChange({
+      ingestionAppliedProperties: {
+        ...ingestionConfig.ingestionAppliedProperties,
+        [field]: value
+      }
+    });
+  };
+
   const renderField = (key, fieldConfig) => {
     switch (fieldConfig.uiType) {
       case 'boolean':
@@ -19,8 +28,8 @@ const ResourceIngestionSettings = ({ config, ingestionSettings, onSettingChange 
           <FormControlLabel
             control={
               <Switch
-                checked={!!ingestionSettings[fieldConfig.uiField]}
-                onChange={(e) => onSettingChange(fieldConfig.uiField, e.target.checked)}
+                checked={!!ingestionConfig.ingestionAppliedProperties[fieldConfig.uiField]}
+                onChange={(e) => handleSettingChange(fieldConfig.uiField, e.target.checked)}
                 size="small"
               />
             }
@@ -34,8 +43,8 @@ const ResourceIngestionSettings = ({ config, ingestionSettings, onSettingChange 
             fullWidth
             size="small"
             label={fieldConfig.uiDisplayName}
-            value={ingestionSettings[fieldConfig.uiField] ?? fieldConfig.default}
-            onChange={(e) => onSettingChange(fieldConfig.uiField, e.target.value)}
+            value={ingestionConfig.ingestionAppliedProperties[fieldConfig.uiField] ?? fieldConfig.default}
+            onChange={(e) => handleSettingChange(fieldConfig.uiField, e.target.value)}
           >
             {fieldConfig.options.map((option) => (
               <MenuItem key={option.value} value={option.value}>
@@ -51,8 +60,8 @@ const ResourceIngestionSettings = ({ config, ingestionSettings, onSettingChange 
             size="small"
             type="number"
             label={fieldConfig.uiDisplayName}
-            value={ingestionSettings[fieldConfig.uiField] ?? fieldConfig.default}
-            onChange={(e) => onSettingChange(fieldConfig.uiField, parseFloat(e.target.value))}
+            value={ingestionConfig.ingestionAppliedProperties[fieldConfig.uiField] ?? fieldConfig.default}
+            onChange={(e) => handleSettingChange(fieldConfig.uiField, parseFloat(e.target.value))}
           />
         );
       default:
@@ -61,22 +70,22 @@ const ResourceIngestionSettings = ({ config, ingestionSettings, onSettingChange 
             fullWidth
             size="small"
             label={fieldConfig.uiDisplayName}
-            value={ingestionSettings[fieldConfig.uiField] ?? fieldConfig.default}
-            onChange={(e) => onSettingChange(fieldConfig.uiField, e.target.value)}
+            value={ingestionConfig.ingestionAppliedProperties[fieldConfig.uiField] ?? fieldConfig.default}
+            onChange={(e) => handleSettingChange(fieldConfig.uiField, e.target.value)}
           />
         );
     }
   };
 
-  const sortedConfig = Object.entries(config).sort((a, b) => a[1].order - b[1].order);
-
   return (
     <Grid container spacing={1}>
-      {sortedConfig.map(([key, fieldConfig]) => (
-        <Grid item xs={4} key={key}>
-          {renderField(key, fieldConfig)}
-        </Grid>
-      ))}
+      {ingestionConfig.ingestionConfig && Object.entries(ingestionConfig.ingestionConfig)
+        .sort((a, b) => a[1].order - b[1].order)
+        .map(([key, fieldConfig]) => (
+          <Grid item xs={4} key={key}>
+            {renderField(key, fieldConfig)}
+          </Grid>
+        ))}
     </Grid>
   );
 };

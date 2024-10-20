@@ -4,7 +4,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AltRouteIcon from '@mui/icons-material/AltRoute';
 import { DataGrid } from '@mui/x-data-grid';
-import ResourceFileUpload from './ResourceFileUpload';
+import ResourceFileUpload from './ResourceFileIngestionSetup';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
 import { detectFileType, autoDetectSettings, generateSchema } from '../utils/fileUtils';
 import { getConfigForResourceType } from '../utils/ingestionConfig';

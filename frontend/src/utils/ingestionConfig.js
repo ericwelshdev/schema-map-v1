@@ -23,3 +23,27 @@ export const updateConfigForResourceType = (resourceType, detectedSettings) => {
   }
   // Add more file types here as needed
 };
+
+export const createIngestionConfig = (sourceType, sourceInputType) => ({
+  sourceType,
+  sourceInputType,
+  ingestionDefaults: {},
+  ingestionConfig: {},
+  ingestionAppliedProperties: {},
+  data: null,
+  schema: null,
+  sampleData: null,
+  rawData: null,
+  fileInfo: null,
+  uploadStatus: null,
+  expandedAccordion: 'fileUpload'
+});
+
+export const updateIngestionConfig = (config, updates) => ({
+  ...config,
+  ...updates,
+  ingestionAppliedProperties: {
+    ...config.ingestionAppliedProperties,
+    ...updates.ingestionAppliedProperties
+  }
+});

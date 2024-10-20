@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Stepper, Step, StepLabel, Button, Box } from '@mui/material';
 import ResourceTypeSelection from './ResourceTypeSelection';
 import ResourceConfiguration from './ResourceConfiguration';
 import ResourceDataDictionary from './ResourceDataDictionary';
 import ResourceMappingTagging from './ResourceMappingTagging';
 import ResourceSummary from './ResourceSummary';
+import { createIngestionConfig } from '../utils/ingestionConfig';
 
 const ResourceWizard = () => {
   const [activeStep, setActiveStep] = useState(0);
@@ -17,35 +18,26 @@ const ResourceWizard = () => {
 
   const steps = ['Select Resource Type', 'Configure Resource', 'Data Dictionary', 'Mapping & Tagging', 'Summary'];
 
-  const handleNext = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
-  };
+  const handleNext = () => setActiveStep((prevActiveStep) => prevActiveStep + 1);
+  const handleBack = () => setActiveStep((prevActiveStep) => prevActiveStep - 1);
+  const handleStepClick = (step) => setActiveStep(step);
 
-  const handleBack = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
-  };
-
-  const handleStepClick = (step) => {
-    setActiveStep(step);
-  };
-
-  const updateWizardState = (step, newState) => {
+  const updateWizardState = useCallback((step, newState) => {
     setWizardState(prevState => ({
       ...prevState,
       [step]: { ...prevState[step], ...newState }
     }));
-  };
-
-  const handleSkip = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
-  };
+  }, []);
 
   const getStepContent = (step) => {
     switch (step) {
       case 0:
         return <ResourceTypeSelection 
           savedState={wizardState.resourceType} 
-          onStateChange={(newState) => updateWizardState('resourceType', newState)} 
+          onStateChange={(newState) => {
+            updateWizardState('resourceType', newState);
+            updateWizardState('configuration', createIngestionConfig(newState.resourceType, newState.sourceInputType));
+          }} 
         />;
       case 1:
         return <ResourceConfiguration 
@@ -54,19 +46,13 @@ const ResourceWizard = () => {
         />;
       case 2:
         return <ResourceDataDictionary 
-          savedState={{
-            ...wizardState.dataDictionary,
-            sourceSchema: wizardState.configuration.sourceSchema,
-            sourceInput: wizardState.configuration.sourceInput,
-            currentFile: wizardState.configuration.currentFile
-          }}
+          savedState={wizardState.dataDictionary}
           onStateChange={(newState) => updateWizardState('dataDictionary', newState)}
         />;
       case 3:
         return <ResourceMappingTagging 
           savedState={wizardState.mappingTagging}
           onStateChange={(newState) => updateWizardState('mappingTagging', newState)}
-          onSkip={handleSkip}
         />;
       case 4:
         return <ResourceSummary wizardState={wizardState} />;
@@ -107,11 +93,6 @@ const ResourceWizard = () => {
               <Button onClick={handleNext} variant="outlined" sx={{ mt: 1 }}>
                 {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
               </Button>
-              {(activeStep === 2 || activeStep === 3) && (
-                <Button onClick={handleSkip} variant="outlined" sx={{ mt: 1 }}>
-                  Skip
-                </Button>
-              )}
             </Box>
           </Box>
         )}
