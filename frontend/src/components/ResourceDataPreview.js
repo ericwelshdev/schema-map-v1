@@ -82,6 +82,7 @@ const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData, rawDa
       multiline
       fullWidth
       rows={15}
+      size="small"
       value={rawData || ''}
       variant="outlined"
       InputProps={{
@@ -91,14 +92,14 @@ const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData, rawDa
   );
 
   return (
-    <Box sx={{ ml: -2 }}>
+    <Box sx={{mt:-3, ml: -2 }}>
       <Tabs value={tabValue} onChange={handleTabChange}>
-        <Tab label="General" />
+        <Tab label="General"  />
         <Tab label="Schema" />
         <Tab label="Sample Data" />
         <Tab label="Raw Data" />
       </Tabs>
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ml:-1, mt:-1, p: 2 }}>
         {tabValue === 0 && renderGeneralInfo()}
         {tabValue === 1 && renderSchema()}
         {tabValue === 2 && renderSampleData()}

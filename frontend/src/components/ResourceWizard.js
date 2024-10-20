@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Stepper, Step, StepLabel, Button, Box } from '@mui/material';
 import ResourceTypeSelection from './ResourceTypeSelection';
 import ResourceConfiguration from './ResourceConfiguration';
-import ResourceDataDictionary from './ResourceDataDictionary';
+import ResourceDataDictionaryConfiguration from './ResourceDataDictionaryConfiguration';
 import ResourceMappingTagging from './ResourceMappingTagging';
 import ResourceSummary from './ResourceSummary';
 import { createIngestionConfig } from '../utils/ingestionConfig';
@@ -12,7 +12,11 @@ const ResourceWizard = () => {
   const [wizardState, setWizardState] = useState({
     resourceType: {},
     configuration: {},
-    dataDictionary: {},
+    dataDictionary: {
+      mode: null, // 'assign' or 'create'
+      selectedDictionary: null,
+      newDictionary: null,
+    },
     mappingTagging: {}
   });
 
@@ -45,8 +49,9 @@ const ResourceWizard = () => {
           onStateChange={(newState) => updateWizardState('configuration', newState)}
         />;
       case 2:
-        return <ResourceDataDictionary 
+        return <ResourceDataDictionaryConfiguration 
           savedState={wizardState.dataDictionary}
+          sourceSchema={wizardState.configuration.schema}
           onStateChange={(newState) => updateWizardState('dataDictionary', newState)}
         />;
       case 3:
