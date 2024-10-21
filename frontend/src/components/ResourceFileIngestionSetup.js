@@ -73,7 +73,7 @@ const ResourceFileIngestionSetup = ({ onConfigChange }) => {
   };
 
   return (
-    <Box sx={{ '& > *': {mt:-4 } }}>
+    <Box sx={{ '& > *': {ml:-2, mt:-4 } }}>
      <Card>
         <CardContent>
         <Typography variant="h6" component="div" >
