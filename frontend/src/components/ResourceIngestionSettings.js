@@ -21,6 +21,7 @@ const ResourceIngestionSettings = ({ ingestionConfig, onSettingChange, onApplyCh
   const renderField = (key, fieldConfig) => {
     const value = ingestionConfig.ingestionAppliedProperties[fieldConfig.callArgField] ?? fieldConfig.default;
 
+
     switch (fieldConfig.uiType) {
       case 'boolean':
         return (
@@ -32,6 +33,7 @@ const ResourceIngestionSettings = ({ ingestionConfig, onSettingChange, onApplyCh
                 size="small"
               />
             }
+
             label={fieldConfig.uiDisplayName}
           />
         );
@@ -58,8 +60,10 @@ const ResourceIngestionSettings = ({ ingestionConfig, onSettingChange, onApplyCh
             fullWidth
             size="small"
             type="number"
+
             label={fieldConfig.uiDisplayName}
             value={value}
+
             onChange={(e) => onSettingChange(fieldConfig.callArgField, parseFloat(e.target.value))}
           />
         );
@@ -68,8 +72,10 @@ const ResourceIngestionSettings = ({ ingestionConfig, onSettingChange, onApplyCh
           <SmallTextField
             fullWidth
             size="small"
+
             label={fieldConfig.uiDisplayName}
             value={value}
+
             onChange={(e) => onSettingChange(fieldConfig.callArgField, e.target.value)}
           />
         );
@@ -79,8 +85,10 @@ const ResourceIngestionSettings = ({ ingestionConfig, onSettingChange, onApplyCh
   return (
     <Box>
       <Grid container spacing={1}>
+
         {Object.entries(config).map(([key, fieldConfig]) => (
           <Grid item xs={4} key={key}>
+
             {renderField(key, fieldConfig)}
           </Grid>
         ))}

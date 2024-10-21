@@ -16,6 +16,7 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
     ddSampleData: null,
     ddRawData: null,
     ddIngestionSettings: {},
+    ddIngestionConfig: {},
     uploadStatus: null,
     error: null,
   });
@@ -41,12 +42,13 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
       }
 
       try {
-        const { file, schema, sampleData, rawData, ingestionSettings } = fileData;
+        const { file, schema, sampleData, rawData, ingestionSettings, ingestionConfig } = fileData;
         console.log('File processing result:', fileData);
         // console.log('Result schema:', schema);
         // console.log('Result sampleData:', sampleData);
         // console.log('Result rawData:', rawData);
         // console.log('Result ingestionSettings:', ingestionSettings);
+        // console.log('Result ingestionConfig:', ingestionConfig);
 
         if (fileData && schema && sampleData) {
           handleConfigChange({
@@ -55,6 +57,7 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
             ddSampleData: sampleData,
             ddRawData: rawData,
             ddIngestionSettings: ingestionSettings || {},
+            ddIngestionConfig: ingestionConfig || {},
             expandedAccordion: 'ingestionSettings',
             uploadStatus: { type: 'success', message: 'File processed successfully' },
             error: null
@@ -89,6 +92,7 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
           ddSampleData: result.sampleData,
           ddRawData: result.rawData,
           ddIngestionSettings: result.ingestionSettings,
+          ddIngestionConfig: result.ingestionConfig,          
           expandedAccordion: 'ingestionSettings',
           uploadStatus: { type: 'success', message: 'Data Dictionary processed successfully' },
           error: null
@@ -107,9 +111,10 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
 
 
   const memoizedIngestionConfig = useMemo(() => ({
-    ingestionConfig: dataDictionaryConfig.ddIngestionSettings,
+    ingestionSettings: dataDictionaryConfig.ddIngestionSettings,
+    ingestionConfig: dataDictionaryConfig.ddIngestionConfig,
     ingestionAppliedProperties: {}
-  }), [dataDictionaryConfig.ddIngestionSettings]);
+  }), [dataDictionaryConfig.ddIngestionConfig, dataDictionaryConfig.ddIngestionSettings]);
 
   const handleModeChange = (event) => {
     const newMode = event.target.value;
@@ -121,6 +126,7 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
       ddSampleData: null,
       ddRawData: null,
       ddIngestionSettings: {},
+      ddIngestionConfig: {},
       uploadStatus: null,
       error: null
     });
