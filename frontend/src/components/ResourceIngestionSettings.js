@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Grid, Box, Button, TextField, MenuItem, FormControlLabel, Switch } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -11,16 +11,32 @@ const SmallTextField = styled(TextField)({
   },
 });
 
-const ResourceIngestionSettings = ({ ingestionConfig, onSettingChange, onApplyChanges }) => {
+const ResourceIngestionSettings = ({ ingestionConfig, onConfigChange, onApplyChanges }) => {
+  const [localConfig, setLocalConfig] = useState(ingestionConfig.ingestionAppliedProperties || {});
+
   useEffect(() => {
-    console.log('Ingestion Config:', ingestionConfig);
+    setLocalConfig(ingestionConfig.ingestionAppliedProperties || {});
   }, [ingestionConfig]);
 
-  const config = ingestionConfig.ingestionConfig || {};
+  const handleSettingChange = (field, value) => {
+    setLocalConfig(prevConfig => ({
+      ...prevConfig,
+      [field]: value
+    }));
+  };
+
+  const handleApplyChanges = () => {
+    const updatedConfig = {
+      ...ingestionConfig,
+      ingestionAppliedProperties: localConfig
+    };
+    onConfigChange(updatedConfig);
+    onApplyChanges(updatedConfig);
+    console.log('Updated Config:', updatedConfig);
+  };
 
   const renderField = (key, fieldConfig) => {
-    const value = ingestionConfig.ingestionAppliedProperties[fieldConfig.callArgField] ?? fieldConfig.default;
-
+    const value = localConfig[fieldConfig.callArgField] ?? fieldConfig.default;
 
     switch (fieldConfig.uiType) {
       case 'boolean':
@@ -29,11 +45,10 @@ const ResourceIngestionSettings = ({ ingestionConfig, onSettingChange, onApplyCh
             control={
               <Switch
                 checked={!!value}
-                onChange={(e) => onSettingChange(fieldConfig.callArgField, e.target.checked)}
+                onChange={(e) => handleSettingChange(fieldConfig.callArgField, e.target.checked)}
                 size="small"
               />
             }
-
             label={fieldConfig.uiDisplayName}
           />
         );
@@ -45,7 +60,7 @@ const ResourceIngestionSettings = ({ ingestionConfig, onSettingChange, onApplyCh
             size="small"
             label={fieldConfig.uiDisplayName}
             value={value}
-            onChange={(e) => onSettingChange(fieldConfig.callArgField, e.target.value)}
+            onChange={(e) => handleSettingChange(fieldConfig.callArgField, e.target.value)}
           >
             {fieldConfig.options.map((option) => (
               <MenuItem key={option.value} value={option.value}>
@@ -60,11 +75,9 @@ const ResourceIngestionSettings = ({ ingestionConfig, onSettingChange, onApplyCh
             fullWidth
             size="small"
             type="number"
-
             label={fieldConfig.uiDisplayName}
             value={value}
-
-            onChange={(e) => onSettingChange(fieldConfig.callArgField, parseFloat(e.target.value))}
+            onChange={(e) => handleSettingChange(fieldConfig.callArgField, parseFloat(e.target.value))}
           />
         );
       default:
@@ -72,11 +85,9 @@ const ResourceIngestionSettings = ({ ingestionConfig, onSettingChange, onApplyCh
           <SmallTextField
             fullWidth
             size="small"
-
             label={fieldConfig.uiDisplayName}
             value={value}
-
-            onChange={(e) => onSettingChange(fieldConfig.callArgField, e.target.value)}
+            onChange={(e) => handleSettingChange(fieldConfig.callArgField, e.target.value)}
           />
         );
     }
@@ -85,10 +96,8 @@ const ResourceIngestionSettings = ({ ingestionConfig, onSettingChange, onApplyCh
   return (
     <Box>
       <Grid container spacing={1}>
-
-        {Object.entries(config).map(([key, fieldConfig]) => (
+        {Object.entries(ingestionConfig.ingestionConfig || {}).map(([key, fieldConfig]) => (
           <Grid item xs={4} key={key}>
-
             {renderField(key, fieldConfig)}
           </Grid>
         ))}
@@ -96,7 +105,7 @@ const ResourceIngestionSettings = ({ ingestionConfig, onSettingChange, onApplyCh
       <Button 
         variant="contained" 
         color="primary" 
-        onClick={onApplyChanges} 
+        onClick={handleApplyChanges} 
         sx={{ mt: 2 }}
       >
         Apply Changes

@@ -1,17 +1,17 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Box, Accordion, AccordionSummary, AccordionDetails, Alert, Card, CardContent, Radio, RadioGroup, FormControlLabel, FormControl, Grid, Typography, TextField } from '@mui/material';
+import { Box, Accordion, AccordionSummary, AccordionDetails, Alert, Card, CardContent, Radio, RadioGroup, FormControlLabel, FormControl, Grid, Typography } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileIngestionSetup from './ResourceFileIngestionSetup';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataPreview from './ResourceDataPreview';
 import DataDictionaryAssignment from './DataDictionaryAssignment';
-import { FileText, Database, Globe } from 'lucide-react';
+import { FileText, Database } from 'lucide-react';
 
 const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => {
   const [dataDictionaryConfig, setDataDictionaryConfig] = useState({
     mode: 'dd_new',
     expandedAccordion: 'ingestionSetup',
-    ddFileInfo: null,
+    ddSourceInfo: null,
     ddSchema: null,
     ddSampleData: null,
     ddRawData: null,
@@ -19,7 +19,10 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
     ddIngestionConfig: {},
     uploadStatus: null,
     error: null,
+    ingestionProcessSource: null,
   });
+
+  const [ddSourceInfo, setDdSourceInfo] = useState(null);
 
   const handleConfigChange = useCallback((updates) => {
     setDataDictionaryConfig(prevConfig => {
@@ -32,48 +35,49 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
   const handleAccordionChange = useCallback((panel) => (event, isExpanded) => {
     handleConfigChange({ expandedAccordion: isExpanded ? panel : false });
   }, [handleConfigChange]);
-    const handleFileUpload = useCallback((fileData) => {
-      if (!fileData) {
-        handleConfigChange({
-          uploadStatus: { type: 'error', message: 'No file data provided' },
-          expandedAccordion: 'ingestionSetup'
-        });
-        return;
-      }
 
-      try {
-        const { file, schema, sampleData, rawData, ingestionSettings, ingestionConfig } = fileData;
-        console.log('File processing result:', fileData);
-        // console.log('Result schema:', schema);
-        // console.log('Result sampleData:', sampleData);
-        // console.log('Result rawData:', rawData);
-        // console.log('Result ingestionSettings:', ingestionSettings);
-        // console.log('Result ingestionConfig:', ingestionConfig);
+  const handleFileUpload = useCallback((fileData) => {
+    if (!fileData) {
+      handleConfigChange({
+        uploadStatus: { type: 'error', message: 'No file data provided' },
+        expandedAccordion: 'ingestionSetup'
+      });
+      return;
+    }
 
-        if (fileData && schema && sampleData) {
-          handleConfigChange({
-            ddFileInfo: file,
-            ddSchema: schema,
-            ddSampleData: sampleData,
-            ddRawData: rawData,
-            ddIngestionSettings: ingestionSettings || {},
-            ddIngestionConfig: ingestionConfig || {},
-            expandedAccordion: 'ingestionSettings',
-            uploadStatus: { type: 'success', message: 'File processed successfully' },
-            error: null
-          });
-        } else {
-          throw new Error('Invalid or incomplete result from file processing');
-        }
-      } catch (error) {
-        console.error('File processing error:', error);
+    try {
+      const { file, schema, sampleData, rawData, ingestionSettings, ingestionConfig } = fileData;
+      setDdSourceInfo(fileData.file);
+      console.log('File processing result:', fileData);
+
+      if (fileData && schema && sampleData) {
         handleConfigChange({
-          uploadStatus: { type: 'error', message: `Error processing file: ${error.message}` },
-          expandedAccordion: 'ingestionSetup',
-          error: error.message
+          ddSourceInfo: fileData.fileInfo,
+          ddSchema: fileData.schema,
+          ddSampleData: fileData.sampleData,
+          ddRawData: fileData.rawData,
+          ddIngestionSettings: fileData.ingestionSettings || {},
+          ddIngestionConfig: fileData.ingestionConfig || {},
+          expandedAccordion: 'ingestionSettings',
+          uploadStatus: { type: 'success', message: 'File processed successfully' },
+          error: null,
+          ingestionProcessSource: 'fileUpload',
         });
+      } else {
+        throw new Error('Invalid or incomplete result from file processing');
       }
-    }, [handleConfigChange]);  const handleExistingDictionarySelect = useCallback(async (selectedDictionary) => {
+    } catch (error) {
+      console.error('File processing error:', error);
+      handleConfigChange({
+        uploadStatus: { type: 'error', message: `Error processing file: ${error.message}` },
+        expandedAccordion: 'ingestionSetup',
+        error: error.message
+      });
+    }
+  }, [handleConfigChange]);
+
+  const handleExistingDictionarySelect = useCallback(async (selectedDictionary) => {
+    setDdSourceInfo(selectedDictionary);
     if (!selectedDictionary) {
       handleConfigChange({
         uploadStatus: { type: 'error', message: 'No data dictionaries provided' },
@@ -87,7 +91,7 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
       
       if (result.schema && result.sampleData && result.rawData) {
         handleConfigChange({
-          ddFileInfo: result.fileInfo,
+          ddSourceInfo: result.fileInfo,
           ddSchema: result.schema,
           ddSampleData: result.sampleData,
           ddRawData: result.rawData,
@@ -95,7 +99,8 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
           ddIngestionConfig: result.ingestionConfig,          
           expandedAccordion: 'ingestionSettings',
           uploadStatus: { type: 'success', message: 'Data Dictionary processed successfully' },
-          error: null
+          error: null,
+          ingestionProcessSource: 'existingDictionary',
         });
       } else {
         throw new Error('Invalid result from Data Dictionary processing');
@@ -109,19 +114,19 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
     }
   }, [handleConfigChange]);
 
-
   const memoizedIngestionConfig = useMemo(() => ({
+    ingesttionSourceInfo: dataDictionaryConfig.ddSourceInfo,
     ingestionSettings: dataDictionaryConfig.ddIngestionSettings,
     ingestionConfig: dataDictionaryConfig.ddIngestionConfig,
-    ingestionAppliedProperties: {}
-  }), [dataDictionaryConfig.ddIngestionConfig, dataDictionaryConfig.ddIngestionSettings]);
+    ingestionAppliedProperties: dataDictionaryConfig.ddIngestionSettings,
+    ingestionProcessSource: dataDictionaryConfig.ingestionProcessSource,
+  }), [dataDictionaryConfig.ddIngestionConfig, dataDictionaryConfig.ddIngestionSettings, dataDictionaryConfig.ddSourceInfo, dataDictionaryConfig.ingestionProcessSource]);
 
   const handleModeChange = (event) => {
     const newMode = event.target.value;
     handleConfigChange({ 
       mode: newMode,
       expandedAccordion: 'ingestionSetup',
-      ddFileInfo: null,
       ddSchema: null,
       ddSampleData: null,
       ddRawData: null,
@@ -130,10 +135,43 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
       uploadStatus: null,
       error: null
     });
+    setDdSourceInfo(null);
   };
 
+  const handleApplyChanges = useCallback(async (updatedConfig) => {
+    try {
+      let result;
+      console.log('dataDictionaryConfig.ddSourceInfo:', dataDictionaryConfig.ddSourceInfo);
+      console.log('Updated Config:', updatedConfig);
+      
+      if (updatedConfig.ingestionProcessSource === 'fileUpload') {
+        result = await handleFileUpload({
+          file: ddSourceInfo,
+          ingestionSettings: updatedConfig.ingestionAppliedProperties
+        });
+      } else if (updatedConfig.ingestionProcessSource === 'existingDictionary') {
+        result = await handleExistingDictionarySelect({
+          ...ddSourceInfo,
+          ingestionSettings: updatedConfig.ingestionAppliedProperties
+        });
+      } else {
+        throw new Error('Invalid ingestion process source');
+      }
 
-
+      handleConfigChange({
+        ddIngestionSettings: updatedConfig.ingestionAppliedProperties,
+        ddSchema: result.schema,
+        ddSampleData: result.sampleData,
+        ddRawData: result.rawData,
+        expandedAccordion: 'data'
+      });
+    } catch (error) {
+      console.error('Error processing data:', error);
+      handleConfigChange({
+        error: 'Failed to process data with new settings'
+      });
+    }
+  }, [dataDictionaryConfig.ddSourceInfo, handleConfigChange, handleFileUpload, ddSourceInfo, handleExistingDictionarySelect]);
 
   return (
     <Box sx={{ '& > *': { mb: '1px' } }}>
@@ -179,13 +217,13 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
       </Card>
 
       {dataDictionaryConfig.uploadStatus && (
-        <Alert severity={dataDictionaryConfig.uploadStatus.type} sx={{ mb: 2 }}>
+        <Alert severity={dataDictionaryConfig.uploadStatus.type} sx={{ mb: 2 }} onClose={() => {}}>
           {dataDictionaryConfig.uploadStatus.message}
         </Alert>
       )}
 
       {dataDictionaryConfig.error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => {}}>
           {dataDictionaryConfig.error}
         </Alert>
       )}
@@ -221,7 +259,8 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
               <AccordionDetails>
                 <ResourceIngestionSettings
                   ingestionConfig={memoizedIngestionConfig}
-                  onConfigChange={(updates) => handleConfigChange({ ddIngestionSettings: updates })}
+                  onConfigChange={(updates) => handleConfigChange({ ddIngestionSettings: updates.ingestionAppliedProperties })}
+                  onApplyChanges={handleApplyChanges}
                 />
               </AccordionDetails>
             </Accordion>
@@ -240,7 +279,7 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
                   schema={dataDictionaryConfig.ddSchema}
                   sampleData={dataDictionaryConfig.ddSampleData}
                   rawData={dataDictionaryConfig.ddRawData}
-                  fileInfo={dataDictionaryConfig.ddFileInfo}
+                  fileInfo={ddSourceInfo}
                 />
               </AccordionDetails>
             </Accordion>

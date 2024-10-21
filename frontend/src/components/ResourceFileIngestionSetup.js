@@ -113,7 +113,7 @@ const ResourceFileIngestionSetup = ({ onConfigChange }) => {
       </Card>
       {loading && <LinearProgress variant="determinate" value={progress} sx={{ mt: 2, mb: 2 }} />}
       {uploadStatus && (
-        <Alert severity={uploadStatus.type} sx={{ mt: 2, mb: 2 }}>
+        <Alert severity={uploadStatus.type} sx={{ mt: 2, mb: 2 }} onClose={() => {}}>
           {uploadStatus.message}
         </Alert>
       )}
