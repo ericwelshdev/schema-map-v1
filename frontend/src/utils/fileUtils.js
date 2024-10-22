@@ -141,31 +141,46 @@ const mapUiFieldsToCallArgFields = (settings, config) => {
 };
 
 
-
 const generateCSVSchema = async (file, settings) => {
-  console.log('settings', settings);
+  console.log('settings', settings); // Debugging log for settings
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
       ...settings,
       complete: (results) => {
+        console.log('Parsing results:', results); // Debugging log for results
+
         try {
+          // Check if results.data exists and is an array with valid data
           if (!results.data || !Array.isArray(results.data) || results.data.length === 0) {
             throw new Error('No valid data found in the CSV file');
           }
 
-          let fields = results.meta.fields || Object.keys(results.data[0]);
+          // Check if fields exist in results.meta or from the first row of results.data
+          let fields = results.meta?.fields || (results.data[0] ? Object.keys(results.data[0]) : []);
+          if (fields.length === 0) {
+            throw new Error('No fields could be identified from the CSV data');
+          }
+
+          // Generate schema based on the fields and inferred data types
           let schema = fields.map((field) => {
-            let columnValues = results.data.map(row => row[field]).filter(value => value != null);
+            let columnValues = results.data
+              .map(row => row ? row[field] : null) // Ensure row exists before accessing field
+              .filter(value => value != null); // Filter out null or undefined values
+
             return {
               name: field,
-              type: inferDataType(columnValues),
+              type: inferDataType(columnValues), // Infer data type based on column values
               comment: ''
             };
           });
-        
+
+          // Log the number of rows in the CSV file for debugging
           console.log('results.data.length:', results.data.length);
+
+          // Prepare sample data based on the settings or default to 100 rows
           let sampleData = results.data.slice(0, Math.min(settings.preview || 100, results.data.length));
-    
+
+          // Handle warnings for any parsing errors or large file sizes
           let warnings = [];
           if (results.errors && results.errors.length > 0) {
             warnings.push('Some rows could not be parsed correctly -> ', results.errors);
@@ -173,22 +188,29 @@ const generateCSVSchema = async (file, settings) => {
           if (results.data.length > 1000000) {
             warnings.push('Large file detected. Only a sample of the data was processed.');
           }
+
+          // Generate raw data sample by joining the first 100 rows
           let rawData = results.data.slice(0, 100).map(row => 
-            Object.values(row).join(settings.delimiter || ',')
+            row ? Object.values(row).join(settings.delimiter || ',') : '' // Ensure row exists before joining
           ).join('\n');
+
+          // Resolve with schema, sample data, warnings, and raw data
           resolve({ schema, sampleData, warnings, rawData });
         } catch (error) {
+          // Log any error that occurs during schema generation
           console.error('Error in CSV schema generation:', error);
           reject(error);
         }
       },
       error: (error) => {
+        // Log any parsing errors from Papa Parse
         console.error('Papa Parse error:', error);
         reject(error);
       }
     });
   });
 };
+
 
 // Generate schema for JSON files
 const generateJSONSchema = async (file, settings) => {
