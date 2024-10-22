@@ -366,8 +366,8 @@ export const processFile = async (file, settings = {}, isInitialIngestion = true
       ingestionConfig: newConfig,
       ingestionSettings: formattedSettings,
       schema: schemaResult.schema,
-      sourceSchema: schemaResult.schema,      
-      fileInfo: {
+      resourceSchema: schemaResult.schema,      
+      resourceInfo: {
         name: file.name,
         type: file.type,
         size: file.size,

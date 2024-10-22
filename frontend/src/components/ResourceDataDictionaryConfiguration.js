@@ -6,7 +6,7 @@ import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataDictionaryDataPreview from './ResourceDataDictionaryDataPreview';
 import ResourceDataDictionaryAssignment from './ResourceDataDictionaryAssignment';
 import ResourceDataDictionaryClassification from './ResourceDataDictionaryClassification';
-import { FileText, Database } from 'lucide-react';
+import { FileText, Database, TextCursorInput  } from 'lucide-react';
 import AlertComponent from './AlertComponent';
 
 const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => {
@@ -206,6 +206,16 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
                     </Box>
                   } 
                 />
+             <FormControlLabel 
+                  value="dd_manual" 
+                  control={<Radio />} 
+                  label={
+                    <Box display="flex" alignItems="center">
+                      <TextCursorInput style={{ marginRight: '8px' }} />
+                      Manually Create New Data Dictionary
+                    </Box>
+                  } 
+                />                
               </Box>
             </RadioGroup>
           </Grid>

@@ -10,7 +10,7 @@ import LockPersonIcon from '@mui/icons-material/LockPerson';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import UndoIcon from '@mui/icons-material/Undo';
 
-const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, rawData }) => {
+const ResourceDataDictionaryDataPreview = ({ schema, resourceData, sourceInfo, sampleData, rawData }) => {
   const [tabValue, setTabValue] = useState(0);
   const [rows, setRows] = useState(schema ? schema.map((col, index) => ({ 
     id: index, 
@@ -292,4 +292,4 @@ const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, raw
   );
 };
 
-export default ResourceDataPreview;
+export default ResourceDataDictionaryDataPreview;

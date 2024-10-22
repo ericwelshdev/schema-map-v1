@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Box, Tabs, Tab, Typography, TextField, Button } from '@mui/material';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
@@ -11,9 +12,10 @@ import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import UndoIcon from '@mui/icons-material/Undo';
 import WarningIcon from '@mui/icons-material/Warning';
 
-const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, rawData }) => {
+
+const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, rawData }) => {
   const [tabValue, setTabValue] = useState(0);
-  const [rows, setRows] = useState(schema ? schema.map((col, index) => ({
+  const [rows, setRows] = useState(schema ? schema.map((col, index) => ({ 
     id: index,
     ...col,
     alternativeName: '',
@@ -25,6 +27,7 @@ const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, raw
     isUnsaved: false,
     originalState: { id: index, ...col, alternativeName: '', isPII: false, isPHI: false }
   })) : []);
+
 
   // Load persisted tab value and row edits on component mount
   useEffect(() => {
@@ -106,12 +109,12 @@ const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, raw
   const renderGeneralInfo = () => (
     <Box>
       <Typography variant="h6">File Information</Typography>
-      {sourceInfo && (
+      {resourceInfo && (
         <>
-          <Typography variant="body2">Name: {sourceInfo.name}</Typography>
-          <Typography variant="body2">Type: {sourceInfo.type}</Typography>
-          <Typography variant="body2">Size: {sourceInfo.size} bytes</Typography>
-          <Typography variant="body2">Last Modified: {sourceInfo.lastModified}</Typography>
+          <Typography variant="body2">Name: {resourceInfo.name}</Typography>
+          <Typography variant="body2">Type: {resourceInfo.type}</Typography>
+          <Typography variant="body2">Size: {resourceInfo.size} bytes</Typography>
+          <Typography variant="body2">Last Modified: {resourceInfo.lastModified}</Typography>
         </>
       )}
     </Box>

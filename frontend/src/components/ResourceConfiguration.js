@@ -54,9 +54,9 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
   );
 
   const renderIngestionSetup = () => {
-      const resourceType = resourceConfig.resourceSetup?.resourceSetup?.resourceType;
+      const resourceType = resourceConfig.resourceSetup?.resourceType;
       console.log("resourceType", resourceType);
-      console.log("resourceConfig.resourceSetup", resourceConfig.resourceSetup);
+      console.log("resourceConfig", resourceConfig);
 
     switch (resourceType) {
       case 'file':
@@ -69,6 +69,62 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
         return null;
     }
   };
+
+  const handleApplyChanges = useCallback(async (updatedConfig) => {
+    try {
+      const resourceType = resourceConfig.resourceSetup?.resourceType;
+
+      const updatedIngestionConfig = {
+        ...resourceConfig.ingestion,
+        ingestionSettings: resourceConfig.ingestionSettings,
+        ingestionAppliedProperties: resourceConfig.ingestionSettings
+      };
+
+      let result;
+      console.log("XXX resourceConfig", resourceConfig);
+      switch (resourceType) {
+        
+        case 'file':
+          // console.log("XXX resourceConfig.resourceInfo.file", resourceConfig.resourceInfo.file);
+          // console.log("XXX resourceConfig.ingestionSettings", resourceConfig.ingestionSettings);
+          result = await ResourceFileIngestionSetup.handleFileUpload({
+            File: resourceConfig.resourceInfo.file,
+            ingestionSettings: resourceConfig.ingestionSettings,
+          });
+          break;
+        case 'database':
+          result = await ResourceDatabaseIngestionSetup.handleDatabaseIngestion({
+            connectionInfo: resourceConfig.resourceInfo,
+            ingestionSettings: resourceConfig.ingestionSettings,
+          });
+          break;
+        case 'api':
+          result = await ResourceApiIngestionSetup.handleApiIngestion({
+            apiConfig: resourceConfig.resourceInfo,
+            ingestionSettings: resourceConfig.ingestionSettings,
+          });
+          break;
+        default:
+          throw new Error('Unsupported resource type');
+      }
+
+      handleConfigChange({        
+        ingestion: updatedIngestionConfig,
+        schema: result.resourceSchema,
+        sampleData: result.sampleData,
+        rawData: result.rawData,
+        expandedAccordion: 'data',
+      });
+      console.log('updatedConfig->>:', updatedConfig)
+    } catch (error) {
+      console.error('Error processing data:', error);
+      handleConfigChange({
+        error: 'Failed to process data with new settings',
+      });
+    }
+  }, [resourceConfig, handleConfigChange]);
+
+
 
   const memoizedIngestionConfig = useMemo(
     () => ({
@@ -105,7 +161,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
         </AccordionDetails>
       </Accordion>
 
-      {resourceConfig.schema && (
+      {resourceConfig.resourceSchema && (
         <>
           <Accordion
             expanded={resourceConfig.expandedAccordion === 'ingestionSettings'}
@@ -120,7 +176,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
                 onConfigChange={(updates) =>
                   handleConfigChange({ ingestionSettings: updates.ingestionAppliedProperties })
                 }
-                onApplyChanges={() => handleConfigChange({ expandedAccordion: 'data' })}
+                onApplyChanges={() => handleApplyChanges({ expandedAccordion: 'data' })}
               />
             </AccordionDetails>
           </Accordion>
@@ -136,10 +192,10 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
               <ResourceDataPreview
                 activeTab={resourceConfig.activeTab} // Pass down the active tab
                 onTabChange={handleTabChange} // Handle tab changes
-                schema={resourceConfig.schema}
+                schema={resourceConfig.resourceSchema}
                 sampleData={resourceConfig.sampleData}
                 rawData={resourceConfig.rawData}
-                fileInfo={resourceConfig.sourceInfo}
+                resourceInfo={resourceConfig.resourceInfo}
               />
             </AccordionDetails>
           </Accordion>

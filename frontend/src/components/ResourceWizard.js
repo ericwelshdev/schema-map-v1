@@ -21,10 +21,23 @@ const ResourceWizard = () => {
   const handleBack = () => setActiveStep((prevActiveStep) => prevActiveStep - 1);
 
   const updateWizardState = (step, newState) => {
-    setWizardState(prevState => ({
-      ...prevState,
-      [step]: { ...prevState[step], ...newState }
-    }));
+    setWizardState(prevState => {
+      let updatedState = { ...prevState[step], ...newState };
+      
+      // Flatten the resourceSetup structure if it exists
+      if (step === 'resourceSetup' && updatedState.resourceSetup) {
+        updatedState = {
+          ...updatedState,
+          ...updatedState.resourceSetup,
+          resourceSetup: undefined // Remove the nested resourceSetup
+        };
+      }
+      
+      return {
+        ...prevState,
+        [step]: updatedState
+      };
+    });
   };
 
   const getStepContent = (step) => {

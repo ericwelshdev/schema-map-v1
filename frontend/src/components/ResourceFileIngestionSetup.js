@@ -1,6 +1,4 @@
-
-
-  import React, { useState  } from 'react';
+  import React, { useState } from 'react';
   import { Box, Card, CardContent, Typography, LinearProgress, Alert} from '@mui/material';
   import { Upload } from 'lucide-react';
   import { processFile } from '../utils/fileUtils';
@@ -44,7 +42,7 @@
     };
 
     const handleFileUpload = async (file, ingestionSettings = {}) => {
-      console.log('handleFileUpload-> Uploading file:', file.name);
+      console.log('handleFileUpload-> Uploading file:', file);
       console.log('handleFileUpload-> Ingestion Settings:', ingestionSettings);
 
       setLoading(true);
@@ -122,9 +120,9 @@
   };
 
   ResourceFileIngestionSetup.handleFileUpload = async (updatedConfig) => {
-    const { ingesttionSourceInfo, ingestionAppliedProperties } = updatedConfig;
+    const { File, ingestionSettings } = updatedConfig;
     console.log('handleFileUpload called with updatedConfig:' , updatedConfig);
 
-    return processFile(ingesttionSourceInfo.file, ingestionAppliedProperties, true);
+    return processFile(File, ingestionSettings, true);
   };
   export default ResourceFileIngestionSetup;
