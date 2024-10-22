@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Radio, RadioGroup, FormControlLabel, FormControl, 
-  TextField, Select, MenuItem, Typography, Box, 
+  TextField, MenuItem, Typography, Box, 
   Card, CardContent, Grid
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
@@ -10,9 +10,7 @@ import { FileText, Database, Globe } from 'lucide-react';
 const StyledCard = styled(Card)(({ theme }) => ({
   boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
   borderRadius: theme.spacing(2),
-  // transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
   '&:hover': {
-    // transform: 'translateY(-5px)',
     boxShadow: '0 6px 12px rgba(0, 0, 0, 0.15)',
   },
 }));
@@ -21,11 +19,16 @@ const ResourceTypeSelection = ({ savedState, onStateChange }) => {
   const [localState, setLocalState] = useState(savedState);
 
   useEffect(() => {
-    onStateChange(localState);
-  }, [localState, onStateChange]);
+    const isValid = validateForm();
+    onStateChange({ ...localState, isValid });
+  }, [localState]);
 
   const handleInputChange = (field, value) => {
     setLocalState(prevState => ({ ...prevState, [field]: value }));
+  };
+
+  const validateForm = () => {
+    return !!localState.resourceName && !!localState.resourceType;
   };
 
   return (
@@ -35,27 +38,53 @@ const ResourceTypeSelection = ({ savedState, onStateChange }) => {
           Select Resource Source Type
         </Typography>
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={4}>
             <TextField 
               fullWidth
               label="Source Name" 
               variant="outlined"
               value={localState.resourceName || ''}
               onChange={(e) => handleInputChange('resourceName', e.target.value)}
+              placeholder="Enter source name"
+              required
             />
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={4}>
+            <TextField 
+              fullWidth
+              label="Standardized Source Name" 
+              variant="outlined"
+              value={localState.standardizedSourceName || ''}
+              onChange={(e) => handleInputChange('standardizedSourceName', e.target.value)}
+              placeholder="Enter standardized source name"
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
             <FormControl fullWidth>
-              <Select
+              <TextField
+                select
                 label="Collection"
                 value={localState.collection || 'None'}
                 onChange={(e) => handleInputChange('collection', e.target.value)}
+                variant="outlined"
               >
                 <MenuItem value="None">None</MenuItem>
                 <MenuItem value="Collection1">Collection 1</MenuItem>
                 <MenuItem value="Collection2">Collection 2</MenuItem>
-              </Select>
+              </TextField>
             </FormControl>
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              label="Resource Description"
+              variant="outlined"
+              value={localState.resourceDescription || ''}
+              onChange={(e) => handleInputChange('resourceDescription', e.target.value)}
+              placeholder="Enter resource description"
+            />
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle1" gutterBottom>
@@ -67,7 +96,7 @@ const ResourceTypeSelection = ({ savedState, onStateChange }) => {
               value={localState.resourceType || ''}
               onChange={(e) => handleInputChange('resourceType', e.target.value)}
             >
-              <Box display="flex" justifyContent="space-between">
+              <Box display="flex">
                 <FormControlLabel 
                   value="file" 
                   control={<Radio />} 

@@ -30,12 +30,12 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
     onStateChange(newState);
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onStateChange(ingestionConfig);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [ingestionConfig, onStateChange]);
+  // useEffect(() => {
+  //   const timer = setTimeout(() => {
+  //     onStateChange(ingestionConfig);
+  //   }, 0);
+  //   return () => clearTimeout(timer);
+  // }, [ingestionConfig, onStateChange]);
 
   const handleAccordionChange = useCallback((panel) => (event, isExpanded) => {
     handleConfigChange({ expandedAccordion: isExpanded ? panel : false });

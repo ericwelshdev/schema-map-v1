@@ -13,7 +13,7 @@ const columns = [
   { field: 'createdBy', headerName: 'Created By', width: 150 },
 ];
 
-const DataDictionaryAssignment = ({ onSelect, onCreateNew }) => {
+const ResourceDataDictionaryAssignment = ({ onSelect, onCreateNew }) => {
   const [dataDictionaries, setDataDictionaries] = useState([]);
   const [selectedDictionary, setSelectedDictionary] = useState(null);
   const [error, setError] = useState(null);
@@ -113,4 +113,4 @@ const DataDictionaryAssignment = ({ onSelect, onCreateNew }) => {
   );
 };
 
-export default DataDictionaryAssignment;
+export default ResourceDataDictionaryAssignment;

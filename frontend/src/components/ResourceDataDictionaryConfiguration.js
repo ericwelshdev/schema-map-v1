@@ -4,7 +4,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileIngestionSetup from './ResourceFileIngestionSetup';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataPreview from './ResourceDataPreview';
-import DataDictionaryAssignment from './DataDictionaryAssignment';
+import ResourceDataDictionaryAssignment from './ResourceDataDictionaryAssignment';
+import ResourceDataDictionaryClassification from './ResourceDataDictionaryClassification';
 import { FileText, Database } from 'lucide-react';
 import AlertComponent from './AlertComponent';
 
@@ -167,6 +168,10 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
     }
   }, [handleConfigChange]);
 
+
+
+  
+
   return (
     <Box sx={{ '& > *': { mb: '1px' } }}>
       <Card sx={{ mb: -1 }}>
@@ -247,7 +252,7 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
               <ResourceFileIngestionSetup onConfigChange={handleFileUpload} />
             )}
             {dataDictionaryConfig.mode === 'dd_existing' && (
-              <DataDictionaryAssignment  onSelect={handleExistingDictionarySelect} />
+              <ResourceDataDictionaryAssignment  onSelect={handleExistingDictionarySelect} />
             )}  
             </AccordionDetails>
           </Accordion>
@@ -290,9 +295,25 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
               </AccordionDetails>
             </Accordion>
           )}
-          
+       
+       {dataDictionaryConfig.ddSchema && (
+            <Accordion 
+              expanded={dataDictionaryConfig.expandedAccordion === 'classification'} 
+              onChange={handleAccordionChange('classification')}
+            >
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                Data Dictionary Classification and Mapping
+              </AccordionSummary>
+              <AccordionDetails>
+                <ResourceDataDictionaryClassification
+                  schema={dataDictionaryConfig.ddSchema}
+                  sourceSchema={sourceProps.schema}
+                  onClassificationChange={(newClassifications) => handleConfigChange({ ddClassifications: newClassifications })}
+                />
+              </AccordionDetails>
+            </Accordion>
+          )}          
         </>
-  
     </Box>
   );
 };
