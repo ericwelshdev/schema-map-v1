@@ -10,6 +10,7 @@ import ResourceDataPreview from './ResourceDataPreview';
 const ResourceConfiguration = ({ savedState, onStateChange }) => {
   const [resourceConfig, setResourceConfig] = useState({
     expandedAccordion: 'ingestionSetup',
+    activeTab: 0, // Assuming tabs are used and this tracks the active one
     sourceInfo: null,
     schema: null,
     sampleData: null,
@@ -41,6 +42,13 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
   const handleAccordionChange = useCallback(
     (panel) => (event, isExpanded) => {
       handleConfigChange({ expandedAccordion: isExpanded ? panel : false });
+    },
+    [handleConfigChange]
+  );
+
+  const handleTabChange = useCallback(
+    (newTabIndex) => {
+      handleConfigChange({ activeTab: newTabIndex });
     },
     [handleConfigChange]
   );
@@ -108,15 +116,17 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
             </AccordionSummary>
             <AccordionDetails>
               <ResourceIngestionSettings
-                ingestionConfig={memoizedIngestionConfig}
-                onConfigChange={(updates) => handleConfigChange({ ingestionSettings: updates.ingestionAppliedProperties })}
+                ingestionConfig={memoizedIngestionConfig}         
+                onConfigChange={(updates) =>
+                  handleConfigChange({ ingestionSettings: updates.ingestionAppliedProperties })
+                }
                 onApplyChanges={() => handleConfigChange({ expandedAccordion: 'data' })}
               />
             </AccordionDetails>
           </Accordion>
 
-          <Accordion 
-            expanded={resourceConfig.expandedAccordion === 'data'} 
+          <Accordion
+            expanded={resourceConfig.expandedAccordion === 'data'}
             onChange={handleAccordionChange('data')}
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -124,6 +134,8 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
             </AccordionSummary>
             <AccordionDetails>
               <ResourceDataPreview
+                activeTab={resourceConfig.activeTab} // Pass down the active tab
+                onTabChange={handleTabChange} // Handle tab changes
                 schema={resourceConfig.schema}
                 sampleData={resourceConfig.sampleData}
                 rawData={resourceConfig.rawData}

@@ -23,7 +23,7 @@
         resourceDescription: '',
         resourceType: 'file',
       });
-      console.log("ResourceTypeSelection-> resourceSetup", resourceSetup)
+      // console.log("ResourceTypeSelection-> resourceSetup", resourceSetup)
       const [sourceTags] = useState(['source', 'data', 'resource']);
       const [errors, setErrors] = useState({});
 
