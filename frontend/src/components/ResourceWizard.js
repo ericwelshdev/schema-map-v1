@@ -36,35 +36,46 @@ const ResourceWizard = () => {
   const getStepContent = (step) => {
     switch (step) {
       case 0:
-        return <ResourceTypeSelection 
-          savedState={wizardState.resourceType} 
-          onStateChange={(newState) => {
-            updateWizardState('resourceType', newState);
-            updateWizardState('configuration', createIngestionConfig(newState.resourceType, newState.sourceInputType));
-          }} 
-        />;
+        return (
+          <ResourceTypeSelection 
+            savedState={wizardState.resourceType} 
+            onStateChange={(newState) => {
+              updateWizardState('resourceType', newState);
+              updateWizardState('configuration', createIngestionConfig(newState.resourceType, newState.sourceInputType)); 
+              // Ensure createIngestionConfig works with resourceType and sourceInputType
+            }} 
+          />
+        );
       case 1:
-        return <ResourceConfiguration 
-          savedState={wizardState.configuration}
-          onStateChange={(newState) => updateWizardState('configuration', newState)}
-        />;
+        return (
+          <ResourceConfiguration 
+            savedState={wizardState.configuration} 
+            onStateChange={(newState) => updateWizardState('configuration', newState)} 
+          />
+        );
       case 2:
-        return <ResourceDataDictionaryConfiguration 
-          savedState={wizardState.dataDictionary}
-          sourceSchema={wizardState.configuration.schema}
-          onStateChange={(newState) => updateWizardState('dataDictionary', newState)}
-        />;
+        return (
+          <ResourceDataDictionaryConfiguration 
+            savedState={wizardState.dataDictionary} 
+            sourceSchema={wizardState.configuration.schema} 
+            // Ensure configuration schema exists before passing
+            onStateChange={(newState) => updateWizardState('dataDictionary', newState)} 
+          />
+        );
       case 3:
-        return <ResourceMappingTagging 
-          savedState={wizardState.mappingTagging}
-          onStateChange={(newState) => updateWizardState('mappingTagging', newState)}
-        />;
+        return (
+          <ResourceMappingTagging 
+            savedState={wizardState.mappingTagging} 
+            onStateChange={(newState) => updateWizardState('mappingTagging', newState)} 
+          />
+        );
       case 4:
         return <ResourceSummary wizardState={wizardState} />;
       default:
         return 'Unknown step';
     }
   };
+  
 
   return (
     <Box sx={{ width: '100%' }}>

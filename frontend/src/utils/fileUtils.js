@@ -144,49 +144,51 @@ const mapUiFieldsToCallArgFields = (settings, config) => {
 
 const generateCSVSchema = async (file, settings) => {
   console.log('settings', settings);
-  // const formattedSettings = getIngestionedSettings(settings);
-  // console.log('formattedSettings', formattedSettings);
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
       ...settings,
       complete: (results) => {
-        const schema = results.meta.fields.map((field, index) => {
-          const columnValues = results.data.map(row => row[field]).filter(value => value !== undefined && value !== null);
-          return {
-            name: field,
-            type: inferDataType(columnValues),
-            comment: ''
-          };
-        });
-        
-        console.log('results.data.length:', results.data.length);
-        const sampleData = results.data.slice(0, 100);
-        if (settings.preview <100){
-          sampleData = results.data;
-        }
-    
+        try {
+          if (!results.data || !Array.isArray(results.data) || results.data.length === 0) {
+            throw new Error('No valid data found in the CSV file');
+          }
 
-        // const data = results.data;
-        // const sampleData = results.data.slice(0, 10);
-        const warnings = [];
-        if (results.errors.length > 0) {
-          warnings.push('Some rows could not be parsed correctly -> ',results.errors);
+          let fields = results.meta.fields || Object.keys(results.data[0]);
+          let schema = fields.map((field) => {
+            let columnValues = results.data.map(row => row[field]).filter(value => value != null);
+            return {
+              name: field,
+              type: inferDataType(columnValues),
+              comment: ''
+            };
+          });
+        
+          console.log('results.data.length:', results.data.length);
+          let sampleData = results.data.slice(0, Math.min(settings.preview || 100, results.data.length));
+    
+          let warnings = [];
+          if (results.errors && results.errors.length > 0) {
+            warnings.push('Some rows could not be parsed correctly -> ', results.errors);
+          }
+          if (results.data.length > 1000000) {
+            warnings.push('Large file detected. Only a sample of the data was processed.');
+          }
+          let rawData = results.data.slice(0, 100).map(row => 
+            Object.values(row).join(settings.delimiter || ',')
+          ).join('\n');
+          resolve({ schema, sampleData, warnings, rawData });
+        } catch (error) {
+          console.error('Error in CSV schema generation:', error);
+          reject(error);
         }
-        if (results.data.length > 1000000) {
-          warnings.push('Large file detected. Only a sample of the data was processed.');
-        }
-        const rawData = results.data.slice(0, 100).map(row => 
-          Object.values(row).join(settings.delimiter)
-        ).join('\n');
-        resolve({ schema, sampleData, warnings, rawData });
       },
-      error: (error) => reject(error)
+      error: (error) => {
+        console.error('Papa Parse error:', error);
+        reject(error);
+      }
     });
   });
 };
-
-
-
 
 // Generate schema for JSON files
 const generateJSONSchema = async (file, settings) => {
@@ -308,6 +310,9 @@ const inferXMLSchema = (sample) => {
 
 export const processFile = async (file, settings = {}, isInitialIngestion = true, progressCallback = () => {}) => {
   try {
+    console.log('fileUtil-> Uploading file:', file);
+    console.log('fileUtil-> Ingestion Settings:', settings);
+
     progressCallback(20);
     console.log('Processing file:', file.name);
     const fileType = await detectFileType(file);
@@ -319,20 +324,19 @@ export const processFile = async (file, settings = {}, isInitialIngestion = true
     console.log('New config:', newConfig);
     
     let formattedSettings;
-    console.log('isInitialIngestion:', isInitialIngestion);
-    if (isInitialIngestion) {
+    if (Object.keys(settings).length === 0) {
       formattedSettings = getDefaultIngestionSettings(fileType, autoDetectedSettings);
-      console.log('formattedSettings_int:', formattedSettings);
     } else {
-      const mappedSettings = mapUiFieldsToCallArgFields(settings, newConfig);
-      formattedSettings = { ...getIngestionedValueSettings(fileType, autoDetectedSettings), ...mappedSettings };
-      console.log('formattedSettings_post:', formattedSettings);
+      formattedSettings = { ...getIngestionedValueSettings(fileType, autoDetectedSettings), ...settings };
     }
+    console.log('Formatted settings:', formattedSettings);
+
     progressCallback(80);
     const schemaResult = await generateSchema(file, formattedSettings);
     console.log('Schema result:', schemaResult);
     console.log('File processing completed successfully');
     progressCallback(100);
+
     return {
       loading: false,
       progress: 100,
@@ -340,7 +344,7 @@ export const processFile = async (file, settings = {}, isInitialIngestion = true
       ingestionConfig: newConfig,
       ingestionSettings: formattedSettings,
       schema: schemaResult.schema,
-      sourceSchema: schemaResult.schema,        
+      sourceSchema: schemaResult.schema,      
       fileInfo: {
         name: file.name,
         type: file.type,
@@ -348,6 +352,8 @@ export const processFile = async (file, settings = {}, isInitialIngestion = true
         lastModified: new Date(file.lastModified).toLocaleString(),
         file: file,
       },
+      numCols : schemaResult.schema.length,
+      numRows: schemaResult.sampleData.length,
       sampleData: schemaResult.sampleData,
       rawData: schemaResult.rawData,
       expandedAccordion: isInitialIngestion ? 'ingestionSettings' : 'data'

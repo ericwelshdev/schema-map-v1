@@ -141,19 +141,11 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
   const handleApplyChanges = useCallback(async (updatedConfig) => {
     try {
       let result;
-      console.log('dataDictionaryConfig.ddSourceInfo:', dataDictionaryConfig.ddSourceInfo);
-      console.log('Updated Config:', updatedConfig);
-      
       if (updatedConfig.ingestionProcessSource === 'fileUpload') {
-        result = await handleFileUpload({
-          file: ddSourceInfo,
-          ingestionSettings: updatedConfig.ingestionAppliedProperties
-        });
+        result = await ResourceFileIngestionSetup.handleFileUpload(updatedConfig);
+        console.log('File re-processing result:', result);
       } else if (updatedConfig.ingestionProcessSource === 'existingDictionary') {
-        result = await handleExistingDictionarySelect({
-          ...ddSourceInfo,
-          ingestionSettings: updatedConfig.ingestionAppliedProperties
-        });
+        // Handle existing dictionary case
       } else {
         throw new Error('Invalid ingestion process source');
       }
@@ -171,7 +163,7 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
         error: 'Failed to process data with new settings'
       });
     }
-  }, [dataDictionaryConfig.ddSourceInfo, handleConfigChange, handleFileUpload, ddSourceInfo, handleExistingDictionarySelect]);
+  }, [handleConfigChange]);
 
   return (
     <Box sx={{ '& > *': { mb: '1px' } }}>
