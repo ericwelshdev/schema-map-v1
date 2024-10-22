@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Tabs, Tab, Typography, TextField } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Tabs, Tab, Typography, TextField, Button } from '@mui/material';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import BlockIcon from '@mui/icons-material/Block';
-import ChangeCircleIcon from '@mui/icons-material/ChangeCircle';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import LockPersonIcon from '@mui/icons-material/LockPerson';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import UndoIcon from '@mui/icons-material/Undo';
+import WarningIcon from '@mui/icons-material/Warning';
 
 const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, rawData }) => {
   const [tabValue, setTabValue] = useState(0);
@@ -21,6 +22,7 @@ const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, raw
     isEditing: false, 
     isChanged: false, 
     isDisabled: false,
+    isUnsaved: false,
     originalState: { ...col, alternativeName: '', isPII: false, isPHI: false }
   })) : []);
 
@@ -35,8 +37,8 @@ const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, raw
   const handleSaveClick = (id) => {
     setRows(rows.map(row => {
       if (row.id === id) {
-        const isChanged = JSON.stringify({ ...row, isEditing: false, isChanged: false }) !== JSON.stringify(row.originalState);
-        return { ...row, isEditing: false, isChanged };
+        const isChanged = JSON.stringify({ ...row, isEditing: false, isChanged: false, isUnsaved: false }) !== JSON.stringify(row.originalState);
+        return { ...row, isEditing: false, isChanged, isUnsaved: false };
       }
       return row;
     }));
@@ -45,8 +47,7 @@ const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, raw
   const handleCancelClick = (id) => {
     setRows(rows.map(row => {
       if (row.id === id) {
-        const isChanged = JSON.stringify({ ...row.originalState, isEditing: false, isChanged: false }) !== JSON.stringify(row.originalState);
-        return { ...row.originalState, isEditing: false, isChanged };
+        return { ...row.originalState, isEditing: false, isChanged: false, isUnsaved: false };
       }
       return row;
     }));
@@ -57,25 +58,33 @@ const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, raw
       if (row.id === id) {
         const newDisabledState = !row.isDisabled;
         const isChanged = newDisabledState !== row.originalState.isDisabled;
-        return { ...row, isDisabled: newDisabledState, isChanged };
+        return { ...row, isDisabled: newDisabledState, isChanged, isUnsaved: true };
       }
       return row;
     }));
   };
 
   const handleUndoClick = (id) => {
-    setRows(rows.map(row => row.id === id ? { ...row.originalState, isChanged: false } : row));
+    setRows(rows.map(row => row.id === id ? { ...row.originalState, isChanged: false, isUnsaved: false } : row));
   };
 
   const handleCellChange = (params) => {
     setRows(rows.map(row => {
       if (row.id === params.id) {
-        const updatedRow = { ...row, [params.field]: params.value, isEditing: true };
+        const updatedRow = { ...row, [params.field]: params.value, isEditing: true, isUnsaved: true };
         const isChanged = JSON.stringify(updatedRow) !== JSON.stringify(row.originalState);
         return { ...updatedRow, isChanged };
       }
       return row;
     }));
+  };
+
+  const handleSaveAll = () => {
+    setRows(rows.map(row => ({ ...row, isUnsaved: false, isEditing: false })));
+  };
+
+  const handleCancelAll = () => {
+    setRows(rows.map(row => ({ ...row.originalState, isChanged: false, isUnsaved: false, isEditing: false })));
   };
 
   const renderGeneralInfo = () => (
@@ -93,6 +102,16 @@ const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, raw
   );
 
   const schemaColumns = [
+    { 
+      field: 'status', 
+      headerName: '', 
+      width: 50,
+      renderCell: (params) => (
+        params.row.isChanged ? 
+          (params.row.isUnsaved ? <WarningIcon color="warning" /> : <CheckCircleOutlineIcon color="primary" />) 
+          : null
+      ),
+    },
     { 
       field: 'name', 
       headerName: 'Column Name', 
@@ -199,6 +218,10 @@ const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, raw
   const renderSchema = () => (
     schema && schema.length > 0 ? (
       <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Button onClick={handleSaveAll} disabled={!rows.some(row => row.isUnsaved)}>Save All</Button>
+          <Button onClick={handleCancelAll} disabled={!rows.some(row => row.isUnsaved)}>Cancel All</Button>
+        </Box>
         <DataGrid
           rows={rows}
           columns={schemaColumns}
@@ -209,7 +232,7 @@ const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, raw
           onCellEditCommit={handleCellChange}
           isCellEditable={(params) => !params.row.isDisabled}
           components={{
-            ColumnUnsortedIcon: ChangeCircleIcon,
+            ColumnUnsortedIcon: CheckCircleOutlineIcon,
           }}
           componentsProps={{
             row: {
