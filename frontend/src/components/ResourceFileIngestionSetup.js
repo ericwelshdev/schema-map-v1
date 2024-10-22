@@ -6,7 +6,7 @@
   import { processFile } from '../utils/fileUtils';
   import AlertComponent from './AlertComponent';
 
-  const ResourceFileIngestionSetup = ({ onConfigChange, initialIngestionSettings = {} }) => {
+  const ResourceFileIngestionSetup = ({ onConfigChange = {} }) => {
     const [progress, setProgress] = useState(0);
     const [loading, setLoading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState(null);
@@ -115,12 +115,7 @@
         </Card>
         {loading && <LinearProgress variant="determinate" value={progress} sx={{ mt: 2, mb: 2 }} />}
         {uploadStatus && (
-        <AlertComponent
-        sx={{ mt: 1, mb: 1 }}
-        severity={uploadStatus.type}
-        message={uploadStatus.message}
-        onClose={() => setUploadStatus(null)}
-        />
+        <Alert severity={uploadStatus.type} sx={{ mt: 2, mb: 2 }}> </Alert>
         )}
       </Box>
     );

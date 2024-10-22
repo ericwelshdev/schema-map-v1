@@ -1,22 +1,17 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Stepper, Step, StepLabel, Button, Box } from '@mui/material';
 import ResourceTypeSelection from './ResourceTypeSelection';
 import ResourceConfiguration from './ResourceConfiguration';
 import ResourceDataDictionaryConfiguration from './ResourceDataDictionaryConfiguration';
 import ResourceMappingTagging from './ResourceMappingTagging';
 import ResourceSummary from './ResourceSummary';
-import { createIngestionConfig } from '../utils/ingestionConfig';
 
 const ResourceWizard = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [wizardState, setWizardState] = useState({
-    resourceType: {},
-    configuration: {},
-    dataDictionary: {
-      mode: null, // 'assign' or 'create'
-      selectedDictionary: null,
-      newDictionary: null,
-    },
+    resourceSetup: {},
+    resourceConfiguration: {},
+    dataDictionary: {},
     mappingTagging: {}
   });
 
@@ -24,67 +19,49 @@ const ResourceWizard = () => {
 
   const handleNext = () => setActiveStep((prevActiveStep) => prevActiveStep + 1);
   const handleBack = () => setActiveStep((prevActiveStep) => prevActiveStep - 1);
-  const handleStepClick = (step) => setActiveStep(step);
 
-  const updateWizardState = useCallback((step, newState) => {
+  const updateWizardState = (step, newState) => {
     setWizardState(prevState => ({
       ...prevState,
       [step]: { ...prevState[step], ...newState }
     }));
-  }, []);
+  };
 
   const getStepContent = (step) => {
     switch (step) {
       case 0:
-        return (
-          <ResourceTypeSelection 
-            savedState={wizardState.resourceType} 
-            onStateChange={(newState) => {
-              updateWizardState('resourceType', newState);
-              updateWizardState('configuration', createIngestionConfig(newState.resourceType, newState.sourceInputType)); 
-              // Ensure createIngestionConfig works with resourceType and sourceInputType
-            }} 
-          />
-        );
+        return <ResourceTypeSelection 
+          savedState={wizardState.resourceSetup} 
+          onStateChange={(newState) => updateWizardState('resourceSetup', newState)} 
+        />;
       case 1:
-        return (
-          <ResourceConfiguration 
-            savedState={wizardState.configuration} 
-            onStateChange={(newState) => updateWizardState('configuration', newState)} 
-          />
-        );
+        return <ResourceConfiguration 
+          savedState={{...wizardState.resourceConfiguration, resourceSetup: wizardState.resourceSetup}}
+          onStateChange={(newState) => updateWizardState('resourceConfiguration', newState)}
+        />;
       case 2:
-        return (
-          <ResourceDataDictionaryConfiguration 
-            savedState={wizardState.dataDictionary} 
-            sourceSchema={wizardState.configuration.schema} 
-            // Ensure configuration schema exists before passing
-            onStateChange={(newState) => updateWizardState('dataDictionary', newState)} 
-          />
-        );
+        return <ResourceDataDictionaryConfiguration 
+          savedState={wizardState.dataDictionary}
+          onStateChange={(newState) => updateWizardState('dataDictionary', newState)}
+        />;
       case 3:
-        return (
-          <ResourceMappingTagging 
-            savedState={wizardState.mappingTagging} 
-            onStateChange={(newState) => updateWizardState('mappingTagging', newState)} 
-          />
-        );
+        return <ResourceMappingTagging 
+          savedState={wizardState.mappingTagging}
+          onStateChange={(newState) => updateWizardState('mappingTagging', newState)}
+        />;
       case 4:
         return <ResourceSummary wizardState={wizardState} />;
       default:
         return 'Unknown step';
     }
   };
-  
 
   return (
     <Box sx={{ width: '100%' }}>
       <Stepper activeStep={activeStep}>
         {steps.map((label, index) => (
           <Step key={label}>
-            <StepLabel onClick={() => handleStepClick(index)} style={{ cursor: 'pointer' }}>
-              {label}
-            </StepLabel>
+            <StepLabel>{label}</StepLabel>
           </Step>
         ))}
       </Stepper>
@@ -101,12 +78,12 @@ const ResourceWizard = () => {
                 color="inherit"
                 disabled={activeStep === 0}
                 onClick={handleBack}
-                variant="outlined" sx={{ mt: 1 }}
+                sx={{ mr: 1 }}
               >
                 Back
               </Button>
               <Box sx={{ flex: '1 1 auto' }} />
-              <Button onClick={handleNext} variant="outlined" sx={{ mt: 1 }}>
+              <Button onClick={handleNext}>
                 {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
               </Button>
             </Box>

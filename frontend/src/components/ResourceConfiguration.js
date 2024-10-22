@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import React, { useState, useCallback, useMemo } from 'react';
+import { Box, Accordion, AccordionSummary, AccordionDetails, Alert } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileIngestionSetup from './ResourceFileIngestionSetup';
 import ResourceDatabaseIngestionSetup from './ResourceDatabaseIngestionSetup';
@@ -8,104 +8,116 @@ import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataPreview from './ResourceDataPreview';
 
 const ResourceConfiguration = ({ savedState, onStateChange }) => {
-  const [ingestionConfig, setIngestionConfig] = useState(savedState);
+  const [resourceConfig, setResourceConfig] = useState({
+    ...savedState,
+    expandedAccordion: 'ingestionSetup',
+    sourceInfo: null,
+    schema: null,
+    sampleData: null,
+    rawData: null,
+    ingestionSettings: {},
+    ingestionConfig: {},
+    uploadStatus: null,
+    error: null,
+  });
+    const handleConfigChange = useCallback((updates) => {
+      setResourceConfig(prevConfig => {
+        const newConfig = { ...prevConfig, ...updates };
+        onStateChange(newConfig);
+        return newConfig;
+      });
+    }, [onStateChange]);
 
-  // const handleConfigChange = useCallback((updates) => {
-  //   setIngestionConfig(prevConfig => {
-  //     const newConfig = { ...prevConfig, ...updates };
-  //     if (updates.schema) {
-  //       newConfig.expandedAccordion = 'ingestionSettings';
-  //     }
-  //     return newConfig;
-  //   });
-  // }, []);
+    const handleAccordionChange = useCallback((panel) => (event, isExpanded) => {
+      handleConfigChange({ expandedAccordion: isExpanded ? panel : false });
+    }, [handleConfigChange]);
 
-  const handleConfigChange = (updates) => {
-    const newState = { ...ingestionConfig, ...updates };
-    if (updates.schema) {
-      newState.expandedAccordion = 'data';
-      newState.activeDataPreviewTab = 1;
-    }
-    setIngestionConfig(newState);
-    onStateChange(newState);
-  };
+    const renderIngestionSetup = () => {
+      const resourceType = resourceConfig.resourceSetup?.resourceSetup?.resourceType;
+      console.log("resourceType", resourceType);
+      console.log("resourceConfig.resourceSetup", resourceConfig.resourceSetup);
+      
+      switch (resourceType) {
+        case 'file':
+          return <ResourceFileIngestionSetup onConfigChange={handleConfigChange} />;
+        case 'database':
+          return <ResourceDatabaseIngestionSetup onConfigChange={handleConfigChange} />;
+        case 'api':
+          return <ResourceApiIngestionSetup onConfigChange={handleConfigChange} />;
+        default:
+          return null;
+      }
+    };
 
-  // useEffect(() => {
-  //   const timer = setTimeout(() => {
-  //     onStateChange(ingestionConfig);
-  //   }, 0);
-  //   return () => clearTimeout(timer);
-  // }, [ingestionConfig, onStateChange]);
 
-  const handleAccordionChange = useCallback((panel) => (event, isExpanded) => {
-    handleConfigChange({ expandedAccordion: isExpanded ? panel : false });
-  }, [handleConfigChange]);
-
-  const renderIngestionSetup = () => {
-    switch (ingestionConfig.sourceType) {
-      case 'file':
-        return <ResourceFileIngestionSetup ingestionConfig={ingestionConfig} onConfigChange={handleConfigChange} />;
-      case 'database':
-        return <ResourceDatabaseIngestionSetup ingestionConfig={ingestionConfig} onConfigChange={handleConfigChange} />;
-      case 'api':
-        return <ResourceApiIngestionSetup ingestionConfig={ingestionConfig} onConfigChange={handleConfigChange} />;
-      default:
-        return null;
-    }
-  };
-
-  const getAccordionTitle = (sourceType) => {
-    return sourceType ? `${sourceType.charAt(0).toUpperCase() + sourceType.slice(1)} Ingestion Setup` : 'Ingestion Setup';
-  };
+  const memoizedIngestionConfig = useMemo(() => ({
+    ingestionSettings: resourceConfig.ingestionSettings,
+    ingestionConfig: resourceConfig.ingestionConfig,
+    ingestionAppliedProperties: resourceConfig.ingestionSettings
+  }), [resourceConfig.ingestionConfig, resourceConfig.ingestionSettings]);
 
   return (
     <Box sx={{ '& > *': { mb: '1px' } }}>
+      {resourceConfig.uploadStatus && (
+        <Alert severity={resourceConfig.uploadStatus.type} sx={{ mb: 2 }}>
+          {resourceConfig.uploadStatus.message}
+        </Alert>
+      )}
+
+      {resourceConfig.error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {resourceConfig.error}
+        </Alert>
+      )}
+
       <Accordion 
-        defaultExpanded
-        expanded={ingestionConfig.expandedAccordion === 'ingestionSetup' || ingestionConfig.expandedAccordion === undefined}
+        expanded={resourceConfig.expandedAccordion === 'ingestionSetup'}
         onChange={handleAccordionChange('ingestionSetup')}
       >
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          {getAccordionTitle(ingestionConfig.sourceType)}
+          Resource Ingestion Setup
         </AccordionSummary>
         <AccordionDetails>
-          <Box sx={{ '& > *': { mb: '1px', mt:-2 } }}>
-            {renderIngestionSetup()}
-          </Box>
+          {renderIngestionSetup()}
         </AccordionDetails>
       </Accordion>
 
-      <Accordion 
-        expanded={ingestionConfig.expandedAccordion === 'ingestionSettings'} 
-        onChange={handleAccordionChange('ingestionSettings')}
-      >
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          Resource Ingestion Settings
-        </AccordionSummary>
-        <AccordionDetails>
-          <ResourceIngestionSettings
-            ingestionConfig={ingestionConfig}
-            onConfigChange={handleConfigChange}
-          />
-        </AccordionDetails>
-      </Accordion>
+      {resourceConfig.schema && (
+        <>
+          <Accordion 
+            expanded={resourceConfig.expandedAccordion === 'ingestionSettings'} 
+            onChange={handleAccordionChange('ingestionSettings')}
+          >
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              Resource Ingestion Settings
+            </AccordionSummary>
+            <AccordionDetails>
+              <ResourceIngestionSettings
+                ingestionConfig={memoizedIngestionConfig}
+                onConfigChange={(updates) => handleConfigChange({ ingestionSettings: updates.ingestionAppliedProperties })}
+                onApplyChanges={() => handleConfigChange({ expandedAccordion: 'data' })}
+              />
+            </AccordionDetails>
+          </Accordion>
 
-      <Accordion 
-        expanded={ingestionConfig.expandedAccordion === 'data'} 
-        onChange={handleAccordionChange('data')}
-      >
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          Data Preview
-        </AccordionSummary>
-        <AccordionDetails>
-          <ResourceDataPreview
-            schema={ingestionConfig.schema}
-            sampleData={ingestionConfig.sampleData}
-            rawData={ingestionConfig.rawData}
-            fileInfo={ingestionConfig.fileInfo}
-          />
-        </AccordionDetails>
-      </Accordion>
+          <Accordion 
+            expanded={resourceConfig.expandedAccordion === 'data'} 
+            onChange={handleAccordionChange('data')}
+          >
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              Resource Data Preview
+            </AccordionSummary>
+            <AccordionDetails>
+              <ResourceDataPreview
+                schema={resourceConfig.schema}
+                sampleData={resourceConfig.sampleData}
+                rawData={resourceConfig.rawData}
+                fileInfo={resourceConfig.sourceInfo}
+              />
+            </AccordionDetails>
+          </Accordion>
+        </>
+      )}
     </Box>
   );
 };

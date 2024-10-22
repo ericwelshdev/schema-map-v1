@@ -18,6 +18,16 @@ const ResourceIngestionSettings = ({ ingestionConfig, onConfigChange, onApplyCha
 
   const config = ingestionConfig.ingestionConfig || {};
 
+  const handleSettingChange = (field, value) => {
+    onConfigChange({
+      ...ingestionConfig,
+      ingestionAppliedProperties: {
+        ...ingestionConfig.ingestionAppliedProperties,
+        [field]: value
+      }
+    })
+  }
+
   const renderField = (key, fieldConfig) => {
     const value = ingestionConfig.ingestionAppliedProperties?.[fieldConfig.callArgField] ?? fieldConfig.default;
 
@@ -28,7 +38,7 @@ const ResourceIngestionSettings = ({ ingestionConfig, onConfigChange, onApplyCha
             control={
               <Switch
                 checked={!!value}
-                onChange={(e) => onConfigChange(fieldConfig.callArgField, e.target.checked)}
+                onChange={(e) => handleSettingChange(fieldConfig.callArgField, e.target.checked)}
                 size="small"
               />
             }
@@ -43,7 +53,7 @@ const ResourceIngestionSettings = ({ ingestionConfig, onConfigChange, onApplyCha
             size="small"
             label={fieldConfig.uiDisplayName}
             value={value}
-            onChange={(e) => onConfigChange(fieldConfig.callArgField, e.target.value)}
+            onChange={(e) => handleSettingChange(fieldConfig.callArgField, e.target.value)}
           >
             {fieldConfig.options.map((option) => (
               <MenuItem key={option.value} value={option.value}>
@@ -60,7 +70,7 @@ const ResourceIngestionSettings = ({ ingestionConfig, onConfigChange, onApplyCha
             type="number"
             label={fieldConfig.uiDisplayName}
             value={value}
-            onChange={(e) => onConfigChange(fieldConfig.callArgField, parseFloat(e.target.value))}
+            onChange={(e) => handleSettingChange(fieldConfig.callArgField, parseFloat(e.target.value))}
           />
         );
       default:
@@ -70,7 +80,7 @@ const ResourceIngestionSettings = ({ ingestionConfig, onConfigChange, onApplyCha
             size="small"
             label={fieldConfig.uiDisplayName}
             value={value}
-            onChange={(e) => onConfigChange(fieldConfig.callArgField, e.target.value)}
+            onChange={(e) => handleSettingChange(fieldConfig.callArgField, e.target.value)}
           />
         );
     }

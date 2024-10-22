@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo} from 'react';
 import { Box, Accordion, AccordionSummary, AccordionDetails, Alert, Card, CardContent, Radio, RadioGroup, FormControlLabel, FormControl, Grid, Typography } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileIngestionSetup from './ResourceFileIngestionSetup';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
-import ResourceDataPreview from './ResourceDataPreview';
+import ResourceDataDictionaryDataPreview from './ResourceDataDictionaryDataPreview';
 import ResourceDataDictionaryAssignment from './ResourceDataDictionaryAssignment';
 import ResourceDataDictionaryClassification from './ResourceDataDictionaryClassification';
 import { FileText, Database } from 'lucide-react';
@@ -118,12 +118,10 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
   }, [handleConfigChange]);
 
   const memoizedIngestionConfig = useMemo(() => ({
-    ingesttionSourceInfo: dataDictionaryConfig.ddSourceInfo,
     ingestionSettings: dataDictionaryConfig.ddIngestionSettings,
     ingestionConfig: dataDictionaryConfig.ddIngestionConfig,
-    ingestionAppliedProperties: dataDictionaryConfig.ddIngestionSettings,
-    ingestionProcessSource: dataDictionaryConfig.ingestionProcessSource,
-  }), [dataDictionaryConfig.ddIngestionConfig, dataDictionaryConfig.ddIngestionSettings, dataDictionaryConfig.ddSourceInfo, dataDictionaryConfig.ingestionProcessSource]);
+    ingestionAppliedProperties: dataDictionaryConfig.ddIngestionSettings
+  }), [dataDictionaryConfig.ddIngestionSettings, dataDictionaryConfig.ddIngestionConfig]);
 
   const handleModeChange = (event) => {
     const newMode = event.target.value;
@@ -141,32 +139,32 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
     setDdSourceInfo(null);
   };
 
-  const handleApplyChanges = useCallback(async (updatedConfig) => {
-    try {
-      let result;
-      if (updatedConfig.ingestionProcessSource === 'fileUpload') {
-        result = await ResourceFileIngestionSetup.handleFileUpload(updatedConfig);
-        console.log('File re-processing result:', result);
-      } else if (updatedConfig.ingestionProcessSource === 'existingDictionary') {
-        // Handle existing dictionary case
-      } else {
-        throw new Error('Invalid ingestion process source');
-      }
+    const handleApplyChanges = useCallback(async (updatedConfig) => {
+      try {
+        let result;
+        if (updatedConfig.ingestionProcessSource === 'fileUpload') {
+          result = await ResourceFileIngestionSetup.handleFileUpload(updatedConfig);
+          console.log('File re-processing result:', result);
+        } else if (updatedConfig.ingestionProcessSource === 'existingDictionary') {
+          // Handle existing dictionary case
+        } else {
+          throw new Error('Invalid ingestion process source');
+        }
 
-      handleConfigChange({
-        ddIngestionSettings: updatedConfig.ingestionAppliedProperties,
-        ddSchema: result.schema,
-        ddSampleData: result.sampleData,
-        ddRawData: result.rawData,
-        expandedAccordion: 'data'
-      });
-    } catch (error) {
-      console.error('Error processing data:', error);
-      handleConfigChange({
-        error: 'Failed to process data with new settings'
-      });
-    }
-  }, [handleConfigChange]);
+        handleConfigChange({
+          ddIngestionSettings: updatedConfig.ingestionAppliedProperties,
+          ddSchema: result.schema,
+          ddSampleData: result.sampleData,
+          ddRawData: result.rawData,
+          expandedAccordion: 'data'
+        });
+      } catch (error) {
+        console.error('Error processing data:', error);
+        handleConfigChange({
+          error: 'Failed to process data with new settings'
+        });
+      }
+    }, [handleConfigChange]);
 
 
 
@@ -216,24 +214,14 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
       </Card>
 
       {dataDictionaryConfig.uploadStatus && (
-        <AlertComponent
-        sx={{ mt: 2, mb: 2 }}
-        severity={dataDictionaryConfig.uploadStatus.type}
-        message={dataDictionaryConfig.uploadStatus.message}
-        onClose={() => setProcessStatus(null)}
-        />
+      <Alert severity={dataDictionaryConfig.uploadStatus.type} sx={{ mt: 2, mb: 2 }}></Alert>
 
     
       )}
 
       {dataDictionaryConfig.error && (
 
-      <AlertComponent
-      sx={{ mt: 2, mb: 2 }}
-      severity="error"
-      message={dataDictionaryConfig.error}
-      onClose={() => setProcessStatus(null)}
-      />
+      <Alert severity="error" sx={{ mt: 2, mb: 2 }}> </Alert>
       )}
 
       
@@ -286,7 +274,7 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
                 Data Dictionary Preview
               </AccordionSummary>
               <AccordionDetails>
-                <ResourceDataPreview
+                <ResourceDataDictionaryDataPreview
                   schema={dataDictionaryConfig.ddSchema}
                   sampleData={dataDictionaryConfig.ddSampleData}
                   rawData={dataDictionaryConfig.ddRawData}
@@ -305,11 +293,11 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
                 Data Dictionary Classification and Mapping
               </AccordionSummary>
               <AccordionDetails>
-                <ResourceDataDictionaryClassification
+                {/* <ResourceDataDictionaryDataPreview
                   schema={dataDictionaryConfig.ddSchema}
                   sourceSchema={sourceProps.schema}
                   onClassificationChange={(newClassifications) => handleConfigChange({ ddClassifications: newClassifications })}
-                />
+                /> */}
               </AccordionDetails>
             </Accordion>
           )}          

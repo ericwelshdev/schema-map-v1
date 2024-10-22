@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, LinearProgress, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { alertConfig } from '../config/alertConfig';
@@ -8,18 +8,14 @@ const AlertComponent = ({ severity, message, onClose }) => {
   const [isVisible, setIsVisible] = useState(true);
   const config = alertConfig[severity];
 
-  const handleClose = useCallback(() => {
-    setIsVisible(false);
-    onClose();
-  }, [onClose]);
-
   useEffect(() => {
     if (config.autoClose && config.duration > 0) {
       const timer = setInterval(() => {
         setProgress((oldProgress) => {
           if (oldProgress <= 0) {
             clearInterval(timer);
-            handleClose();
+            setIsVisible(false);
+            onClose();
             return 0;
           }
           return oldProgress - (100 / (config.duration / 100));
@@ -28,7 +24,7 @@ const AlertComponent = ({ severity, message, onClose }) => {
 
       return () => clearInterval(timer);
     }
-  }, [config.autoClose, config.duration, handleClose]);
+  }, [config.autoClose, config.duration, onClose]);
 
   if (!isVisible) return null;
 
@@ -41,7 +37,10 @@ const AlertComponent = ({ severity, message, onClose }) => {
             aria-label="close"
             color="inherit"
             size="small"
-            onClick={handleClose}
+            onClick={() => {
+              setIsVisible(false);
+              onClose();
+            }}
           >
             <CloseIcon fontSize="inherit" />
           </IconButton>
@@ -60,5 +59,4 @@ const AlertComponent = ({ severity, message, onClose }) => {
     </Alert>
   );
 };
-
 export default AlertComponent;
