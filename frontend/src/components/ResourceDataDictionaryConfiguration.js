@@ -6,6 +6,7 @@ import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataPreview from './ResourceDataPreview';
 import DataDictionaryAssignment from './DataDictionaryAssignment';
 import { FileText, Database } from 'lucide-react';
+import AlertComponent from './AlertComponent';
 
 const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => {
   const [dataDictionaryConfig, setDataDictionaryConfig] = useState({
@@ -23,6 +24,7 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
   });
 
   const [ddSourceInfo, setDdSourceInfo] = useState(null);
+  const [processStatus, setProcessStatus] = useState(null);
 
   const handleConfigChange = useCallback((updates) => {
     setDataDictionaryConfig(prevConfig => {
@@ -171,16 +173,16 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
         <CardContent>
         <FormControl component="fieldset">
         <Grid item xs={5}>
-            <Typography variant="subtitle1" gutterBottom>
+            {/* <Typography variant="subtitle1" sx={{ mt: -1 }} >
               Choose Data Dictionary Option:
-            </Typography>
+            </Typography> */}
             <RadioGroup
               aria-label="data-dictionary-option"
               name="data-dictionary-option"
               value={dataDictionaryConfig.mode}
               onChange={handleModeChange}
             >
-              <Box display="flex" justifyContent="space-between">
+              <Box  display="flex" justifyContent="space-between">
                 <FormControlLabel 
                   value="dd_new" 
                   control={<Radio />} 
@@ -209,15 +211,24 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
       </Card>
 
       {dataDictionaryConfig.uploadStatus && (
-        <Alert severity={dataDictionaryConfig.uploadStatus.type} sx={{ mb: 2 }} onClose={() => {}}>
-          {dataDictionaryConfig.uploadStatus.message}
-        </Alert>
+        <AlertComponent
+        sx={{ mt: 2, mb: 2 }}
+        severity={dataDictionaryConfig.uploadStatus.type}
+        message={dataDictionaryConfig.uploadStatus.message}
+        onClose={() => setProcessStatus(null)}
+        />
+
+    
       )}
 
       {dataDictionaryConfig.error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => {}}>
-          {dataDictionaryConfig.error}
-        </Alert>
+
+      <AlertComponent
+      sx={{ mt: 2, mb: 2 }}
+      severity="error"
+      message={dataDictionaryConfig.error}
+      onClose={() => setProcessStatus(null)}
+      />
       )}
 
       
@@ -226,6 +237,7 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
           <Accordion 
             expanded={dataDictionaryConfig.expandedAccordion === 'ingestionSetup'}
             onChange={handleAccordionChange('ingestionSetup')}
+            sx={{ '&.Mui-expanded': { margin: 0 } }}
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               Data Dictionary Setup
@@ -244,6 +256,7 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
             <Accordion 
               expanded={dataDictionaryConfig.expandedAccordion === 'ingestionSettings'} 
               onChange={handleAccordionChange('ingestionSettings')}
+              sx={{ '&.Mui-expanded': { margin: 0 } }}
             >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 Data Dictionary Ingestion Settings
@@ -262,6 +275,7 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
             <Accordion 
               expanded={dataDictionaryConfig.expandedAccordion === 'data'} 
               onChange={handleAccordionChange('data')}
+              sx={{ '&.Mui-expanded': { margin: 0 } }}
             >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 Data Dictionary Preview
@@ -271,11 +285,12 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
                   schema={dataDictionaryConfig.ddSchema}
                   sampleData={dataDictionaryConfig.ddSampleData}
                   rawData={dataDictionaryConfig.ddRawData}
-                  fileInfo={ddSourceInfo}
+                  sourceInfo={dataDictionaryConfig.ddSourceInfo}
                 />
               </AccordionDetails>
             </Accordion>
           )}
+          
         </>
   
     </Box>

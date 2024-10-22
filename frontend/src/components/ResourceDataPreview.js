@@ -2,8 +2,14 @@ import React from 'react';
 import { Box, Tabs, Tab, Typography, TextField } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 
-const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData, rawData }) => {
+const ResourceDataPreview = ({ schema, resourceData, sourceInfo, sampleData, rawData }) => {
   const [tabValue, setTabValue] = React.useState(0);
+
+  console.log('ResourceDataPreview-> schema:', schema);
+  console.log('ResourceDataPreview-> resourceData:', resourceData);
+  console.log('ResourceDataPreview-> fileInfo:', sourceInfo);
+  // console.log('ResourceDataPreview-> sampleData:', sampleData);
+  // console.log('ResourceDataPreview-> rawData:', rawData);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -12,12 +18,12 @@ const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData, rawDa
   const renderGeneralInfo = () => (
     <Box>
       <Typography variant="h6">File Information</Typography>
-      {fileInfo && (
+      {sourceInfo && (
         <>
-          <Typography variant="body2">Name: {fileInfo.name}</Typography>
-          <Typography variant="body2">Type: {fileInfo.type}</Typography>
-          <Typography variant="body2">Size: {fileInfo.size} bytes</Typography>
-          <Typography variant="body2">Last Modified: {fileInfo.lastModified}</Typography>
+          <Typography variant="body2">Name: {sourceInfo.name}</Typography>
+          <Typography variant="body2">Type: {sourceInfo.type}</Typography>
+          <Typography variant="body2">Size: {sourceInfo.size} bytes</Typography>
+          <Typography variant="body2">Last Modified: {sourceInfo.lastModified}</Typography>
         </>
       )}
     </Box>
@@ -47,29 +53,35 @@ const ResourceDataPreview = ({ schema, resourceData, fileInfo, sampleData, rawDa
     )
   );
 
-  const sampleDataColumns = schema ? schema.map(col => ({
-    field: col.name,
-    headerName: col.name,
-    flex: 1,
-  })) : [];
+  // const sampleDataColumns = schema ? schema.map(col => ({
+  //   field: col.name,
+  //   headerName: col.name,
+  //   flex: 1,
+  // })) : [];
 
   const renderSampleData = () => (
     sampleData ? (
-      <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
+      <Box sx={{ height: 350, width: '100%', overflow: 'auto' }}>
         <DataGrid
           rows={sampleData.map((row, index) => ({ id: index, ...row }))}
           columns={schema.map(col => ({
             field: col.name,
             headerName: col.name,
             flex: 1,
+            minWidth: 150,
           }))}
           autoPageSize
           rowsPerPageOptions={[10, 25, 50]}
           columnHeaderHeight={40}
           rowHeight={40}
           density="compact"
-          autosizeOptions={{ columns: schema.map(col => col.name) }}
-          disableExtendRowFullWidth ={false}
+
+
+          disableExtendRowFullWidth={false}
+          disableColumnMenu
+          components={{
+            ColumnResizeIcon: () => null,
+          }}
         />
       </Box>
     ) : (

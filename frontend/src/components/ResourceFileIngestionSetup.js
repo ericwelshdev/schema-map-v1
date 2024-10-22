@@ -1,7 +1,10 @@
-  import React, { useState } from 'react';
-  import { Box, Card, CardContent, Typography, LinearProgress, Alert } from '@mui/material';
+
+
+  import React, { useState  } from 'react';
+  import { Box, Card, CardContent, Typography, LinearProgress, Alert} from '@mui/material';
   import { Upload } from 'lucide-react';
   import { processFile } from '../utils/fileUtils';
+  import AlertComponent from './AlertComponent';
 
   const ResourceFileIngestionSetup = ({ onConfigChange, initialIngestionSettings = {} }) => {
     const [progress, setProgress] = useState(0);
@@ -112,9 +115,12 @@
         </Card>
         {loading && <LinearProgress variant="determinate" value={progress} sx={{ mt: 2, mb: 2 }} />}
         {uploadStatus && (
-          <Alert severity={uploadStatus.type} sx={{ mt: 2, mb: 2 }} onClose={() => {}}>
-            {uploadStatus.message}
-          </Alert>
+        <AlertComponent
+        sx={{ mt: 1, mb: 1 }}
+        severity={uploadStatus.type}
+        message={uploadStatus.message}
+        onClose={() => setUploadStatus(null)}
+        />
         )}
       </Box>
     );
