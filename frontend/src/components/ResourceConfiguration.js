@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Accordion, AccordionSummary, AccordionDetails, Alert } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileIngestionSetup from './ResourceFileIngestionSetup';
@@ -9,7 +9,6 @@ import ResourceDataPreview from './ResourceDataPreview';
 
 const ResourceConfiguration = ({ savedState, onStateChange }) => {
   const [resourceConfig, setResourceConfig] = useState({
-    ...savedState,
     expandedAccordion: 'ingestionSetup',
     sourceInfo: null,
     schema: null,
@@ -20,41 +19,57 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
     uploadStatus: null,
     error: null,
   });
-    const handleConfigChange = useCallback((updates) => {
-      setResourceConfig(prevConfig => {
+
+  // Sync local state with savedState whenever it changes (e.g., when navigating between steps)
+  useEffect(() => {
+    if (savedState) {
+      setResourceConfig((prevState) => ({ ...prevState, ...savedState }));
+    }
+  }, [savedState]);
+
+  const handleConfigChange = useCallback(
+    (updates) => {
+      setResourceConfig((prevConfig) => {
         const newConfig = { ...prevConfig, ...updates };
-        onStateChange(newConfig);
+        onStateChange(newConfig); // Update parent component's state
         return newConfig;
       });
-    }, [onStateChange]);
+    },
+    [onStateChange]
+  );
 
-    const handleAccordionChange = useCallback((panel) => (event, isExpanded) => {
+  const handleAccordionChange = useCallback(
+    (panel) => (event, isExpanded) => {
       handleConfigChange({ expandedAccordion: isExpanded ? panel : false });
-    }, [handleConfigChange]);
+    },
+    [handleConfigChange]
+  );
 
-    const renderIngestionSetup = () => {
+  const renderIngestionSetup = () => {
       const resourceType = resourceConfig.resourceSetup?.resourceSetup?.resourceType;
       console.log("resourceType", resourceType);
       console.log("resourceConfig.resourceSetup", resourceConfig.resourceSetup);
-      
-      switch (resourceType) {
-        case 'file':
-          return <ResourceFileIngestionSetup onConfigChange={handleConfigChange} />;
-        case 'database':
-          return <ResourceDatabaseIngestionSetup onConfigChange={handleConfigChange} />;
-        case 'api':
-          return <ResourceApiIngestionSetup onConfigChange={handleConfigChange} />;
-        default:
-          return null;
-      }
-    };
 
+    switch (resourceType) {
+      case 'file':
+        return <ResourceFileIngestionSetup onConfigChange={handleConfigChange} />;
+      case 'database':
+        return <ResourceDatabaseIngestionSetup onConfigChange={handleConfigChange} />;
+      case 'api':
+        return <ResourceApiIngestionSetup onConfigChange={handleConfigChange} />;
+      default:
+        return null;
+    }
+  };
 
-  const memoizedIngestionConfig = useMemo(() => ({
-    ingestionSettings: resourceConfig.ingestionSettings,
-    ingestionConfig: resourceConfig.ingestionConfig,
-    ingestionAppliedProperties: resourceConfig.ingestionSettings
-  }), [resourceConfig.ingestionConfig, resourceConfig.ingestionSettings]);
+  const memoizedIngestionConfig = useMemo(
+    () => ({
+      ingestionSettings: resourceConfig.ingestionSettings,
+      ingestionConfig: resourceConfig.ingestionConfig,
+      ingestionAppliedProperties: resourceConfig.ingestionSettings,
+    }),
+    [resourceConfig.ingestionConfig, resourceConfig.ingestionSettings]
+  );
 
   return (
     <Box sx={{ '& > *': { mb: '1px' } }}>
@@ -70,7 +85,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
         </Alert>
       )}
 
-      <Accordion 
+      <Accordion
         expanded={resourceConfig.expandedAccordion === 'ingestionSetup'}
         onChange={handleAccordionChange('ingestionSetup')}
       >
@@ -84,8 +99,8 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
 
       {resourceConfig.schema && (
         <>
-          <Accordion 
-            expanded={resourceConfig.expandedAccordion === 'ingestionSettings'} 
+          <Accordion
+            expanded={resourceConfig.expandedAccordion === 'ingestionSettings'}
             onChange={handleAccordionChange('ingestionSettings')}
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>

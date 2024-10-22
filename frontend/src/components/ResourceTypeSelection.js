@@ -43,7 +43,7 @@
 
       useEffect(() => {
         onStateChange({ resourceSetup, isValid: validateForm() });
-      }, [resourceSetup]);
+      }, [onStateChange, resourceSetup, validateForm]);
       
       const handleInputChange = (field, value) => {
         setResourceSetup(prevState => ({
