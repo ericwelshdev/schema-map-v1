@@ -107,7 +107,7 @@ const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, r
   };
 
   const renderGeneralInfo = () => (
-    <Box>
+    <Box sx={{ mt:4, height: 350, width: '100%', overflow: 'auto' }}>
       <Typography variant="h6">File Information</Typography>
       {resourceInfo && (
         <>
@@ -236,16 +236,18 @@ const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, r
 
   const renderSchema = () => (
     schema && schema.length > 0 ? (
-      <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
+      <Box sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
         <Box sx={{ mb:-1, display: 'flex', justifyContent: 'flex-end' }}>
           <Button startIcon={<SaveIcon/>} onClick={handleSaveAll} disabled={!rows.some(row => row.isUnsaved)}>Save All</Button>
           <Button startIcon={<CancelIcon />} onClick={handleCancelAll} disabled={!rows.some(row => row.isUnsaved)}>Cancel All</Button>
         </Box>
+        <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
         <DataGrid
           rows={rows}
-          columns={schemaColumns}
+          columns={schemaColumns}          
           autoPageSize
           rowsPerPageOptions={[10, 25, 50]}
+          pageSizeOptions={[10, 100, { value: 1000, label: '1,000' }]}
           density="compact"
           editMode="row"
           onCellEditCommit={handleCellChange}
@@ -268,6 +270,7 @@ const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, r
             },
           }}
         />
+        </Box>
       </Box>
     ) : (
       <Typography>No schema available</Typography>
@@ -276,7 +279,8 @@ const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, r
 
   const renderSampleData = () => (
     sampleData ? (
-      <Box sx={{ height: 350, width: '100%', overflow: 'auto' }}>
+      <Box sx={{ mt:4 , height: '100%', width: '100%', overflow: 'auto' }}>
+        <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
         <DataGrid
           rows={sampleData.map((row, index) => ({ id: index, ...row }))}
           columns={schema.map(col => ({
@@ -296,6 +300,7 @@ const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, r
             ColumnResizeIcon: () => null,
           }}
         />
+        </Box>
       </Box>
     ) : (
       <Typography>No sample data available</Typography>
@@ -303,11 +308,16 @@ const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, r
   );
 
   const renderRawData = () => (
+    <Box sx={{ mt:4, height: 350, width: '100%', overflow: 'auto' }}>
     <TextField
       multiline
       fullWidth
       rows={15}
-      sx={{ fontFamily: 'monospace', fontSize: 8 }}
+      sx={{
+        '& .MuiInputBase-input': {
+          fontFamily: 'monospace', // Set the font to monotype
+        },
+      }}
       size="small"
       value={rawData || ''}
       variant="outlined"
@@ -315,17 +325,24 @@ const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, r
         readOnly: true,
       }}
     />
+    </Box>
   );
 
   return (
-    <Box sx={{mt:-3, ml: -2 }}>
-      <Tabs value={tabValue} onChange={handleTabChange}>
-        <Tab label="General"  />
+    <Box sx={{mt:-3, ml: -2, overflow: 'auto' }}>
+      <Tabs value={tabValue} onChange={handleTabChange} sx={{
+          minHeight: '20px', // Reduce overall tab height
+          '& .MuiTabs-indicator': {
+            bottom: '8px', // Bring the indicator line closer to the text
+          },
+        }}
+      >
+        <Tab label="General" />
         <Tab label="Schema" />
         <Tab label="Sample Data" />
         <Tab label="Raw Data" />
       </Tabs>
-      <Box sx={{ml:-1, mt:-1, p: 2 }}>
+      <Box sx={{ml:-1, mt:-5, p:2, overflow: 'auto' }}>
         {tabValue === 0 && renderGeneralInfo()}
         {tabValue === 1 && renderSchema()}
         {tabValue === 2 && renderSampleData()}

@@ -98,7 +98,7 @@
                 </TextField>
               </FormControl>
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={6} md={8}>
               <Autocomplete
                 multiple
                 id="resourceTags"
@@ -140,6 +140,18 @@
                 }}
               />
             </Grid>
+            <Grid item xs={6} md={4}>
+              <FormControl fullWidth>
+              <TextField
+                fullWidth
+                label="Resource Version" 
+                variant="outlined"
+                value={resourceSetup.resourceVersionText}
+                onChange={(e) => handleInputChange('versionText', e.target.value)}
+                placeholder="Enter version number"
+                />
+              </FormControl>
+            </Grid>              
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -176,16 +188,18 @@
                   <FormControlLabel 
                     value="database" 
                     control={<Radio />} 
+                    disabled={true}
                     label={
                       <Box display="flex" alignItems="center">
                         <Database style={{ marginRight: '8px' }} />
-                        Database Resource
+                        Database
                       </Box>
                     } 
                   />
                   <FormControlLabel 
                     value="api" 
                     control={<Radio />} 
+                    disabled={true}
                     label={
                       <Box display="flex" alignItems="center">
                         <Globe style={{ marginRight: '8px' }} />

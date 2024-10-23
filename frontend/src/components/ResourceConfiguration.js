@@ -136,7 +136,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
   );
 
   return (
-    <Box sx={{ '& > *': { mb: '1px' } }}>
+    <Box sx={{ '& > *': { mb: '1px', height: '100%' } }}>
       {resourceConfig.uploadStatus && (
         <Alert severity={resourceConfig.uploadStatus.type} sx={{ mb: 2 }}>
           {resourceConfig.uploadStatus.message}
@@ -150,6 +150,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
       )}
 
       <Accordion
+        disableGutters={true}
         expanded={resourceConfig.expandedAccordion === 'ingestionSetup'}
         onChange={handleAccordionChange('ingestionSetup')}
       >
@@ -181,17 +182,18 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
             </AccordionDetails>
           </Accordion>
 
-          <Accordion
+          <Accordion 
+            disableGutters={true}
             expanded={resourceConfig.expandedAccordion === 'data'}
             onChange={handleAccordionChange('data')}
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               Resource Data Preview
             </AccordionSummary>
-            <AccordionDetails>
+            <AccordionDetails >
               <ResourceDataPreview
-                activeTab={resourceConfig.activeTab} // Pass down the active tab
-                onTabChange={handleTabChange} // Handle tab changes
+                activeTab={resourceConfig.activeTab} // pass down the active tab
+                onTabChange={handleTabChange} //  tab changes
                 schema={resourceConfig.resourceSchema}
                 sampleData={resourceConfig.sampleData}
                 rawData={resourceConfig.rawData}

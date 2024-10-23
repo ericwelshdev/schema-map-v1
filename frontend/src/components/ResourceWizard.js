@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Stepper, Step, StepLabel, Button, Box, Slide } from '@mui/material';
 import ResourceTypeSelection from './ResourceTypeSelection';
 import ResourceConfiguration from './ResourceConfiguration';
@@ -9,9 +9,8 @@ import ResourceSummary from './ResourceSummary';
 
 const ResourceWizard = () => {
   const [activeStep, setActiveStep] = useState(0);
-  const [slideDirection, setSlideDirection] = useState('left'); // Default direction is forward
-  const [prevStep, setPrevStep] = useState(0); // Keep track of the previous step
-  const [isTransitioning, setIsTransitioning] = useState(true);
+  const [slideDirection, setSlideDirection] = useState('left');
+  const [prevStep, setPrevStep] = useState(0);
   const [wizardState, setWizardState] = useState({
     resourceSetup: {},
     resourceConfiguration: {},
@@ -21,21 +20,28 @@ const ResourceWizard = () => {
 
   const steps = ['Resource Type', 'Configure Resource', 'Data Dictionary Type', 'Data Dictionary', 'Mapping & Tagging', 'Summary'];
 
+  // Ensure that the first step is displayed properly on initial load
+  useEffect(() => {
+    if (activeStep === 0) {
+      setSlideDirection('left');
+    }
+  }, [activeStep]);
+
   const handleNext = () => {
-    setSlideDirection('left'); // Moving forward
-    setPrevStep(activeStep); // Set the current step as previous
+    setSlideDirection('left');
+    setPrevStep(activeStep);
     setActiveStep((prevStep) => prevStep + 1);
   };
 
   const handleBack = () => {
-    setSlideDirection('right'); // Moving backward
-    setPrevStep(activeStep); // Set the current step as previous
+    setSlideDirection('right');
+    setPrevStep(activeStep);
     setActiveStep((prevStep) => prevStep - 1);
   };
 
   const handleSkip = () => {
-    setSlideDirection('left'); // Moving forward
-    setPrevStep(activeStep); // Set the current step as previous
+    setSlideDirection('left');
+    setPrevStep(activeStep);
     if (activeStep === 2) {
       setActiveStep(4);
     } else {
@@ -45,25 +51,21 @@ const ResourceWizard = () => {
 
   const handleStepClick = (step) => {
     setSlideDirection(step > activeStep ? 'left' : 'right');
-    setPrevStep(activeStep); // Set the current step as previous
+    setPrevStep(activeStep);
     setActiveStep(step);
   };
 
-  const isStepSkippable = (step) => {
-    return step === 2 || step === 4;
-  };
-
+  const isStepSkippable = (step) => step === 2 || step === 4;
 
   const updateWizardState = (step, newState) => {
     setWizardState((prevState) => {
       let updatedState = { ...prevState[step], ...newState };
 
-      // the resourceSetup structure if it exists
       if (step === 'resourceSetup' && updatedState.resourceSetup) {
         updatedState = {
           ...updatedState,
           ...updatedState.resourceSetup,
-          resourceSetup: undefined, // the nested resourceSetup
+          resourceSetup: undefined,
         };
       }
 
@@ -121,7 +123,6 @@ const ResourceWizard = () => {
     }
   };
 
-
   return (
     <Box sx={{ width: '100%', overflow: 'hidden' }}>
       <Stepper activeStep={activeStep}>
@@ -135,10 +136,10 @@ const ResourceWizard = () => {
       <Box sx={{ mt: 2, position: 'relative' }}>
         <Slide
           direction={slideDirection} 
-          in={activeStep !== prevStep} // Ensure it transitions only when the step changes
+          in={true} // Ensure it's always in when the step changes
           mountOnEnter
           unmountOnExit
-          key={activeStep} // Use the key prop to ensure proper re-rendering
+          key={activeStep} 
         >
           <Box>{getStepContent(activeStep)}</Box>
         </Slide>

@@ -24,7 +24,7 @@
         resourceType: 'file',
       });
       // console.log("ResourceTypeSelection-> resourceSetup", resourceSetup)
-      const [sourceTags] = useState(['source', 'target', 'data',  'resource']);
+      const [sourceTags] = useState(['datadictionary', 'source', 'target', 'data',  'resource']);
       const [errors, setErrors] = useState({});
 
       const validateForm = () => {
