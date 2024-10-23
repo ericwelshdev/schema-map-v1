@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Tabs, Tab, Typography, TextField } from '@mui/material';
+import { Box, Tabs, Tab, Typography, TextField, Button } from '@mui/material';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import BlockIcon from '@mui/icons-material/Block';
-import ChangeCircleIcon from '@mui/icons-material/ChangeCircle';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import LockPersonIcon from '@mui/icons-material/LockPerson';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import UndoIcon from '@mui/icons-material/Undo';
+import WarningIcon from '@mui/icons-material/Warning';
 
-const ResourceDataDictionaryDataPreview = ({ schema, resourceData, sourceInfo, sampleData, rawData }) => {
+const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo, sampleData, rawData }) => {
   const [tabValue, setTabValue] = useState(0);
   const [rows, setRows] = useState(schema ? schema.map((col, index) => ({ 
     id: index, 
@@ -21,56 +22,73 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, sourceInfo, s
     isEditing: false, 
     isChanged: false, 
     isDisabled: false,
-    originalState: { ...col, alternativeName: '', isPII: false, isPHI: false }
+    isUnsaved: false,
+    originalState: { id: index, ...col, alternativeName: '', isPII: false, isPHI: false }
   })) : []);
 
+
+  // Load persisted tab value and row edits on component mount
+  useEffect(() => {
+    const savedTabValue = localStorage.getItem('resourceTabValue');
+    const savedRows = localStorage.getItem('resourceRows');
+    if (savedTabValue !== null) setTabValue(Number(savedTabValue));
+    if (savedRows) setRows(JSON.parse(savedRows));
+  }, []);
+
+  // Save tab value to localStorage
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+    localStorage.setItem('resourceTabValue', newValue);
+  };
+
+  // Save rows to localStorage on every row change
+  const persistRows = (updatedRows) => {
+    setRows(updatedRows);
+    localStorage.setItem('resourceRows', JSON.stringify(updatedRows));
   };
 
   const handleEditClick = (id) => {
-    setRows(rows.map(row => row.id === id ? { ...row, isEditing: true } : row));
+    persistRows(rows.map(row => row.id === id ? { ...row, isEditing: true, isUnsaved: true } : row));
   };
 
   const handleSaveClick = (id) => {
-    setRows(rows.map(row => {
+    persistRows(rows.map(row => {
       if (row.id === id) {
-        const isChanged = JSON.stringify({ ...row, isEditing: false, isChanged: false }) !== JSON.stringify(row.originalState);
-        return { ...row, isEditing: false, isChanged };
+        const isChanged = JSON.stringify({ ...row, isEditing: false, isChanged: false, isUnsaved: false }) !== JSON.stringify(row.originalState);
+        return { ...row, isEditing: false, isChanged, isUnsaved: false };
       }
       return row;
     }));
   };
 
   const handleCancelClick = (id) => {
-    setRows(rows.map(row => {
+    persistRows(rows.map(row => {
       if (row.id === id) {
-        const isChanged = JSON.stringify({ ...row.originalState, isEditing: false, isChanged: false }) !== JSON.stringify(row.originalState);
-        return { ...row.originalState, isEditing: false, isChanged };
+        return { ...row.originalState, id: row.id, isEditing: false, isChanged: false, isUnsaved: false };
       }
       return row;
     }));
   };
 
   const handleDisableClick = (id) => {
-    setRows(rows.map(row => {
+    persistRows(rows.map(row => {
       if (row.id === id) {
         const newDisabledState = !row.isDisabled;
         const isChanged = newDisabledState !== row.originalState.isDisabled;
-        return { ...row, isDisabled: newDisabledState, isChanged };
+        return { ...row, isDisabled: newDisabledState, isChanged, isUnsaved: true, isEditing: true };
       }
       return row;
     }));
   };
 
   const handleUndoClick = (id) => {
-    setRows(rows.map(row => row.id === id ? { ...row.originalState, isChanged: false } : row));
+    persistRows(rows.map(row => row.id === id ? { ...row.originalState, id: row.id, isChanged: false, isUnsaved: false } : row));
   };
 
   const handleCellChange = (params) => {
-    setRows(rows.map(row => {
+    persistRows(rows.map(row => {
       if (row.id === params.id) {
-        const updatedRow = { ...row, [params.field]: params.value, isEditing: true };
+        const updatedRow = { ...row, [params.field]: params.value, isEditing: true, isUnsaved: true };
         const isChanged = JSON.stringify(updatedRow) !== JSON.stringify(row.originalState);
         return { ...updatedRow, isChanged };
       }
@@ -78,21 +96,39 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, sourceInfo, s
     }));
   };
 
+  const handleSaveAll = () => {
+    persistRows(rows.map(row => ({ ...row, isUnsaved: false, isEditing: false })));
+  };
+
+  const handleCancelAll = () => {
+    persistRows(rows.map(row => ({ ...row.originalState, id: row.id, isChanged: false, isUnsaved: false, isEditing: false })));
+  };
+
   const renderGeneralInfo = () => (
     <Box>
       <Typography variant="h6">File Information</Typography>
-      {sourceInfo && (
+      {resourceInfo && (
         <>
-          <Typography variant="body2">Name: {sourceInfo.name}</Typography>
-          <Typography variant="body2">Type: {sourceInfo.type}</Typography>
-          <Typography variant="body2">Size: {sourceInfo.size} bytes</Typography>
-          <Typography variant="body2">Last Modified: {sourceInfo.lastModified}</Typography>
+          <Typography variant="body2">Name: {resourceInfo.name}</Typography>
+          <Typography variant="body2">Type: {resourceInfo.type}</Typography>
+          <Typography variant="body2">Size: {resourceInfo.size} bytes</Typography>
+          <Typography variant="body2">Last Modified: {resourceInfo.lastModified}</Typography>
         </>
       )}
     </Box>
   );
 
   const schemaColumns = [
+    {
+      field: 'status',
+      headerName: '',
+      width: 50,
+      renderCell: (params) => (
+        params.row.isChanged ?
+          (params.row.isUnsaved ? <WarningIcon color="warning" /> : <CheckCircleOutlineIcon color="primary" />)
+          : null
+      ),
+    },
     { 
       field: 'name', 
       headerName: 'Column Name', 
@@ -199,6 +235,10 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, sourceInfo, s
   const renderSchema = () => (
     schema && schema.length > 0 ? (
       <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
+        <Box sx={{ mb:-1, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button startIcon={<SaveIcon/>} onClick={handleSaveAll} disabled={!rows.some(row => row.isUnsaved)}>Save All</Button>
+          <Button startIcon={<CancelIcon />} onClick={handleCancelAll} disabled={!rows.some(row => row.isUnsaved)}>Cancel All</Button>
+        </Box>
         <DataGrid
           rows={rows}
           columns={schemaColumns}
@@ -209,7 +249,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, sourceInfo, s
           onCellEditCommit={handleCellChange}
           isCellEditable={(params) => !params.row.isDisabled}
           components={{
-            ColumnUnsortedIcon: ChangeCircleIcon,
+            ColumnUnsortedIcon: CheckCircleOutlineIcon,
           }}
           componentsProps={{
             row: {
@@ -265,6 +305,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, sourceInfo, s
       multiline
       fullWidth
       rows={15}
+      sx={{ fontFamily: 'monospace', fontSize: 8 }}
       size="small"
       value={rawData || ''}
       variant="outlined"

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Grid, Divider, Paper } from '@mui/material';
+import { Box, Typography, Grid, Divider, Paper, Fade, Slide } from '@mui/material';
 import AutoDetectIcon from '@mui/icons-material/AutoFixHigh';
 import DefaultIcon from '@mui/icons-material/Settings';
 import UserSetIcon from '@mui/icons-material/Person';

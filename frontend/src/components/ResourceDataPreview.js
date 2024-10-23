@@ -307,6 +307,7 @@ const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, r
       multiline
       fullWidth
       rows={15}
+      sx={{ fontFamily: 'monospace', fontSize: 8 }}
       size="small"
       value={rawData || ''}
       variant="outlined"

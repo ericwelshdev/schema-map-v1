@@ -9,7 +9,7 @@ import ResourceDataDictionaryClassification from './ResourceDataDictionaryClassi
 import { FileText, Database, TextCursorInput  } from 'lucide-react';
 import AlertComponent from './AlertComponent';
 
-const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => {
+const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
   const [dataDictionaryConfig, setDataDictionaryConfig] = useState({
     mode: 'dd_new',
     expandedAccordion: 'ingestionSetup',
@@ -26,6 +26,13 @@ const ResourceDataDictionaryConfiguration = ({ sourceProps, onStateChange }) => 
 
   const [ddSourceInfo, setDdSourceInfo] = useState(null);
   const [processStatus, setProcessStatus] = useState(null);
+
+  useEffect(() => {
+    if (savedState) {
+      setDataDictionaryConfig((prevState) => ({ ...prevState, ...savedState }));
+    }
+  }, [savedState]);
+
 
   const handleConfigChange = useCallback((updates) => {
     setDataDictionaryConfig(prevConfig => {
