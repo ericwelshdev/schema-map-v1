@@ -20,7 +20,7 @@ import { debounce } from 'lodash';
       });
 
       const [rows, setRows] = useState(() => {
-        const savedRows = localStorage.getItem('previewRows');
+        const savedRows = localStorage.getItem('resourcePreviewRows');
         if (savedRows) {
           return JSON.parse(savedRows);
         }
@@ -41,7 +41,7 @@ import { debounce } from 'lodash';
 
       // Only update rows from schema if no saved state exists
       useEffect(() => {
-        if (!localStorage.getItem('previewRows') && schema) {
+        if (!localStorage.getItem('resourcePreviewRows') && schema) {
           const initialRows = schema.map((col, index) => ({
             id: index,
             ...col,
@@ -77,8 +77,8 @@ import { debounce } from 'lodash';
 
   const persistRows = (updatedRows) => {
     setRows(updatedRows);
-    console.log('persistRows: localStorage.setItem -> previewRows', updatedRows);
-    localStorage.setItem('previewRows', JSON.stringify(updatedRows));
+    console.log('persistRows: localStorage.setItem -> resourcePreviewRows', updatedRows);
+    localStorage.setItem('resourcePreviewRows', JSON.stringify(updatedRows));
   };
 
   const handleEditClick = (id) => {

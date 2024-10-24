@@ -9,7 +9,7 @@ import ResourceDataPreview from './ResourceDataPreview';
 
 const ResourceConfiguration = ({ savedState, onStateChange }) => {
   const [resourceConfig, setResourceConfig] = useState(() => {
-    const saved = localStorage.getItem('resourceConfig');
+    const saved = localStorage.getItem('resourceGenralConfig');
     return saved ? JSON.parse(saved) : {
       expandedAccordion: 'ingestionSetup',
       activeTab: 0,
@@ -41,7 +41,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
   useEffect(() => {
     if (resourceConfig) {
       onStateChange(resourceConfig);
-      localStorage.setItem('resourceConfig', JSON.stringify(resourceConfig));
+      localStorage.setItem('resourceGenralConfig', JSON.stringify(resourceConfig));
     }
   }, [resourceConfig, onStateChange]);
 
