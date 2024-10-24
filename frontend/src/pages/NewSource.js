@@ -3,6 +3,9 @@ import { Box, Breadcrumbs, Link, Typography } from '@mui/material';
 import ResourceWizard from '../components/ResourceWizard';
 
 const NewSource = () => {
+
+  localStorage.removeItem('resourceConfig');
+  
   return (
     <Box sx={{ width: '100%', padding: '24px' }}>
       <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>

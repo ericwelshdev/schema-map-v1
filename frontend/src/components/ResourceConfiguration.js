@@ -34,12 +34,18 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
     },
     []
   );
+  
+  
+  
 
   useEffect(() => {
     if (resourceConfig) {
       onStateChange(resourceConfig);
+      localStorage.setItem('resourceConfig', JSON.stringify(resourceConfig));
     }
   }, [resourceConfig, onStateChange]);
+
+
 
   const handleAccordionChange = useCallback(
     (panel) => (event, isExpanded) => {
@@ -68,8 +74,8 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
   
   const renderIngestionSetup = () => {
     const resourceType = savedState?.resourceSetup?.resourceSetup?.resourceType;
-    console.log("resourceType", resourceType);
-    console.log("savedState:", savedState);
+    // console.log("resourceType", resourceType);
+    // console.log("savedState:", savedState);
 
     switch (resourceType) {
       case 'file':

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Accordion, AccordionSummary, AccordionDetails, Alert } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResourceFileIngestionSetup from './ResourceFileIngestionSetup';
-import ResourceDatabaseIngestionSetup from './ResourceDatabaseIngestionSetup';
+import ResourceDataDictionaryAssignment from './ResourceDataDictionaryAssignment';
 import ResourceApiIngestionSetup from './ResourceApiIngestionSetup';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataDictionaryDataPreview from './ResourceDataDictionaryDataPreview';
@@ -39,12 +39,18 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
     },
     []
   );
+  
+  
+  
 
   useEffect(() => {
     if (ddResourceConfig) {
       onStateChange(ddResourceConfig);
+      localStorage.setItem('ddResourceConfig', JSON.stringify(ddResourceConfig));
     }
   }, [ddResourceConfig, onStateChange]);
+
+
 
   const handleAccordionChange = useCallback(
     (panel) => (event, isExpanded) => {
@@ -86,7 +92,7 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
       case 'dd_new':
         return <ResourceFileIngestionSetup onConfigChange={handleConfigChange} />;
       case 'dd_existing':
-        return <ResourceDatabaseIngestionSetup onConfigChange={handleConfigChange} />;
+        return <ResourceDataDictionaryAssignment onConfigChange={handleConfigChange} />;
       case 'dd_manual':
         return <ResourceApiIngestionSetup onConfigChange={handleConfigChange} />;
       default:
@@ -117,7 +123,7 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
           });
           break;
         case 'database':
-          result = await ResourceDatabaseIngestionSetup.handleDatabaseIngestion({
+          result = await ResourceDataDictionaryAssignment.handleDatabaseIngestion({
             connectionInfo: ddResourceConfig.resourceInfo,
             ingestionSettings: ddResourceConfig.ingestionSettings,
           });

@@ -27,23 +27,20 @@ const StyledCard = styled(Card)(({ theme }) => ({
 
 const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames }) => {
   const [resourceSetup, setResourceSetup] = useState(() => {
-    const saved = localStorage.getItem('resourceConfig');
-    return saved
-      ? JSON.parse(saved)
-      : savedState.resourceSetup || {
-      resourceName: "",
-      standardizedSourceName: "",
-      resourceVersionText: "",
-      collection: "None",
-      resourceTags: ["source"],
-      resourceDescription: "",
-      resourceType: "file",
+    const saved = localStorage.getItem('resourceTypeSetup');
+    return saved ? JSON.parse(saved) : savedState.resourceSetup || {
+      resourceName: '',
+      standardizedSourceName: '',
+      collection: 'None',
+      resourceTags: ['source'],
+      resourceDescription: '',
+      resourceType: 'file'
     };
   });
 
-
-
-  // console.log("ResourceTypeSelection-> resourceSetup", resourceSetup)
+  useEffect(() => {
+    localStorage.setItem('resourceTypeSetup', JSON.stringify(resourceSetup));
+  }, [resourceSetup]);
   const [errors, setErrors] = useState({});
   const [sourceTags] = useState([
     "target",

@@ -13,88 +13,72 @@ import UndoIcon from '@mui/icons-material/Undo';
 import WarningIcon from '@mui/icons-material/Warning';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import { debounce } from 'lodash';
+    const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, rawData, onDataChange }) => {
+      const [tabValue, setTabValue] = useState(() => {
+        const savedTab = localStorage.getItem('previewTabValue');
+        return savedTab ? parseInt(savedTab) : 0;
+      });
 
+      const [rows, setRows] = useState(() => {
+        const savedRows = localStorage.getItem('previewRows');
+        if (savedRows) {
+          return JSON.parse(savedRows);
+        }
+        return schema ? schema.map((col, index) => ({
+          id: index,
+          ...col,
+          alternativeName: '',
+          comment: '',
+          isPII: false,
+          isPHI: false,
+          isEditing: false,
+          isChanged: false,
+          isDisabled: false,
+          isUnsaved: false,
+          originalState: { id: index, ...col }
+        })) : [];
+      });
 
-const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, rawData, onDataChange }) => {
-  const [tabValue, setTabValue] = useState(0);
- 
-    const [rows, setRows] = useState(schema ? schema.map((col, index) => ({
-      id: index,
-      ...col,
-      alternativeName: '',
-      comment:'',
-      isPII: false,
-      isPHI: false,
-      isEditing: false,
-      isChanged: false,
-      isDisabled: false,
-      isUnsaved: false,
-      originalState: { id: index, ...col, alternativeName: '', isPII: false, isPHI: false }
-    })) : []);
-
-    const debouncedDataChange = debounce((data, callback) => {
-      callback?.(data);
-    }, 500);
-
-    // First useEffect for loading saved state
-    useEffect(() => {
-      const savedTabValue = localStorage.getItem('resourceTabValue');
-      const savedRows = localStorage.getItem('resourceRows');
-      if (savedTabValue !== null) setTabValue(Number(savedTabValue));
-      if (savedRows) setRows(JSON.parse(savedRows));
-    }, []);
-
-    // Second useEffect for schema processing
-    useEffect(() => {
-      if (schema) {
-        const newRows = schema.map((col, index) => {
-          const columnName = resourceInfo?.hasHeader ? col.name : `col_${index + 1}`;
-          return {
+      // Only update rows from schema if no saved state exists
+      useEffect(() => {
+        if (!localStorage.getItem('previewRows') && schema) {
+          const initialRows = schema.map((col, index) => ({
             id: index,
             ...col,
-            name: columnName,
-            order: index + 1,
             alternativeName: '',
-            comment:'',
+            comment: '',
             isPII: false,
             isPHI: false,
             isEditing: false,
             isChanged: false,
             isDisabled: false,
             isUnsaved: false,
-            originalState: {
-              id: index,
-              ...col,
-              name: columnName,
-              order: index + 1,
-              alternativeName: '',
-              isPII: false,
-              isPHI: false
-            }
-          };
-        });
-        setRows(newRows);
-        localStorage.setItem('resourceRows', JSON.stringify(newRows));
-      }
-    }, [schema, resourceInfo]);
+            originalState: { id: index, ...col }
+          }));
+          setRows(initialRows);
+        }
+      }, [schema]);
 
-    // Third useEffect for data changes
-    useEffect(() => {
+      const debouncedDataChange = debounce((data, callback) => {
+        callback?.(data);
+      }, 500);
+
+      useEffect(() => {
       debouncedDataChange({
         processedSchema: rows,
         sampleData,
         resourceInfo
       }, onDataChange);
-    }, [rows, sampleData, resourceInfo]);
+    }, [rows, sampleData, resourceInfo, debouncedDataChange, onDataChange]);
 
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-    localStorage.setItem('resourceTabValue', newValue);
-  };
+    const handleTabChange = (event, newValue) => {
+      setTabValue(newValue);
+    };
 
   const persistRows = (updatedRows) => {
     setRows(updatedRows);
-    localStorage.setItem('resourceRows', JSON.stringify(updatedRows));
+    console.log('persistRows: localStorage.setItem -> previewRows', updatedRows);
+    localStorage.setItem('previewRows', JSON.stringify(updatedRows));
   };
 
   const handleEditClick = (id) => {

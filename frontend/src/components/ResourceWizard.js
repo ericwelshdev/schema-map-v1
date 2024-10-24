@@ -12,51 +12,72 @@ const ResourceWizard = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [slideDirection, setSlideDirection] = useState('left');
   const [prevStep, setPrevStep] = useState(0);
-  const [wizardState, setWizardState] = useState({
-    resourceSetup: {
-      resourceName: '',
-      standardizedSourceName: '',
-      collection: 'None',
-      resourceTags: ['source'],
-      resourceDescription: '',
-      resourceType: 'file'
-    },
-    resourceConfig: {
-      expandedAccordion: 'ingestionSetup',
-      activeTab: 0,
-      sourceInfo: null,
-      schema: null,
-      processedSchema: null,  // enriched source schema
-      sampleData: null,
-      rawData: null,
-      ingestionSettings: {},
-      ingestionConfig: {},
-      uploadStatus: null,
-      error: null
-    },
-    dataDictionarySetup: {
-      resourceName: '',
-      standardizedSourceName: '',
-      collection: 'None',
-      resourceTags: ['datadictionary'],
-      resourceDescription: '',
-      resourceType: 'dd_new'
-    },
-    dataDictionaryConfig: {
-      expandedAccordion: 'ingestionSetup',
-      activeTab: 0,
-      ddSourceInfo: null,
-      ddSchema: null,
-      processedSchema: null,  //  enriched DD schem
-      ddSampleData: null,
-      ddRawData: null,
-      ddIngestionSettings: {},
-      ddIngestionConfig: {},
-      uploadStatus: null,
-      error: null
-    }
+
+  const [wizardState, setWizardState] = useState(() => {
+    // Check for existing state in localStorage
+    const savedState = localStorage.getItem('wizardState');
+    if (savedState) {
+      return JSON.parse(savedState);
+    }    
+    // Return clean initial state
+    return {
+      resourceSetup: {
+        resourceName: '',
+        standardizedSourceName: '',
+        collection: 'None',
+        resourceTags: ['source'],
+        resourceDescription: '',
+        resourceType: 'file'
+      },
+      resourceConfig: {
+        expandedAccordion: 'ingestionSetup',
+        activeTab: 0,
+        sourceInfo: null,
+        schema: null,
+        processedSchema: null,
+        sampleData: null,
+        rawData: null,
+        ingestionSettings: {},
+        ingestionConfig: {},
+        uploadStatus: null,
+        error: null
+      },
+      dataDictionarySetup: {
+        resourceName: '',
+        standardizedSourceName: '',
+        collection: 'None',
+        resourceTags: ['datadictionary'],
+        resourceDescription: '',
+        resourceType: 'dd_new'
+      },
+      dataDictionaryConfig: {
+        expandedAccordion: 'ingestionSetup',
+        activeTab: 0,
+        ddSourceInfo: null,
+        ddSchema: null,
+        processedSchema: null,
+        ddSampleData: null,
+        ddRawData: null,
+        ddIngestionSettings: {},
+        ddIngestionConfig: {},
+        uploadStatus: null,
+        error: null
+      }
+    };
   });
 
+  // Persist state changes
+  useEffect(() => {
+    localStorage.setItem('wizardState', JSON.stringify(wizardState));
+  }, [wizardState]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      localStorage.removeItem('wizardState');
+      localStorage.removeItem('resourceConfig');
+    };
+  }, []);
   const steps = ['Resource Type', 'Configure Resource', 'Data Dictionary Type', 'Data Dictionary', 'Mapping & Tagging', 'Summary'];
 
   // Ensure that the first step is displayed properly on initial load
@@ -133,7 +154,7 @@ const ResourceWizard = () => {
 
   // Add memoization for the state logging
   const logWizardState = useMemo(() => {
-    console.log('Current Wizard State:', wizardState);
+    // console.log('Current Wizard State:', wizardState);
   }, [wizardState]);
 
   const getStepContent = (step) => {
