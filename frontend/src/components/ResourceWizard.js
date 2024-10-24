@@ -1,4 +1,4 @@
-import React, { useState, useEffect ,useMemo} from 'react';
+import React, { useState, useEffect ,useMemo, useCallback} from 'react';
 import { Stepper, Step, StepLabel, Button, Box, Slide } from '@mui/material';
 import ResourceTypeSelection from './ResourceTypeSelection';
 import ResourceConfiguration from './ResourceConfiguration';
@@ -26,6 +26,7 @@ const ResourceWizard = () => {
       activeTab: 0,
       sourceInfo: null,
       schema: null,
+      processedSchema: null,  // enriched source schema
       sampleData: null,
       rawData: null,
       ingestionSettings: {},
@@ -46,6 +47,7 @@ const ResourceWizard = () => {
       activeTab: 0,
       ddSourceInfo: null,
       ddSchema: null,
+      processedSchema: null,  //  enriched DD schem
       ddSampleData: null,
       ddRawData: null,
       ddIngestionSettings: {},
@@ -96,18 +98,41 @@ const ResourceWizard = () => {
 
   const debouncedStateUpdate = useMemo(
     () => debounce((step, newState, setWizardState) => {
-      setWizardState(prev => ({
-        ...prev,
-        [step]: newState
-      }));
-    }, 1000), // Increased debounce time
-    []
+      if (JSON.stringify(wizardState[step]) !== JSON.stringify(newState)) {
+        setWizardState(prev => ({
+          ...prev,
+          [step]: newState
+        }));
+      }
+    }, 1000),
+    [wizardState]  // Only depend on wizardState changes
   );
-  const updateWizardState = (step, newState) => {
-    debouncedStateUpdate(step, newState, setWizardState);
-  };
 
+  const updateWizardState = useCallback((step, newState) => {
+    setWizardState(prevState => {
+      const currentStateStr = JSON.stringify(prevState[step]);
+      const newStateStr = JSON.stringify(newState);
+      if (currentStateStr === newStateStr) {
+        return prevState;
+      }
+      return {
+        ...prevState,
+        [step]: newState
+      };
+    });
+  }, []);
+  
+  // Remove or conditionally render console.log
+  const DEBUG = false;
   useEffect(() => {
+    if (DEBUG) {
+      console.log('Current Wizard State:', wizardState);
+    }
+  }, [wizardState]);
+  
+
+  // Add memoization for the state logging
+  const logWizardState = useMemo(() => {
     console.log('Current Wizard State:', wizardState);
   }, [wizardState]);
 
@@ -152,7 +177,7 @@ const ResourceWizard = () => {
       case 4:
         return (
           <ResourceMappingTagging
-            savedState={wizardState.mappingTagging}
+            savedState={wizardState}
             onStateChange={(newState) => updateWizardState('mappingTagging', newState)}
           />
         );

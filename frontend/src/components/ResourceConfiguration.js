@@ -27,15 +27,19 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
 
   const handleConfigChange = useCallback(
     (updates) => {
-      setResourceConfig((prevConfig) => {
+      setResourceConfig(prevConfig => {
         const newConfig = { ...prevConfig, ...updates };
-        localStorage.setItem('resourceConfig', JSON.stringify(newConfig));
-        onStateChange(newConfig);
         return newConfig;
       });
     },
-    [onStateChange]
+    []
   );
+
+  useEffect(() => {
+    if (resourceConfig) {
+      onStateChange(resourceConfig);
+    }
+  }, [resourceConfig, onStateChange]);
 
   const handleAccordionChange = useCallback(
     (panel) => (event, isExpanded) => {
@@ -54,7 +58,8 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
 
   const handleDataChange = (resourceData) => {
     handleConfigChange({
-      schema: resourceData.processedSchema,
+      processedSchema: resourceData.processedSchema,
+      schema: resourceData.schema,
       sampleData: resourceData.sampleData,
       resourceInfo: resourceData.resourceInfo
     });

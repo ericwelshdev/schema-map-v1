@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Tabs, Tab, Typography, TextField, Button } from '@mui/material';
+import { Box, Tabs, Tab, Typography, TextField, Button, Autocomplete, Chip } from '@mui/material';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
@@ -9,38 +9,44 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import UndoIcon from '@mui/icons-material/Undo';
 import WarningIcon from '@mui/icons-material/Warning';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
+import KeyIcon from '@mui/icons-material/Key';
+import KeyOffIcon from '@mui/icons-material/KeyOff';
+import { styled, lighten, darken, maxWidth } from '@mui/system';
 import { debounce } from 'lodash';
 
 
 const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo, sampleData, rawData, onDataChange }) => {
   const [tabValue, setTabValue] = useState(0);
  
-  const [rows, setRows] = useState(schema ? schema.map((col, index) => ({ 
-    id: index, 
-    ...col, 
-    alternativeName: '', 
-      comment:'',
-    isPII: false, 
-    isPHI: false, 
-    isEditing: false, 
-    isChanged: false, 
-    isDisabled: false,
-    isUnsaved: false,
-    originalState: { id: index, ...col, alternativeName: '', isPII: false, isPHI: false }
-  })) : []);
+  const [rows, setRows] = useState(schema ? schema.map((col, index) => ({
+      id: index,
+      ...col,
+      alternativeName: '',
+      comment: '',
+      isEditing: false,
+      isChanged: false,
+      isDisabled: false,
+      isUnsaved: false,
+      originalState: { id: index, ...col, alternativeName: '' }
+    })) : []);
 
-    const debouncedDataChange = debounce((data, callback) => {
-      callback?.(data);
-    }, 500);
+  const debouncedDataChange = debounce((data, callback) => {
+    callback?.(data);
+  }, 500);
 
-    // First useEffect for loading saved state
+  useEffect(() => {
+    if (rows.length > 0) {
+      localStorage.setItem('ddPreviewRows', JSON.stringify(rows));
+    }
+  }, [rows]);
+
+  // First useEffect for loading saved state
   useEffect(() => {
     const savedTabValue = localStorage.getItem('resourceTabValue');
     const savedRows = localStorage.getItem('resourceRows');
     if (savedTabValue !== null) setTabValue(Number(savedTabValue));
-    if (savedRows) setRows(JSON.parse(savedRows));
+      if (savedRows) setRows(JSON.parse(savedRows));
   }, []);
-
     // Second useEffect for schema processing
     useEffect(() => {
       if (schema) {
@@ -72,15 +78,34 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
     }, [schema, resourceInfo]);
 
     // Third useEffect for data changes
+    // useEffect(() => {
+    //   debouncedDataChange({
+    //     processedSchema: rows,
+    //     sampleData,
+    //     resourceInfo
+    //   }, onDataChange);
+    // }, [rows, sampleData, resourceInfo]);
+
     useEffect(() => {
-      debouncedDataChange({
-        processedSchema: rows,
+      const enrichedDDSchema = rows.map(row => ({
+        name: row.name,
+        alternativeName: row.alternativeName,
+        type: row.type,
+        schemaClassification: row.schemaClassification,
+        comment: row.comment,
+        order: row.order
+      }));
+    
+      onDataChange({
+        processedSchema: enrichedDDSchema,
         sampleData,
         resourceInfo
-      }, onDataChange);
-    }, [rows, sampleData, resourceInfo]);
+      });
+    }, [rows, sampleData, resourceInfo, onDataChange]);
+    
 
-    console.log('resourceInfo rendered',resourceInfo);
+
+  // console.log('resourceInfo rendered',resourceInfo);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -198,6 +223,44 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
     </Box>
   );
 
+
+
+  const GroupHeader = styled('div')(({ theme }) => ({
+    position: 'sticky',
+    top: '-8px',
+    fontSize: 12,
+    padding: '1px 4px',
+    color: theme.palette.primary.main,
+    backgroundColor: lighten(theme.palette.primary.light, 0.85)
+  }));
+  
+  const GroupItems = styled('ul')({
+    padding: 0,
+    fontSize: 12    
+  });
+  
+  const schemaClassificationOptions = [
+    { 
+      group: 'Mandatory',
+      options: [
+        { value: 'physical_table_name', label: 'Physical Table Name' },
+        { value: 'physical_column_name', label: 'Physical Column Name' }
+      ]
+    },
+    {
+      group: 'Optional',
+      options: [
+        { value: 'logical_table_name', label: 'Logical Table Name' },
+        { value: 'logical_column_name', label: 'Logical Column Name' },
+        { value: 'column_description', label: 'Column Description' },
+        { value: 'data_type', label: 'Data Type' },
+        { value: 'primary_key', label: 'Primary Key' },
+        { value: 'foreign_key', label: 'Foreign Key' },
+        { value: 'nullable', label: 'Nullable' }
+      ]
+    }
+  ];
+
   const schemaColumns = [
     {
       field: 'status',
@@ -209,6 +272,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
           : null
       ),
     },
+    { field: 'order', headerName: 'ID',  width:50},
     { 
       field: 'name', 
       headerName: 'Column Name', 
@@ -230,7 +294,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
       editable: true,
       cellClassName: (params) => params.row.isDisabled ? 'disabled-cell' : '',
     },
-    { field: 'order', headerName: 'Column Order', flex: 1 },
+    
     { 
       field: 'comment', 
       headerName: 'Comment', 
@@ -238,6 +302,59 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
       editable: true,
       cellClassName: (params) => params.row.isDisabled ? 'disabled-cell' : '',
     },
+    {
+      field: 'schemaClassification',
+      headerName: 'Schema Classification',
+      flex: 1,
+      renderCell: (params) => (
+        params.value ? (
+          <Chip
+          size={'small'}
+            label={params.value.label}
+            variant="outlined"
+            sx={{
+              backgroundColor: 'lightblue',
+              maxWidth: '100%',
+              fontSize:12
+            }}
+          />
+        ) : (
+          <Autocomplete
+            size="small"
+            options={schemaClassificationOptions.flatMap(group => group.options)}
+            groupBy={(option) => option.value.includes('physical') ? 'Mandatory' : 'Optional'}
+            getOptionLabel={(option) => option.label}
+            renderGroup={(params) => (
+              <li key={params.key}>
+                <GroupHeader>{params.group}</GroupHeader>
+                <GroupItems>{params.children}</GroupItems>
+              </li>
+            )}
+            value={params.value}
+            onChange={(event, newValue) => {
+              handleCellChange({
+                id: params.id,
+                field: 'schemaClassification',
+                value: newValue
+              });
+            }}
+            renderInput={(params) => (
+              <TextField 
+                {...params} 
+                variant="outlined"
+                placeholder="No Classification"
+                sx={{ 
+                  '& .MuiInputBase-root': {
+                    height: 30
+                  }
+                }}
+              />
+            )}
+          />
+        )
+      )
+    }
+    ,    
     {
       field: 'actions',
       type: 'actions',
@@ -336,49 +453,48 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
       <Typography>No schema available</Typography>
     )
   );
+  const classificationIcons = {
+    mandatory: <KeyIcon sx={{ color: 'primary.main', fontSize: 18 }} />,
+    optional: <KeyOffIcon sx={{ color: 'secondary.main', fontSize: 18 }} />
+  };
+
+  const isColumnMandatory = (classification) => {
+    return classification?.value?.includes('physical_');
+  };
+
   const renderSampleData = () => (
     sampleData ? (
-        <Box sx={{ mt:4 , height: '100%', width: '100%', overflow: 'auto' }}>
-          <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
-        <DataGrid
-            rows={sampleData.map((row, rowIndex) => {
-              // Convert array data to object with placeholder column names if needed
-              const processedRow = resourceInfo?.hasHeader ? row : 
-                Object.values(row).reduce((acc, value, index) => {
-                  acc[`col_${index + 1}`] = value;
-                  return acc;
-                }, {});
-              return { id: rowIndex, ...processedRow };
-            })}
-            columns={rows.map(schemaCol => ({
-              field: schemaCol.name,
-              headerName: schemaCol.alternativeName || schemaCol.name,
-            flex: 1,
-            minWidth: 150,
-              disabled: schemaCol.isDisabled,
-              renderHeader: (params) => (
+      <Box sx={{ mt:4, height: '100%', width: '100%', overflow: 'auto' }}>
+        <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
+          <DataGrid
+            rows={sampleData.map((row, index) => ({ id: index, ...row }))}
+            columns={schema.map(col => ({
+              field: col.name,
+              headerName: (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  {params.colDef.headerName}
-                  {schemaCol.isDisabled && <VisibilityOffOutlinedIcon color="primary" sx={{ fontSize: 16 }} />}
+                  {isColumnMandatory(col.schemaClassification) ? 
+                    classificationIcons.mandatory : 
+                    classificationIcons.optional}
+                  {col.name}
                 </Box>
               ),
-              cellClassName: schemaCol.isDisabled ? 'disabled-cell' : '',
-          }))}
-          autoPageSize
-          rowsPerPageOptions={[10, 25, 50]}
-          columnHeaderHeight={40}
-          rowHeight={40}
-          density="compact"
-          disableExtendRowFullWidth={false}
-          disableColumnMenu
-        />
-          </Box>
+              flex: 1,
+              minWidth: 150,
+            }))}
+            autoPageSize
+            rowsPerPageOptions={[10, 25, 50]}
+            columnHeaderHeight={40}
+            rowHeight={40}
+            density="compact"
+            disableExtendRowFullWidth={false}
+            disableColumnMenu
+          />
+        </Box>
       </Box>
     ) : (
       <Typography>No sample data available</Typography>
     )
-  );
-  const renderRawData = () => (
+  );  const renderRawData = () => (
     <Box sx={{ mt:4, height: 350, width: '100%', overflow: 'auto' }}>
     <TextField
       multiline

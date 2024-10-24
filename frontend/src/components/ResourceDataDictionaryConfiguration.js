@@ -8,7 +8,7 @@ import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataDictionaryDataPreview from './ResourceDataDictionaryDataPreview';
 
 const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
-  console.log('Incoming savedState:', savedState);
+  // console.log('ResourceDataDictionaryConfiguration-> Incoming savedState:', savedState);
 
   const [ddResourceConfig, setResourceConfig] = useState(() => {
     const saved = localStorage.getItem('ddResourceConfig');
@@ -29,15 +29,22 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
 
   const handleConfigChange = useCallback(
     (updates) => {
-      setResourceConfig((prevConfig) => {
+      setResourceConfig(prevConfig => {
         const newConfig = { ...prevConfig, ...updates };
-        localStorage.setItem('resourceConfig', JSON.stringify(newConfig));
-        onStateChange(newConfig);
+        // if (JSON.stringify(prevConfig) === JSON.stringify(newConfig)) {
+        //   return prevConfig;
+        // }
         return newConfig;
       });
     },
-    [onStateChange]
+    []
   );
+
+  useEffect(() => {
+    if (ddResourceConfig) {
+      onStateChange(ddResourceConfig);
+    }
+  }, [ddResourceConfig, onStateChange]);
 
   const handleAccordionChange = useCallback(
     (panel) => (event, isExpanded) => {
@@ -56,17 +63,24 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
 
   const handleDataChange = (resourceData) => {
     handleConfigChange({
-      schema: resourceData.processedSchema,
+      processedSchema: resourceData.processedSchema,
+      schema: resourceData.schema,
       sampleData: resourceData.sampleData,
       resourceInfo: resourceData.resourceInfo
     });
   };
 
+  // useEffect(() => {
+  //   if (savedState && JSON.stringify(savedState) !== JSON.stringify(ddResourceConfig)) {
+  //     setResourceConfig(prevState => ({ ...prevState, ...savedState }));
+  //   }
+  // }, [savedState]);
+
 
   const renderIngestionSetup = () => {
     const resourceType = savedState?.dataDictionarySetup?.ddResourceSetup?.resourceType;
-    console.log("resourceType", resourceType);
-    console.log("savedState:", ddResourceConfig);
+    // console.log("resourceType", resourceType);
+    // console.log("savedState:", ddResourceConfig);
 
     switch (resourceType) {
       case 'dd_new':
@@ -219,3 +233,5 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
 };
 
 export default ResourceDataDictionaryConfiguration;
+
+

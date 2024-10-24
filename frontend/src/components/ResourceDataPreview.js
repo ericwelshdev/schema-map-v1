@@ -214,6 +214,7 @@ const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, r
           : null
       ),
     },
+    { field: 'order', headerName: 'ID',  width:50},
     {
       field: 'name',
       headerName: 'Column Name',
@@ -235,7 +236,7 @@ const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, r
       editable: true,
       cellClassName: (params) => params.row.isDisabled ? 'disabled-cell' : '',
     },
-    { field: 'order', headerName: 'Column Order', flex: 1 },
+    
     {
       field: 'comment',
       headerName: 'Comment',
