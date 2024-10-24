@@ -6,17 +6,20 @@ import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import LockPersonIcon from '@mui/icons-material/LockPerson';
-import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import UndoIcon from '@mui/icons-material/Undo';
 import WarningIcon from '@mui/icons-material/Warning';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
+import { debounce } from 'lodash';
 
-const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo, sampleData, rawData }) => {
+
+const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo, sampleData, rawData, onDataChange }) => {
   const [tabValue, setTabValue] = useState(0);
+ 
   const [rows, setRows] = useState(schema ? schema.map((col, index) => ({ 
     id: index, 
     ...col, 
     alternativeName: '', 
+      comment:'',
     isPII: false, 
     isPHI: false, 
     isEditing: false, 
@@ -26,8 +29,11 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
     originalState: { id: index, ...col, alternativeName: '', isPII: false, isPHI: false }
   })) : []);
 
+    const debouncedDataChange = debounce((data, callback) => {
+      callback?.(data);
+    }, 500);
 
-  // Load persisted tab value and row edits on component mount
+    // First useEffect for loading saved state
   useEffect(() => {
     const savedTabValue = localStorage.getItem('resourceTabValue');
     const savedRows = localStorage.getItem('resourceRows');
@@ -35,13 +41,52 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
     if (savedRows) setRows(JSON.parse(savedRows));
   }, []);
 
-  // Save tab value to localStorage
+    // Second useEffect for schema processing
+    useEffect(() => {
+      if (schema) {
+        const newRows = schema.map((col, index) => {
+          const columnName = resourceInfo?.hasHeader ? col.name : `col_${index + 1}`;
+          return {
+            id: index,
+            ...col,
+            name: columnName,
+            order: index + 1,
+            alternativeName: '',
+            comment:'',
+            isEditing: false,
+            isChanged: false,
+            isDisabled: false,
+            isUnsaved: false,
+            originalState: {
+              id: index,
+              ...col,
+              name: columnName,
+              order: index + 1,
+              alternativeName: ''
+            }
+          };
+        });
+        setRows(newRows);
+        localStorage.setItem('resourceRows', JSON.stringify(newRows));
+      }
+    }, [schema, resourceInfo]);
+
+    // Third useEffect for data changes
+    useEffect(() => {
+      debouncedDataChange({
+        processedSchema: rows,
+        sampleData,
+        resourceInfo
+      }, onDataChange);
+    }, [rows, sampleData, resourceInfo]);
+
+    console.log('resourceInfo rendered',resourceInfo);
+
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
     localStorage.setItem('resourceTabValue', newValue);
   };
 
-  // Save rows to localStorage on every row change
   const persistRows = (updatedRows) => {
     setRows(updatedRows);
     localStorage.setItem('resourceRows', JSON.stringify(updatedRows));
@@ -52,14 +97,26 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
   };
 
   const handleSaveClick = (id) => {
+    console.log('Saving row with id:', id);
     persistRows(rows.map(row => {
+      // console.log('Row id:', row.id,  'Original state:', row.originalState, "Current state:", row);
       if (row.id === id) {
-        const isChanged = JSON.stringify({ ...row, isEditing: false, isChanged: false, isUnsaved: false }) !== JSON.stringify(row.originalState);
-        return { ...row, isEditing: false, isChanged, isUnsaved: false };
+        const currentState = {
+          ...row,
+          isEditing: false,
+          isUnsaved: false
+        };
+        return {
+          ...currentState,
+          isChanged: true,
+          originalState: { ...currentState }
+        };
       }
+      
       return row;
     }));
   };
+  
 
   const handleCancelClick = (id) => {
     persistRows(rows.map(row => {
@@ -82,19 +139,41 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
   };
 
   const handleUndoClick = (id) => {
-    persistRows(rows.map(row => row.id === id ? { ...row.originalState, id: row.id, isChanged: false, isUnsaved: false } : row));
-  };
-
-  const handleCellChange = (params) => {
     persistRows(rows.map(row => {
-      if (row.id === params.id) {
-        const updatedRow = { ...row, [params.field]: params.value, isEditing: true, isUnsaved: true };
-        const isChanged = JSON.stringify(updatedRow) !== JSON.stringify(row.originalState);
-        return { ...updatedRow, isChanged };
+      if (row.id === id) {
+        // Restore from originalState while maintaining row structure
+        return {
+          ...row.originalState,
+          id: row.id,
+          isEditing: false,
+          isChanged: false,
+          isUnsaved: false
+        };
       }
       return row;
     }));
   };
+
+  const handleCellChange = (params) => {
+    console.log('Cell change:', params.field, params.value); // Keep this for debugging
+    
+    persistRows(rows.map(row => {
+      if (row.id === params.id) {
+        // Ensure we capture the actual value from the cell edit
+        const newValue = params.value !== undefined ? params.value : row[params.field];
+        
+        return {
+          ...row,
+          [params.field]: newValue,
+          isEditing: true,
+          isUnsaved: true,
+          isChanged: true
+        };
+      }
+      return row;
+    }));
+  };
+  
 
   const handleSaveAll = () => {
     persistRows(rows.map(row => ({ ...row, isUnsaved: false, isEditing: false })));
@@ -104,8 +183,9 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
     persistRows(rows.map(row => ({ ...row.originalState, id: row.id, isChanged: false, isUnsaved: false, isEditing: false })));
   };
 
+
   const renderGeneralInfo = () => (
-    <Box>
+    <Box sx={{ mt:4, height: 350, width: '100%', overflow: 'auto' }}>
       <Typography variant="h6">File Information</Typography>
       {resourceInfo && (
         <>
@@ -158,32 +238,6 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
       editable: true,
       cellClassName: (params) => params.row.isDisabled ? 'disabled-cell' : '',
     },
-    { 
-      field: 'isPII', 
-      headerName: 'PII', 
-      width: 100, 
-      renderCell: (params) => (
-        <GridActionsCellItem
-          icon={<LockPersonIcon color={params.row.isPII ? "primary" : "disabled"} />}
-          label="Toggle PII"
-          onClick={() => !params.row.isDisabled && handleCellChange({ id: params.id, field: 'isPII', value: !params.row.isPII })}
-          disabled={params.row.isDisabled}
-        />
-      )
-    },
-    { 
-      field: 'isPHI', 
-      headerName: 'PHI', 
-      width: 100, 
-      renderCell: (params) => (
-        <GridActionsCellItem
-          icon={<LocalHospitalIcon color={params.row.isPHI ? "primary" : "disabled"} />}
-          label="Toggle PHI"
-          onClick={() => !params.row.isDisabled && handleCellChange({ id: params.id, field: 'isPHI', value: !params.row.isPHI })}
-          disabled={params.row.isDisabled}
-        />
-      )
-    },
     {
       field: 'actions',
       type: 'actions',
@@ -192,7 +246,9 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
       cellClassName: 'actions',
       getActions: ({ id }) => {
         const row = rows.find(r => r.id === id);
-        const isEditing = row?.isEditing;
+        if (!row) return [];  // Guard clause to prevent undefined errors
+        
+        const isEditing = row.isEditing;
         
         if (isEditing) {
           return [
@@ -214,10 +270,10 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
             icon={<EditIcon />}
             label="Edit"
             onClick={() => handleEditClick(id)}
-            disabled={row?.isDisabled}
+            disabled={row.isDisabled}
           />,
           <GridActionsCellItem
-            icon={<BlockIcon />}
+            icon={<BlockIcon color={row.isDisabled ? "primary" : "disabled"} />}
             label="Disable"
             onClick={() => handleDisableClick(id)}
           />,
@@ -225,28 +281,36 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
             icon={<UndoIcon />}
             label="Undo"
             onClick={() => handleUndoClick(id)}
-            disabled={!row?.isChanged}
+            disabled={!row.isChanged}
           />,
         ];
       },
     },
   ];
-
   const renderSchema = () => (
     schema && schema.length > 0 ? (
-      <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
+      <Box sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
         <Box sx={{ mb:-1, display: 'flex', justifyContent: 'flex-end' }}>
           <Button startIcon={<SaveIcon/>} onClick={handleSaveAll} disabled={!rows.some(row => row.isUnsaved)}>Save All</Button>
           <Button startIcon={<CancelIcon />} onClick={handleCancelAll} disabled={!rows.some(row => row.isUnsaved)}>Cancel All</Button>
         </Box>
+        <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
         <DataGrid
           rows={rows}
           columns={schemaColumns}
           autoPageSize
           rowsPerPageOptions={[10, 25, 50]}
+          pageSizeOptions={[10, 100, { value: 1000, label: '1,000' }]}
           density="compact"
-          editMode="row"
-          onCellEditCommit={handleCellChange}
+          editMode="cell"
+          processRowUpdate={(newRow, oldRow) => {
+            handleCellChange({
+              id: newRow.id,
+              field: Object.keys(newRow).find(key => newRow[key] !== oldRow[key]),
+              value: newRow[Object.keys(newRow).find(key => newRow[key] !== oldRow[key])]
+            });
+            return newRow;
+          }}
           isCellEditable={(params) => !params.row.isDisabled}
           components={{
             ColumnUnsortedIcon: CheckCircleOutlineIcon,
@@ -266,22 +330,39 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
             },
           }}
         />
+        </Box>
       </Box>
     ) : (
       <Typography>No schema available</Typography>
     )
   );
-
   const renderSampleData = () => (
     sampleData ? (
-      <Box sx={{ height: 350, width: '100%', overflow: 'auto' }}>
+        <Box sx={{ mt:4 , height: '100%', width: '100%', overflow: 'auto' }}>
+          <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
         <DataGrid
-          rows={sampleData.map((row, index) => ({ id: index, ...row }))}
-          columns={schema.map(col => ({
-            field: col.name,
-            headerName: col.name,
+            rows={sampleData.map((row, rowIndex) => {
+              // Convert array data to object with placeholder column names if needed
+              const processedRow = resourceInfo?.hasHeader ? row : 
+                Object.values(row).reduce((acc, value, index) => {
+                  acc[`col_${index + 1}`] = value;
+                  return acc;
+                }, {});
+              return { id: rowIndex, ...processedRow };
+            })}
+            columns={rows.map(schemaCol => ({
+              field: schemaCol.name,
+              headerName: schemaCol.alternativeName || schemaCol.name,
             flex: 1,
             minWidth: 150,
+              disabled: schemaCol.isDisabled,
+              renderHeader: (params) => (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {params.colDef.headerName}
+                  {schemaCol.isDisabled && <VisibilityOffOutlinedIcon color="primary" sx={{ fontSize: 16 }} />}
+                </Box>
+              ),
+              cellClassName: schemaCol.isDisabled ? 'disabled-cell' : '',
           }))}
           autoPageSize
           rowsPerPageOptions={[10, 25, 50]}
@@ -290,22 +371,24 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
           density="compact"
           disableExtendRowFullWidth={false}
           disableColumnMenu
-          components={{
-            ColumnResizeIcon: () => null,
-          }}
         />
+          </Box>
       </Box>
     ) : (
       <Typography>No sample data available</Typography>
     )
   );
-
   const renderRawData = () => (
+    <Box sx={{ mt:4, height: 350, width: '100%', overflow: 'auto' }}>
     <TextField
       multiline
       fullWidth
       rows={15}
-      sx={{ fontFamily: 'monospace', fontSize: 8 }}
+      sx={{
+        '& .MuiInputBase-input': {
+          fontFamily: 'monospace', // Set the font to monotype
+        },
+      }}
       size="small"
       value={rawData || ''}
       variant="outlined"
@@ -313,17 +396,24 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
         readOnly: true,
       }}
     />
+    </Box>
   );
 
   return (
-    <Box sx={{mt:-3, ml: -2 }}>
-      <Tabs value={tabValue} onChange={handleTabChange}>
-        <Tab label="General"  />
+    <Box sx={{mt:-3, ml: -2, overflow: 'auto' }}>
+      <Tabs value={tabValue} onChange={handleTabChange} sx={{
+          minHeight: '20px', // Reduce overall tab height
+          '& .MuiTabs-indicator': {
+            bottom: '8px', // Bring the indicator line closer to the text
+          },
+        }}
+      >
+        <Tab label="General" />
         <Tab label="Schema" />
         <Tab label="Sample Data" />
         <Tab label="Raw Data" />
       </Tabs>
-      <Box sx={{ml:-1, mt:-1, p: 2 }}>
+      <Box sx={{ml:-1, mt:-5, p:2, overflow: 'auto' }}>
         {tabValue === 0 && renderGeneralInfo()}
         {tabValue === 1 && renderSchema()}
         {tabValue === 2 && renderSampleData()}

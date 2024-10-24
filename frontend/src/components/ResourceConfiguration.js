@@ -8,31 +8,29 @@ import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataPreview from './ResourceDataPreview';
 
 const ResourceConfiguration = ({ savedState, onStateChange }) => {
-  const [resourceConfig, setResourceConfig] = useState({
-    expandedAccordion: 'ingestionSetup',
-    activeTab: 0, // Assuming tabs are used and this tracks the active one
-    sourceInfo: null,
-    schema: null,
-    sampleData: null,
-    rawData: null,
-    ingestionSettings: {},
-    ingestionConfig: {},
-    uploadStatus: null,
-    error: null,
+  const [resourceConfig, setResourceConfig] = useState(() => {
+    const saved = localStorage.getItem('resourceConfig');
+    return saved ? JSON.parse(saved) : {
+      expandedAccordion: 'ingestionSetup',
+      activeTab: 0,
+      sourceInfo: null,
+      schema: null,
+      sampleData: null,
+      rawData: null,
+      ingestionSettings: {},
+      ingestionConfig: {},
+      uploadStatus: null,
+      error: null,
+      resourceType: savedState?.resourceSetup?.resourceSetup?.resourceType
+    };
   });
-
-  // Sync local state with savedState whenever it changes (e.g., when navigating between steps)
-  useEffect(() => {
-    if (savedState) {
-      setResourceConfig((prevState) => ({ ...prevState, ...savedState }));
-    }
-  }, [savedState]);
 
   const handleConfigChange = useCallback(
     (updates) => {
       setResourceConfig((prevConfig) => {
         const newConfig = { ...prevConfig, ...updates };
-        onStateChange(newConfig); // Update parent component's state
+        localStorage.setItem('resourceConfig', JSON.stringify(newConfig));
+        onStateChange(newConfig);
         return newConfig;
       });
     },
@@ -53,10 +51,20 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
     [handleConfigChange]
   );
 
+
+  const handleDataChange = (resourceData) => {
+    handleConfigChange({
+      schema: resourceData.processedSchema,
+      sampleData: resourceData.sampleData,
+      resourceInfo: resourceData.resourceInfo
+    });
+  };
+
+  
   const renderIngestionSetup = () => {
-      const resourceType = resourceConfig.resourceSetup?.resourceType;
-      console.log("resourceType", resourceType);
-      console.log("resourceConfig", resourceConfig);
+    const resourceType = savedState?.resourceSetup?.resourceSetup?.resourceType;
+    console.log("resourceType", resourceType);
+    console.log("savedState:", savedState);
 
     switch (resourceType) {
       case 'file':
@@ -198,6 +206,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
                 sampleData={resourceConfig.sampleData}
                 rawData={resourceConfig.rawData}
                 resourceInfo={resourceConfig.resourceInfo}
+                onDataChange={handleDataChange}
               />
             </AccordionDetails>
           </Accordion>

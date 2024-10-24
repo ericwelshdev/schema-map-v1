@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect ,useMemo} from 'react';
 import { Stepper, Step, StepLabel, Button, Box, Slide } from '@mui/material';
 import ResourceTypeSelection from './ResourceTypeSelection';
 import ResourceConfiguration from './ResourceConfiguration';
@@ -6,16 +6,53 @@ import ResourceDataDictionaryTypeSelection from './ResourceDataDictionaryTypeSel
 import ResourceDataDictionaryConfiguration from './ResourceDataDictionaryConfiguration';
 import ResourceMappingTagging from './ResourceMappingTagging';
 import ResourceSummary from './ResourceSummary';
+import { debounce } from 'lodash';
 
 const ResourceWizard = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [slideDirection, setSlideDirection] = useState('left');
   const [prevStep, setPrevStep] = useState(0);
   const [wizardState, setWizardState] = useState({
-    resourceSetup: {},
-    resourceConfiguration: {},
-    dataDictionary: {},
-    mappingTagging: {}
+    resourceSetup: {
+      resourceName: '',
+      standardizedSourceName: '',
+      collection: 'None',
+      resourceTags: ['source'],
+      resourceDescription: '',
+      resourceType: 'file'
+    },
+    resourceConfig: {
+      expandedAccordion: 'ingestionSetup',
+      activeTab: 0,
+      sourceInfo: null,
+      schema: null,
+      sampleData: null,
+      rawData: null,
+      ingestionSettings: {},
+      ingestionConfig: {},
+      uploadStatus: null,
+      error: null
+    },
+    dataDictionarySetup: {
+      resourceName: '',
+      standardizedSourceName: '',
+      collection: 'None',
+      resourceTags: ['datadictionary'],
+      resourceDescription: '',
+      resourceType: 'dd_new'
+    },
+    dataDictionaryConfig: {
+      expandedAccordion: 'ingestionSetup',
+      activeTab: 0,
+      ddSourceInfo: null,
+      ddSchema: null,
+      ddSampleData: null,
+      ddRawData: null,
+      ddIngestionSettings: {},
+      ddIngestionConfig: {},
+      uploadStatus: null,
+      error: null
+    }
   });
 
   const steps = ['Resource Type', 'Configure Resource', 'Data Dictionary Type', 'Data Dictionary', 'Mapping & Tagging', 'Summary'];
@@ -57,24 +94,22 @@ const ResourceWizard = () => {
 
   const isStepSkippable = (step) => step === 2 || step === 4;
 
+  const debouncedStateUpdate = useMemo(
+    () => debounce((step, newState, setWizardState) => {
+      setWizardState(prev => ({
+        ...prev,
+        [step]: newState
+      }));
+    }, 1000), // Increased debounce time
+    []
+  );
   const updateWizardState = (step, newState) => {
-    setWizardState((prevState) => {
-      let updatedState = { ...prevState[step], ...newState };
-
-      if (step === 'resourceSetup' && updatedState.resourceSetup) {
-        updatedState = {
-          ...updatedState,
-          ...updatedState.resourceSetup,
-          resourceSetup: undefined,
-        };
-      }
-
-      return {
-        ...prevState,
-        [step]: updatedState,
-      };
-    });
+    debouncedStateUpdate(step, newState, setWizardState);
   };
+
+  useEffect(() => {
+    console.log('Current Wizard State:', wizardState);
+  }, [wizardState]);
 
   const getStepContent = (step) => {
     switch (step) {
@@ -86,27 +121,32 @@ const ResourceWizard = () => {
           />
         );
       case 1:
+        const resourceSetupConfigState = {
+          ...wizardState.resourceSetup.resourceSetup,
+          config: wizardState.resourceConfig
+        };
         return (
           <ResourceConfiguration
-            savedState={{
-              ...wizardState.resourceConfiguration,
-              resourceSetup: wizardState.resourceSetup,
-            }}
-            onStateChange={(newState) => updateWizardState('resourceConfiguration', newState)}
+            savedState={wizardState}
+            onStateChange={(newState) => updateWizardState('resourceConfig', newState)}
           />
         );
       case 2:
         return (
           <ResourceDataDictionaryTypeSelection
-            savedState={wizardState.dataDictionary}
+            savedState={wizardState.dataDictionarySetup}
             onStateChange={(newState) => updateWizardState('dataDictionarySetup', newState)}
           />
         );
       case 3:
+        const ddResourceSetupConfigState = {
+          ...wizardState.dataDictionarySetup.resourceSetup,
+          config: wizardState.resourceConfig
+        };
         return (
           <ResourceDataDictionaryConfiguration
-            savedState={wizardState.dataDictionary}
-            onStateChange={(newState) => updateWizardState('dataDictionary', newState)}
+            savedState={wizardState}
+            onStateChange={(newState) => updateWizardState('dataDictionaryConfig', newState)}
           />
         );
       case 4:
@@ -121,17 +161,22 @@ const ResourceWizard = () => {
       default:
         return 'Unknown step';
     }
-  };
-
-  return (
+  };  return (
     <Box sx={{ width: '100%', overflow: 'hidden' }}>
-      <Stepper activeStep={activeStep}>
-        {steps.map((label, index) => (
-          <Step key={label} onClick={() => handleStepClick(index)} sx={{ cursor: 'pointer' }}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
+<Stepper activeStep={activeStep}>
+  {steps.map((label, index) => (
+    <Step key={label} onClick={() => handleStepClick(index)} sx={{ cursor: 'pointer' }}>
+      <StepLabel
+        StepIconProps={{
+          sx: { cursor: 'pointer' },
+        }}
+        sx={{ userSelect: 'none' }} 
+      >
+        {label}
+      </StepLabel>
+    </Step>
+  ))}
+</Stepper>
 
       <Box sx={{ mt: 2, position: 'relative' }}>
         <Slide

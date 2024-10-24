@@ -345,9 +345,12 @@ export const processFile = async (file, settings = {}, isInitialIngestion = true
     const newConfig = getConfigForResourceType(fileType);
     console.log('New config:', newConfig);
     
+    // Get header detection from autoDetectedSettings
+    const hasHeader = autoDetectedSettings.hasHeader;
+    
     let formattedSettings;
     if (Object.keys(settings).length === 0) {
-      formattedSettings = getDefaultIngestionSettings(fileType, autoDetectedSettings);
+      formattedSettings = { ...getDefaultIngestionSettings(fileType, autoDetectedSettings), includeHeader: hasHeader };
     } else {
       formattedSettings = { ...getIngestionedValueSettings(fileType, autoDetectedSettings), ...settings };
     }
@@ -364,7 +367,10 @@ export const processFile = async (file, settings = {}, isInitialIngestion = true
       progress: 100,
       uploadStatus: { type: 'success', message: 'File successfully processed.' },
       ingestionConfig: newConfig,
-      ingestionSettings: formattedSettings,
+      ingestionSettings: {
+        ...formattedSettings,
+        includeHeader: hasHeader
+      },
       schema: schemaResult.schema,
       resourceSchema: schemaResult.schema,      
       resourceInfo: {
@@ -373,6 +379,7 @@ export const processFile = async (file, settings = {}, isInitialIngestion = true
         size: file.size,
         lastModified: new Date(file.lastModified).toLocaleString(),
         file: file,
+        hasHeader: hasHeader
       },
       numCols : schemaResult.schema.length,
       numRows: schemaResult.sampleData.length,
