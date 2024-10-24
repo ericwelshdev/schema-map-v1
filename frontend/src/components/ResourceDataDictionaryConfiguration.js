@@ -11,7 +11,7 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
   // console.log('ResourceDataDictionaryConfiguration-> Incoming savedState:', savedState);
 
   const [ddResourceConfig, setResourceConfig] = useState(() => {
-    const saved = localStorage.getItem('ddResourceConfig');
+    const saved = localStorage.getItem('ddResourceGeneralConfig');
     return saved ? JSON.parse(saved) : {
     expandedAccordion: 'ingestionSetup',
     activeTab: 0,
@@ -30,10 +30,13 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
   const handleConfigChange = useCallback(
     (updates) => {
       setResourceConfig(prevConfig => {
-        const newConfig = { ...prevConfig, ...updates };
-        // if (JSON.stringify(prevConfig) === JSON.stringify(newConfig)) {
-        //   return prevConfig;
-        // }
+        const newConfig = { 
+          ...prevConfig, 
+          ...updates,
+          // Set accordion and tab when schema is available
+          expandedAccordion: updates.schema ? 'data' : prevConfig.expandedAccordion,
+          activeTab: updates.schema ? 1 : prevConfig.activeTab // 1 is schema tab
+        };
         return newConfig;
       });
     },
@@ -46,7 +49,7 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
   useEffect(() => {
     if (ddResourceConfig) {
       onStateChange(ddResourceConfig);
-      localStorage.setItem('ddResourceConfig', JSON.stringify(ddResourceConfig));
+      localStorage.setItem('ddResourceGeneralConfig', JSON.stringify(ddResourceConfig));
     }
   }, [ddResourceConfig, onStateChange]);
 

@@ -9,7 +9,7 @@ import ResourceDataPreview from './ResourceDataPreview';
 
 const ResourceConfiguration = ({ savedState, onStateChange }) => {
   const [resourceConfig, setResourceConfig] = useState(() => {
-    const saved = localStorage.getItem('resourceGenralConfig');
+    const saved = localStorage.getItem('resourceGeneralConfig');
     return saved ? JSON.parse(saved) : {
       expandedAccordion: 'ingestionSetup',
       activeTab: 0,
@@ -28,7 +28,13 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
   const handleConfigChange = useCallback(
     (updates) => {
       setResourceConfig(prevConfig => {
-        const newConfig = { ...prevConfig, ...updates };
+        const newConfig = { 
+          ...prevConfig, 
+          ...updates,
+          // Set accordion and tab when schema is available
+          expandedAccordion: updates.schema ? 'data' : prevConfig.expandedAccordion,
+          activeTab: updates.schema ? 1 : prevConfig.activeTab // 1 is schema tab
+        };
         return newConfig;
       });
     },
@@ -41,7 +47,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
   useEffect(() => {
     if (resourceConfig) {
       onStateChange(resourceConfig);
-      localStorage.setItem('resourceGenralConfig', JSON.stringify(resourceConfig));
+      localStorage.setItem('resourceGeneralConfig', JSON.stringify(resourceConfig));
     }
   }, [resourceConfig, onStateChange]);
 

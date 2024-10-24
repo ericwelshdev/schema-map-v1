@@ -12,6 +12,7 @@ import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined
 import KeyIcon from '@mui/icons-material/Key';
 import KeyOffIcon from '@mui/icons-material/KeyOff';
 import { styled, lighten, darken, maxWidth } from '@mui/system';
+import { SquareChartGanttIcon, TablePropertiesIcon, Grid3X3Icon, LetterTextIcon } from "lucide-react";
 import { debounce } from 'lodash';
 
 
@@ -22,7 +23,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
       });
  
       const [rows, setRows] = useState(() => {
-        const savedRows = localStorage.getItem('ddResourcePrevieRows');
+        const savedRows = localStorage.getItem('ddResourcePreviewRows');
         if (savedRows) {
           return JSON.parse(savedRows);
         }
@@ -41,7 +42,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
 
       // Only update rows from schema if no saved state exists
     useEffect(() => {
-        if (!localStorage.getItem('ddResourcePrevieRows') && schema) {
+        if (!localStorage.getItem('ddResourcePreviewRows') && schema) {
           const initialRows = schema.map((col, index) => ({
             id: index,
             ...col,
@@ -75,8 +76,8 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
 
   const persistRows = (updatedRows) => {
     setRows(updatedRows);
-    console.log('persistRows: localStorage.setItem -> ddResourcePrevieRows', updatedRows);
-    localStorage.setItem('ddResourcePrevieRows', JSON.stringify(updatedRows));
+    console.log('persistRows: localStorage.setItem -> ddResourcePreviewRows', updatedRows);
+    localStorage.setItem('ddResourcePreviewRows', JSON.stringify(updatedRows));
   };
 
   const handleEditClick = (id) => {
@@ -84,7 +85,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
   };
 
   const handleSaveClick = (id) => {
-    console.log('Saving row with id:', id);
+    // console.log('Saving row with id:', id);
     persistRows(rows.map(row => {
       // console.log('Row id:', row.id,  'Original state:', row.originalState, "Current state:", row);
       if (row.id === id) {
@@ -142,7 +143,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
   };
 
   const handleCellChange = (params) => {
-    console.log('Cell change:', params.field, params.value); // Keep this for debugging
+    // console.log('Cell change:', params.field, params.value); // Keep this for debugging
     
     persistRows(rows.map(row => {
       if (row.id === params.id) {
@@ -486,10 +487,10 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
           },
         }}
       >
-        <Tab label="General" />
-        <Tab label="Schema" />
-        <Tab label="Sample Data" />
-        <Tab label="Raw Data" />
+        <Tab label="General" icon={<SquareChartGanttIcon/> }  iconPosition="start" />
+        <Tab label="Schema"  icon={<TablePropertiesIcon/>}  iconPosition="start" />
+        <Tab label="Sample Data"  icon={<Grid3X3Icon/>}  iconPosition="start" />
+        <Tab label="Raw Data" icon={<LetterTextIcon/>}  iconPosition="start"/>
       </Tabs>
       <Box sx={{ml:-1, mt:-5, p:2, overflow: 'auto' }}>
         {tabValue === 0 && renderGeneralInfo()}

@@ -12,11 +12,14 @@ import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import UndoIcon from '@mui/icons-material/Undo';
 import WarningIcon from '@mui/icons-material/Warning';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
+import { SquareChartGanttIcon, TablePropertiesIcon, Grid3X3Icon, LetterTextIcon } from "lucide-react";
 import { debounce } from 'lodash';
+
+
     const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, rawData, onDataChange }) => {
       const [tabValue, setTabValue] = useState(() => {
         const savedTab = localStorage.getItem('previewTabValue');
-        return savedTab ? parseInt(savedTab) : 0;
+        return savedTab ? parseInt(savedTab) : 1;
       });
 
       const [rows, setRows] = useState(() => {
@@ -38,6 +41,13 @@ import { debounce } from 'lodash';
           originalState: { id: index, ...col }
         })) : [];
       });
+
+      useEffect(() => {
+        if (schema && !localStorage.getItem('previewTabValue')) {
+          setTabValue(1);
+          localStorage.setItem('previewTabValue', '1');
+        }
+      }, [schema]);      
 
       // Only update rows from schema if no saved state exists
       useEffect(() => {
@@ -73,6 +83,7 @@ import { debounce } from 'lodash';
 
     const handleTabChange = (event, newValue) => {
       setTabValue(newValue);
+      localStorage.setItem('previewTabValue', newValue);
     };
 
   const persistRows = (updatedRows) => {
@@ -426,10 +437,10 @@ import { debounce } from 'lodash';
           },
         }}
       >
-        <Tab label="General" />
-        <Tab label="Schema" />
-        <Tab label="Sample Data" />
-        <Tab label="Raw Data" />
+        <Tab label="General" icon={<SquareChartGanttIcon/> }  iconPosition="start" />
+        <Tab label="Schema"  icon={<TablePropertiesIcon/>}  iconPosition="start" />
+        <Tab label="Sample Data"  icon={<Grid3X3Icon/>}  iconPosition="start" />
+        <Tab label="Raw Data" icon={<LetterTextIcon/>}  iconPosition="start"/>
       </Tabs>
       <Box sx={{ml:-1, mt:-5, p:2, overflow: 'auto' }}>
         {tabValue === 0 && renderGeneralInfo()}
