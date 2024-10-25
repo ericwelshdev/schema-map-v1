@@ -33,9 +33,8 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
         const newConfig = { 
           ...prevConfig, 
           ...updates,
-          // Set accordion and tab when schema is available
-          expandedAccordion: updates.schema ? 'data' : prevConfig.expandedAccordion,
-          activeTab: updates.schema ? 1 : prevConfig.activeTab // 1 is schema tab
+          // Initially open data accordion when schema first becomes available
+          expandedAccordion: updates.schema && !prevConfig.schema ? 'data' : updates.expandedAccordion || prevConfig.expandedAccordion
         };
         return newConfig;
       });

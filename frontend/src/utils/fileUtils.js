@@ -144,6 +144,11 @@ const mapUiFieldsToCallArgFields = (settings, config) => {
 const generateCSVSchema = async (file, settings) => {
   console.log('settings', settings); // Debugging log for settings
   return new Promise((resolve, reject) => {
+
+    if(settings.fullMode){
+      settings.preview = 0;
+    }
+
     Papa.parse(file, {
       ...settings,
       complete: (results) => {
@@ -189,13 +194,19 @@ const generateCSVSchema = async (file, settings) => {
             warnings.push('Large file detected. Only a sample of the data was processed.');
           }
 
+          let fullData = sampleData
+          if(settings.fullMode){
+            fullData = results.data;
+          }
+          
           // Generate raw data sample by joining the first 100 rows
-          let rawData = results.data.slice(0, 100).map(row => 
+          let rawData = results.data.slice(0, settings.preview).map(row => 
             row ? Object.values(row).join(settings.delimiter || ',') : '' // Ensure row exists before joining
           ).join('\n');
 
+
           // Resolve with schema, sample data, warnings, and raw data
-          resolve({ schema, sampleData, warnings, rawData });
+          resolve({ schema, sampleData, warnings, rawData, fullData });
         } catch (error) {
           // Log any error that occurs during schema generation
           console.error('Error in CSV schema generation:', error);

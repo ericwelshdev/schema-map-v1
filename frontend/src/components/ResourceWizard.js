@@ -75,7 +75,8 @@ const ResourceWizard = () => {
   useEffect(() => {
     return () => {
       localStorage.removeItem('wizardState');
-      localStorage.removeItem('resourceGeneralConfig');
+      localStorage.removeItem('resourceGeneralConfigX');
+      localStorage.clear();
     };
   }, []);
   const steps = ['Resource Type', 'Configure Resource', 'Data Dictionary Type', 'Data Dictionary', 'Mapping & Tagging', 'Summary'];

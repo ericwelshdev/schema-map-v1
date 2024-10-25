@@ -9,7 +9,8 @@ import ResourceDataPreview from './ResourceDataPreview';
 
 const ResourceConfiguration = ({ savedState, onStateChange }) => {
   const [resourceConfig, setResourceConfig] = useState(() => {
-    const saved = localStorage.getItem('resourceGeneralConfig');
+    const saved = localStorage.getItem('resourceGeneralConfigX');
+    console.log("savedState:", savedState);
     return saved ? JSON.parse(saved) : {
       expandedAccordion: 'ingestionSetup',
       activeTab: 0,
@@ -31,9 +32,8 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
         const newConfig = { 
           ...prevConfig, 
           ...updates,
-          // Set accordion and tab when schema is available
-          expandedAccordion: updates.schema ? 'data' : prevConfig.expandedAccordion,
-          activeTab: updates.schema ? 1 : prevConfig.activeTab // 1 is schema tab
+          // Initially open data accordion when schema first becomes available
+          expandedAccordion: updates.schema && !prevConfig.schema ? 'data' : updates.expandedAccordion || prevConfig.expandedAccordion
         };
         return newConfig;
       });
@@ -47,7 +47,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
   useEffect(() => {
     if (resourceConfig) {
       onStateChange(resourceConfig);
-      localStorage.setItem('resourceGeneralConfig', JSON.stringify(resourceConfig));
+      localStorage.setItem('resourceGeneralConfigX', JSON.stringify(resourceConfig));
     }
   }, [resourceConfig, onStateChange]);
 
@@ -97,7 +97,12 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
 
   const handleApplyChanges = useCallback(async (updatedConfig) => {
     try {
-      const resourceType = resourceConfig.resourceSetup?.resourceType;
+      
+      const resourceType = savedState?.resourceSetup?.resourceSetup?.resourceType;
+      // console.log("resourceType", resourceType);
+      // if (!resourceType) {
+      //   throw new Error('Resource type not specified');
+      // }
 
       const updatedIngestionConfig = {
         ...resourceConfig.ingestion,
@@ -106,12 +111,8 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
       };
 
       let result;
-      console.log("XXX resourceConfig", resourceConfig);
       switch (resourceType) {
-        
         case 'file':
-          // console.log("XXX resourceConfig.resourceInfo.file", resourceConfig.resourceInfo.file);
-          // console.log("XXX resourceConfig.ingestionSettings", resourceConfig.ingestionSettings);
           result = await ResourceFileIngestionSetup.handleFileUpload({
             File: resourceConfig.resourceInfo.file,
             ingestionSettings: resourceConfig.ingestionSettings,
@@ -130,7 +131,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
           });
           break;
         default:
-          throw new Error('Unsupported resource type');
+          throw new Error(`Unsupported resource type: ${resourceType}`);
       }
 
       handleConfigChange({        
@@ -139,12 +140,13 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
         sampleData: result.sampleData,
         rawData: result.rawData,
         expandedAccordion: 'data',
+        error: null // Clear any previous errors
       });
-      console.log('updatedConfig->>:', updatedConfig)
     } catch (error) {
       console.error('Error processing data:', error);
       handleConfigChange({
-        error: 'Failed to process data with new settings',
+        error: `Failed to process data: ${error.message}`,
+        uploadStatus: { type: 'error', message: error.message }
       });
     }
   }, [resourceConfig, handleConfigChange]);

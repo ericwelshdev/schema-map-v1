@@ -30,6 +30,7 @@ import { debounce } from 'lodash';
         return schema ? schema.map((col, index) => ({
           id: index,
           ...col,
+          order: index + 1,
           alternativeName: '',
           comment: '',
           isPII: false,
@@ -51,10 +52,11 @@ import { debounce } from 'lodash';
 
       // Only update rows from schema if no saved state exists
       useEffect(() => {
-        if (!localStorage.getItem('resourcePreviewRows') && schema) {
+        if (schema) {
           const initialRows = schema.map((col, index) => ({
             id: index,
             ...col,
+            order: index + 1,
             alternativeName: '',
             comment: '',
             isPII: false,
@@ -66,8 +68,10 @@ import { debounce } from 'lodash';
             originalState: { id: index, ...col }
           }));
           setRows(initialRows);
+          localStorage.setItem('resourcePreviewRows', JSON.stringify(initialRows));
         }
       }, [schema]);
+      
 
       const debouncedDataChange = debounce((data, callback) => {
         callback?.(data);
@@ -97,7 +101,7 @@ import { debounce } from 'lodash';
   };
 
   const handleSaveClick = (id) => {
-    console.log('Saving row with id:', id);
+    // console.log('Saving row with id:', id);
     persistRows(rows.map(row => {
       // console.log('Row id:', row.id,  'Original state:', row.originalState, "Current state:", row);
       if (row.id === id) {
@@ -155,7 +159,7 @@ import { debounce } from 'lodash';
   };
 
   const handleCellChange = (params) => {
-    console.log('Cell change:', params.field, params.value); // Keep this for debugging
+    // console.log('Cell change:', params.field, params.value); // Keep this for debugging
     
     persistRows(rows.map(row => {
       if (row.id === params.id) {

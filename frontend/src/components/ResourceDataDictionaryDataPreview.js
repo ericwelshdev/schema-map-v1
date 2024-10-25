@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Box, Tabs, Tab, Typography, TextField, Button, Autocomplete, Chip } from '@mui/material';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
@@ -19,7 +19,7 @@ import { debounce } from 'lodash';
 const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo, sampleData, rawData, onDataChange }) => {
       const [tabValue, setTabValue] = useState(() => {
         const savedTab = localStorage.getItem('previewTabValue');
-        return savedTab ? parseInt(savedTab) : 0;
+        return savedTab ? parseInt(savedTab) : 1;
       });
  
       const [rows, setRows] = useState(() => {
@@ -30,6 +30,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
         return schema ? schema.map((col, index) => ({
       id: index,
       ...col,
+      order: index + 1,
       alternativeName: '',
       comment: '',
       isEditing: false,
@@ -40,23 +41,33 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
         })) : [];
       });
 
+      useEffect(() => {
+        if (schema && !localStorage.getItem('previewTabValue')) {
+          setTabValue(1);
+          localStorage.setItem('previewTabValue', '1');
+        }
+      }, [schema]);      
+
       // Only update rows from schema if no saved state exists
     useEffect(() => {
-        if (!localStorage.getItem('ddResourcePreviewRows') && schema) {
-          const initialRows = schema.map((col, index) => ({
-            id: index,
-            ...col,
-            alternativeName: '',
-            comment:'',
-            isEditing: false,
-            isChanged: false,
-            isDisabled: false,
-            isUnsaved: false,
-            originalState: { id: index, ...col }
-          }));
-          setRows(initialRows);
+      if (schema) {
+        const initialRows = schema.map((col, index) => ({
+          id: index,
+          ...col,
+          order: index + 1,
+          alternativeName: '',
+          comment: '',
+          schemaClassification: null,
+          isEditing: false,
+          isChanged: false,
+          isDisabled: false,
+          isUnsaved: false,
+          originalState: { id: index, ...col }
+        }));
+        setRows(initialRows);
+        localStorage.setItem('ddResourcePreviewRows', JSON.stringify(initialRows));
       }
-      }, [schema]);
+    }, [schema]);
 
       const debouncedDataChange = debounce((data, callback) => {
         callback?.(data);
@@ -72,6 +83,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+      localStorage.setItem('previewTabValue', newValue);
   };
 
   const persistRows = (updatedRows) => {
@@ -282,8 +294,8 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
             }}
           />
         ) : (
-          <Autocomplete
-            size="small"
+        <Autocomplete
+          size="small"
             options={schemaClassificationOptions.flatMap(group => group.options)}
             groupBy={(option) => option.value.includes('physical') ? 'Mandatory' : 'Optional'}
             getOptionLabel={(option) => option.label}
@@ -296,24 +308,24 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
             value={params.value}
             onChange={(event, newValue) => {
               handleCellChange({
-                id: params.id,
-                field: 'schemaClassification',
-                value: newValue
+            id: params.id,
+            field: 'schemaClassification',
+            value: newValue
               });
             }}
-            renderInput={(params) => (
-              <TextField 
-                {...params} 
-                variant="outlined"
+          renderInput={(params) => (
+            <TextField 
+              {...params} 
+              variant="outlined"
                 placeholder="No Classification"
-                sx={{ 
-                  '& .MuiInputBase-root': {
-                    height: 30
-                  }
-                }}
-              />
-            )}
-          />
+              sx={{ 
+                '& .MuiInputBase-root': {
+                  height: 30
+                }
+              }}
+            />
+          )}
+        />
         )
       )
     }
@@ -422,41 +434,45 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
   };
 
   const isColumnMandatory = (classification) => {
+    console.log('isColumnMandatory:', classification);
     return classification?.value?.includes('physical_');
   };
-
-  const renderSampleData = () => (
-    sampleData ? (
-      <Box sx={{ mt:4, height: '100%', width: '100%', overflow: 'auto' }}>
-        <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
-          <DataGrid
-            rows={sampleData.map((row, index) => ({ id: index, ...row }))}
-            columns={schema.map(col => ({
-              field: col.name,
-              headerName: (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  {isColumnMandatory(col.schemaClassification) ? 
-                    classificationIcons.mandatory : 
-                    classificationIcons.optional}
-                  {col.name}
-                </Box>
-              ),
-              flex: 1,
-              minWidth: 150,
-            }))}
-            autoPageSize
-            rowsPerPageOptions={[10, 25, 50]}
-            columnHeaderHeight={40}
-            rowHeight={40}
-            density="compact"
-            disableExtendRowFullWidth={false}
-            disableColumnMenu
-          />
+    const renderSampleData = () => (
+      sampleData ? (
+        <Box sx={{ mt:4, height: '100%', width: '100%', overflow: 'auto' }}>
+          <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
+            <DataGrid
+              rows={sampleData.map((row, index) => ({ id: index, ...row }))}
+              columns={schema.map(col => ({
+                field: col.name,
+                headerName: col.name,
+                renderHeader: (params) => (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {col.schemaClassification && 
+                      (isColumnMandatory(col.schemaClassification) ? 
+                        classificationIcons.mandatory : 
+                        classificationIcons.optional)
+                    }
+                    {col.name}
+                  </Box>
+                ),
+                flex: 1,
+                minWidth: 150,
+              }))}
+              autoPageSize
+              rowsPerPageOptions={[10, 25, 50]}
+              columnHeaderHeight={40}
+              rowHeight={40}
+              density="compact"
+              disableExtendRowFullWidth={false}
+              disableColumnMenu
+            />
+          </Box>
         </Box>
-      </Box>
-    ) : (
-      <Typography>No sample data available</Typography>
-    )
+      ) : (
+        <Typography>No sample data available</Typography>
+      )
+    
   );  const renderRawData = () => (
     <Box sx={{ mt:4, height: 350, width: '100%', overflow: 'auto' }}>
     <TextField
