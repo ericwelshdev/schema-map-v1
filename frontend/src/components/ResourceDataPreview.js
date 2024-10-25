@@ -28,11 +28,11 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
             try {
               await initDB();
               const savedRows = await getData('resourcePreviewRows');
-        
-        if (savedRows) {
+              console.log('Collected Saved rows:', savedRows);
+              if (savedRows) {
                 setRows(savedRows);
               } else if (schema) {
-                const initialRows = schema.map((col, index) => ({
+         const initialRows = schema.map((col, index) => ({
           id: index,
           ...col,
           order: index + 1,
@@ -45,39 +45,40 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
           isDisabled: false,
           isUnsaved: false,
           originalState: { id: index, ...col }
-                }));
-                setRows(initialRows);
-                await setData('resourcePreviewRows', initialRows);
-              }
-            } catch (error) {
-              console.error('Database operation failed:', error);
+          }));
+          setRows(initialRows);
+          await setData('resourcePreviewRows', initialRows);
+          console.log('Saved rows:', initialRows);
+        }
+        } catch (error) {
+        console.error('Database operation failed:', error);
         }
           };
 
           loadSavedData();
         }, [schema]);
       // Only update rows from schema if no saved state exists
-      useEffect(() => {
-        if (schema) {
-          const initialRows = schema.map((col, index) => ({
-            id: index,
-            ...col,
-            order: index + 1,
-            alternativeName: '',
-            comment: '',
-            isPII: false,
-            isPHI: false,
-            isEditing: false,
-            isChanged: false,
-            isDisabled: false,
-            isUnsaved: false,
-            originalState: { id: index, ...col }
-          }));
-          setRows(initialRows);
-        // localStorage.setItem('ddResourcePreviewRows', JSON.stringify(initialRows));
-        setData('resourcePreviewRows', initialRows);
-        }
-      }, [schema]);
+      // useEffect(() => {
+      //   if (schema) {
+      //     const initialRows = schema.map((col, index) => ({
+      //       id: index,
+      //       ...col,
+      //       order: index + 1,
+      //       alternativeName: '',
+      //       comment: '',
+      //       isPII: false,
+      //       isPHI: false,
+      //       isEditing: false,
+      //       isChanged: false,
+      //       isDisabled: false,
+      //       isUnsaved: false,
+      //       originalState: { id: index, ...col }
+      //     }));
+      //     setRows(initialRows);
+      //   // localStorage.setItem('ddResourcePreviewRows', JSON.stringify(initialRows));
+      //   setData('resourcePreviewRows', initialRows);
+      //   }
+      // }, [schema]);
 
       const debouncedDataChange = debounce((data, callback) => {
         callback?.(data);
@@ -100,8 +101,8 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
     setRows(updatedRows);
     console.log('persistRows: setData ->resourcePreviewRows', updatedRows);
     // localStorage.setItem('ddResourcePreviewRows', JSON.stringify(updatedRows));
-
-    setData('ddResourcePreviewRows', updatedRows);
+    setData('resourcePreviewRows', updatedRows);
+    console.log('Saved Updated rows:', updatedRows);
   };
 
   const handleEditClick = (id) => {

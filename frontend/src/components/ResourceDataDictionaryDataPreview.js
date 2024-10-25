@@ -28,7 +28,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
             try {
               await initDB();
               const savedRows = await getData('ddResourcePreviewRows');
-        
+              console.log('Collected Saved rows:', savedRows);
               if (savedRows) {
                 setRows(savedRows);
               } else if (schema) {
@@ -47,7 +47,8 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
                   originalState: { id: index, ...col }
                 }));
                 setRows(initialRows);
-                await setData('ddResourcePreviewRows', initialRows);
+          await setData('ddResourcePreviewRows', initialRows);
+          console.log('Saved rows:', initialRows);
               }
             } catch (error) {
               console.error('Database operation failed:', error);
@@ -57,26 +58,26 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
           loadSavedData();
         }, [schema]);
       // Only update rows from schema if no saved state exists
-    useEffect(() => {
-      if (schema) {
-        const initialRows = schema.map((col, index) => ({
-          id: index,
-          ...col,
-          order: index + 1,
-          alternativeName: '',
-          comment: '',
-          schemaClassification: null,
-          isEditing: false,
-          isChanged: false,
-          isDisabled: false,
-          isUnsaved: false,
-          originalState: { id: index, ...col }
-        }));
-        setRows(initialRows);
-        // localStorage.setItem('ddResourcePreviewRows', JSON.stringify(initialRows));
-        setData('ddResourcePreviewRows', initialRows);
-      }
-    }, [schema]);
+    // useEffect(() => {
+    //   if (schema) {
+    //     const initialRows = schema.map((col, index) => ({
+    //       id: index,
+    //       ...col,
+    //       order: index + 1,
+    //       alternativeName: '',
+    //       comment: '',
+    //       schemaClassification: null,
+    //       isEditing: false,
+    //       isChanged: false,
+    //       isDisabled: false,
+    //       isUnsaved: false,
+    //       originalState: { id: index, ...col }
+    //     }));
+    //     setRows(initialRows);
+    //     // localStorage.setItem('ddResourcePreviewRows', JSON.stringify(initialRows));
+    //     setData('ddResourcePreviewRows', initialRows);
+    //   }
+    // }, [schema]);
 
       const debouncedDataChange = debounce((data, callback) => {
         callback?.(data);
@@ -97,10 +98,10 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
 
   const persistRows = (updatedRows) => {
     setRows(updatedRows);
-    console.log('persistRows: setData ->resourcePreviewRows', updatedRows);
+    console.log('persistRows: setData ->ddResourcePreviewRows', updatedRows);
     // localStorage.setItem('ddResourcePreviewRows', JSON.stringify(updatedRows));
-
     setData('ddResourcePreviewRows', updatedRows);
+    console.log('Saved Updated rows:', updatedRows);
   };
 
   const handleEditClick = (id) => {
