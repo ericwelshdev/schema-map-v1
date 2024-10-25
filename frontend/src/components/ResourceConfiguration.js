@@ -9,13 +9,14 @@ import ResourceDataPreview from './ResourceDataPreview';
 
 const ResourceConfiguration = ({ savedState, onStateChange }) => {
   const [resourceConfig, setResourceConfig] = useState(() => {
-    const saved = localStorage.getItem('resourceGeneralConfigX');
+    const saved = localStorage.getItem('resourceGeneralConfig');
     console.log("savedState:", savedState);
     return saved ? JSON.parse(saved) : {
       expandedAccordion: 'ingestionSetup',
       activeTab: 0,
       sourceInfo: null,
       schema: null,
+      fullData: null,
       sampleData: null,
       rawData: null,
       ingestionSettings: {},
@@ -47,7 +48,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
   useEffect(() => {
     if (resourceConfig) {
       onStateChange(resourceConfig);
-      localStorage.setItem('resourceGeneralConfigX', JSON.stringify(resourceConfig));
+      localStorage.setItem('resourceGeneralConfig', JSON.stringify(resourceConfig));
     }
   }, [resourceConfig, onStateChange]);
 
@@ -72,6 +73,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
     handleConfigChange({
       processedSchema: resourceData.processedSchema,
       schema: resourceData.schema,
+      fullData: resourceData.fullData,
       sampleData: resourceData.sampleData,
       resourceInfo: resourceData.resourceInfo
     });
@@ -137,6 +139,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
       handleConfigChange({        
         ingestion: updatedIngestionConfig,
         schema: result.resourceSchema,
+        fullData: result.fullData,
         sampleData: result.sampleData,
         rawData: result.rawData,
         expandedAccordion: 'data',
@@ -150,6 +153,8 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
       });
     }
   }, [resourceConfig, handleConfigChange]);
+
+  
 
 
 

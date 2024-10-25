@@ -206,7 +206,7 @@ const generateCSVSchema = async (file, settings) => {
 
 
           // Resolve with schema, sample data, warnings, and raw data
-          resolve({ schema, sampleData, warnings, rawData, fullData });
+          resolve({ schema, fullData, sampleData, warnings, rawData });
         } catch (error) {
           // Log any error that occurs during schema generation
           console.error('Error in CSV schema generation:', error);
@@ -394,6 +394,7 @@ export const processFile = async (file, settings = {}, isInitialIngestion = true
       },
       numCols : schemaResult.schema.length,
       numRows: schemaResult.sampleData.length,
+      fullData: schemaResult.fullData,
       sampleData: schemaResult.sampleData,
       rawData: schemaResult.rawData,
       expandedAccordion: isInitialIngestion ? 'ingestionSettings' : 'data'

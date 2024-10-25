@@ -14,20 +14,25 @@ import WarningIcon from '@mui/icons-material/Warning';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import { SquareChartGanttIcon, TablePropertiesIcon, Grid3X3Icon, LetterTextIcon } from "lucide-react";
 import { debounce } from 'lodash';
-
+import { initDB,  getData, setData } from '../utils/storageUtils';
 
     const ResourceDataPreview = ({ schema, resourceData, resourceInfo, sampleData, rawData, onDataChange }) => {
       const [tabValue, setTabValue] = useState(() => {
         const savedTab = localStorage.getItem('previewTabValue');
         return savedTab ? parseInt(savedTab) : 1;
       });
+        const [rows, setRows] = useState([]);
 
-      const [rows, setRows] = useState(() => {
-        const savedRows = localStorage.getItem('resourcePreviewRows');
+        useEffect(() => {
+          const loadSavedData = async () => {
+            try {
+              await initDB();
+              const savedRows = await getData('resourcePreviewRows');
+        
         if (savedRows) {
-          return JSON.parse(savedRows);
-        }
-        return schema ? schema.map((col, index) => ({
+                setRows(savedRows);
+              } else if (schema) {
+                const initialRows = schema.map((col, index) => ({
           id: index,
           ...col,
           order: index + 1,
@@ -40,16 +45,17 @@ import { debounce } from 'lodash';
           isDisabled: false,
           isUnsaved: false,
           originalState: { id: index, ...col }
-        })) : [];
-      });
-
-      useEffect(() => {
-        if (schema && !localStorage.getItem('previewTabValue')) {
-          setTabValue(1);
-          localStorage.setItem('previewTabValue', '1');
+                }));
+                setRows(initialRows);
+                await setData('resourcePreviewRows', initialRows);
+              }
+            } catch (error) {
+              console.error('Database operation failed:', error);
         }
-      }, [schema]);      
+          };
 
+          loadSavedData();
+        }, [schema]);
       // Only update rows from schema if no saved state exists
       useEffect(() => {
         if (schema) {
@@ -68,10 +74,10 @@ import { debounce } from 'lodash';
             originalState: { id: index, ...col }
           }));
           setRows(initialRows);
-          localStorage.setItem('resourcePreviewRows', JSON.stringify(initialRows));
+        // localStorage.setItem('ddResourcePreviewRows', JSON.stringify(initialRows));
+        setData('resourcePreviewRows', initialRows);
         }
       }, [schema]);
-      
 
       const debouncedDataChange = debounce((data, callback) => {
         callback?.(data);
@@ -92,8 +98,10 @@ import { debounce } from 'lodash';
 
   const persistRows = (updatedRows) => {
     setRows(updatedRows);
-    console.log('persistRows: localStorage.setItem -> resourcePreviewRows', updatedRows);
-    localStorage.setItem('resourcePreviewRows', JSON.stringify(updatedRows));
+    console.log('persistRows: setData ->resourcePreviewRows', updatedRows);
+    // localStorage.setItem('ddResourcePreviewRows', JSON.stringify(updatedRows));
+
+    setData('ddResourcePreviewRows', updatedRows);
   };
 
   const handleEditClick = (id) => {

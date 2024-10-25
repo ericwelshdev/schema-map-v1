@@ -24,6 +24,7 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
   const [dataDictionarySchema, setDataDictionarySchema] = useState([]);
   const [ingestionSettings, setIngestionSettings] = useState(savedState.ingestionSettings || {});
   const [fileInfo, setFileInfo] = useState(savedState.fileInfo || null);
+  const [fullData, setFullData] = useState(savedState.fullData || []);
   const [sampleData, setSampleData] = useState(savedState.sampleData || null);
   const [rawData, setRawData] = useState(savedState.rawData || null);
   const [loading, setLoading] = useState(false);
@@ -52,6 +53,7 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
         dataDictionarySchema,
         ingestionSettings,
         fileInfo,
+        fullData,
         sampleData,
         rawData,
         detectedFileType,
@@ -63,7 +65,7 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
         dataDictionary
       });
     }
-  }, [expandedAccordion, uploadStatus, schema, sourceSchema, dataDictionarySchema, ingestionSettings, fileInfo, sampleData, rawData, detectedFileType, config, classifications, sourceDataMapping, sourceInput,sourceAltInput, dataDictionary, onStateChange]);
+  }, [expandedAccordion, uploadStatus, schema, sourceSchema, dataDictionarySchema, ingestionSettings, fileInfo, fullData, sampleData, rawData, detectedFileType, config, classifications, sourceDataMapping, sourceInput,sourceAltInput, dataDictionary, onStateChange]);
 
 
 
@@ -110,6 +112,7 @@ const ResourceDataDictionary = ({ resourceData, onUpload, onSkip, savedState = {
       setDataDictionarySchema(schemaWithIds)
       
       setSchema(schemaWithIds);
+      setFullData(schemaResult.fullData);
       setSampleData(schemaResult.sampleData);
       setRawData(schemaResult.rawData);
       setProgress(80);

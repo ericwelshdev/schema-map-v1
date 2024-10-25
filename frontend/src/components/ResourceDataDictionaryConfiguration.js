@@ -6,6 +6,7 @@ import ResourceDataDictionaryAssignment from './ResourceDataDictionaryAssignment
 import ResourceApiIngestionSetup from './ResourceApiIngestionSetup';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataDictionaryDataPreview from './ResourceDataDictionaryDataPreview';
+import { initDB,  getData, setData } from '../utils/storageUtils';
 
 const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
   // console.log('ResourceDataDictionaryConfiguration-> Incoming savedState:', savedState);
@@ -48,7 +49,8 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
   useEffect(() => {
     if (ddResourceConfig) {
       onStateChange(ddResourceConfig);
-      localStorage.setItem('ddResourceGeneralConfig', JSON.stringify(ddResourceConfig));
+      // localStorage.setItem('ddResourceGeneralConfig', JSON.stringify(ddResourceConfig));
+      getData('ddResourcePreviewRows');
     }
   }, [ddResourceConfig, onStateChange]);
 
@@ -104,8 +106,8 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
 
   const handleApplyChanges = useCallback(async (updatedConfig) => {
     try {
-      const resourceType = ddResourceConfig.resourceSetup?.resourceType;
-
+      const resourceType = savedState?.dataDictionarySetup?.ddResourceSetup?.resourceType;
+    
       const updatedIngestionConfig = {
         ...ddResourceConfig.ingestion,
         ingestionSettings: ddResourceConfig.ingestionSettings,
@@ -113,31 +115,27 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
       };
 
       let result;
-      console.log("XXX ddResourceConfig", ddResourceConfig);
       switch (resourceType) {
-        
-        case 'file':
-          // console.log("XXX ddResourceConfig.resourceInfo.file", ddResourceConfig.resourceInfo.file);
-          // console.log("XXX ddResourceConfig.ingestionSettings", ddResourceConfig.ingestionSettings);
+        case 'dd_new':
           result = await ResourceFileIngestionSetup.handleFileUpload({
             File: ddResourceConfig.resourceInfo.file,
             ingestionSettings: ddResourceConfig.ingestionSettings,
           });
           break;
-        case 'database':
+        case 'dd_existing':
           result = await ResourceDataDictionaryAssignment.handleDatabaseIngestion({
             connectionInfo: ddResourceConfig.resourceInfo,
             ingestionSettings: ddResourceConfig.ingestionSettings,
           });
           break;
-        case 'api':
+        case 'dd_manual':
           result = await ResourceApiIngestionSetup.handleApiIngestion({
             apiConfig: ddResourceConfig.resourceInfo,
             ingestionSettings: ddResourceConfig.ingestionSettings,
           });
           break;
         default:
-          throw new Error('Unsupported resource type');
+          throw new Error(`Unsupported resource type: ${resourceType}`);
       }
 
       handleConfigChange({        
@@ -147,14 +145,14 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
         rawData: result.rawData,
         expandedAccordion: 'data',
       });
-      console.log('updatedConfig->>:', updatedConfig)
     } catch (error) {
       console.error('Error processing data:', error);
       handleConfigChange({
-        error: 'Failed to process data with new settings',
+        error: `Failed to process data: ${error.message}`,
+        uploadStatus: { type: 'error', message: error.message }
       });
     }
-  }, [ddResourceConfig, handleConfigChange]);
+  }, [ddResourceConfig, handleConfigChange, savedState]);
 
 
 

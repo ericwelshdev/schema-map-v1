@@ -37,14 +37,14 @@ export const csvConfig = {
   },
     previewNRows: {
       order: 2,
-      default: 0,
+      default: 100,
       uiField: 'previewNRows',
       uiDisplayName: 'Preview N Rows',
       uiType: 'number',
       callArgField: 'preview',
       autoDetect: async (file) => {
         // Implement auto-detection logic
-        return 0;
+        return 100;
       }
     },
   delimiter: {
@@ -179,7 +179,7 @@ export const csvConfig = {
   },
   fullMode: {
     order: 13,
-    default: false,
+    default: true,
     uiField: 'fastMode',
     uiDisplayName: 'Full Data Mode',
     uiType: 'boolean',

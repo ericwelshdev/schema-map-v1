@@ -7,6 +7,8 @@ import ResourceDataDictionaryConfiguration from './ResourceDataDictionaryConfigu
 import ResourceMappingTagging from './ResourceMappingTagging';
 import ResourceSummary from './ResourceSummary';
 import { debounce } from 'lodash';
+import { initDB,  getData, setData } from '../utils/storageUtils'
+
 
 const ResourceWizard = () => {
   const [activeStep, setActiveStep] = useState(0);
@@ -35,6 +37,7 @@ const ResourceWizard = () => {
         sourceInfo: null,
         schema: null,
         processedSchema: null,
+        fullData: null,
         sampleData: null,
         rawData: null,
         ingestionSettings: {},
@@ -53,29 +56,53 @@ const ResourceWizard = () => {
       dataDictionaryConfig: {
         expandedAccordion: 'ingestionSetup',
         activeTab: 0,
-        ddSourceInfo: null,
-        ddSchema: null,
+        sourceInfo: null,
+        schema: null,
         processedSchema: null,
-        ddSampleData: null,
-        ddRawData: null,
-        ddIngestionSettings: {},
-        ddIngestionConfig: {},
+        fullData: null,
+        sampleData: null,
+        rawData: null,
+        ingestionSettings: {},
+        ingestionConfig: {},
         uploadStatus: null,
         error: null
       }
     };
   });
 
-  // Persist state changes
+
   useEffect(() => {
-    localStorage.setItem('wizardState', JSON.stringify(wizardState));
+    initDB();
+    
+    // Store essential state in localStorage
+    const essentialState = {
+      resourceSetup: wizardState.resourceSetup,
+      dataDictionarySetup: wizardState.dataDictionarySetup,
+      currentStep: wizardState.currentStep
+    };
+    localStorage.setItem('wizardStateEssential', JSON.stringify(essentialState));
+    
+    console.log("wizardState in useEffect:", wizardState);
+    // Store large datasets in IndexedDB
+    if (wizardState.resourceConfig?.fullData) {
+      setData('resourceFullData', wizardState.resourceConfig?.fullData);
+    }
+    if (wizardState.resourceConfig?.sampleData) {
+      setData('resourceSampleData', wizardState.resourceConfig.sampleData);
+    }
+    if (wizardState.resourceConfig?.sampleData) {
+      setData('ddResourceFullData', wizardState.dataDictionaryConfig.fullData);
+    }    
+    if (wizardState.resourceConfig?.sampleData) {
+      setData('ddResourceSampleData', wizardState.dataDictionaryConfig.sampleData);
+    }    
   }, [wizardState]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      localStorage.removeItem('wizardState');
-      localStorage.removeItem('resourceGeneralConfigX');
+      localStorage.removeItem('wizardStateEssential');
+      localStorage.removeItem('resourceGeneralConfig');
       localStorage.clear();
     };
   }, []);

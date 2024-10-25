@@ -1,69 +1,106 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, TextField, Autocomplete, Chip } from '@mui/material';
 import stringSimilarity from 'string-similarity';
+import { getData } from '../utils/storageUtils';
 
-// Sample tags
+// Core tags for classification
 const coreTags = ['PII', 'Sensitive', 'Confidential', 'Business', 'Required'];
 
 const ResourceMappingTagging = ({ savedState }) => {
   const [matchResults, setMatchResults] = useState([]);
-  
-  // Get source schema
-  const resourceSchema = JSON.parse(localStorage.getItem('resourcePreviewRows'));
-  
-  // Get data dictionary schema and data
-  const dataDictionarySchema = JSON.parse(localStorage.getItem('ddResourcePreviewRows'));
+  const [sourceData, setSourceData] = useState({
+    ddResourceFullData: null,
+    ddResourcePreviewRows: null,
+    resourcePreviewRows: null,
+    resourceSampleData: null,
+  });
 
-  const dataDictionaryData = JSON.parse(localStorage.getItem('ddResourceGeneralConfig'));
+  // Load data from storage on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      const data = {
+        ddResourceFullData: await getData('ddResourceFullData'),
+        ddResourcePreviewRows: await getData('ddResourcePreviewRows'),
+        resourcePreviewRows: await getData('resourcePreviewRows'),
+        resourceSampleData: await getData('resourceSampleData'),
+      };
+      setSourceData(data);
+      console.log('Loaded Data:', data);
+    };
 
-  // Extract classified columns from data dictionary schema
+    loadData();
+  }, []);
+
+  // Get columns classified by a specific type
   const getClassifiedColumns = useCallback((classificationType) => {
-    return dataDictionarySchema?.filter(
+    const classifiedColumns = sourceData.ddResourcePreviewRows?.filter(
       (column) => column.schemaClassification?.value === classificationType
-    );
-  }, [dataDictionarySchema]);
+    ) || [];
 
+    console.log(`Classified Columns for '${classificationType}':`, classifiedColumns);
+    return classifiedColumns;
+  }, [sourceData.ddResourcePreviewRows]);
+
+  // Compute matches between source and classified columns
   const computeMatches = useCallback(() => {
-    if (!resourceSchema?.length || !dataDictionarySchema?.length || !dataDictionaryData?.length) {
+    const { resourcePreviewRows, ddResourceFullData } = sourceData;
+
+    if (!resourcePreviewRows?.length || !ddResourceFullData?.length) {
       console.log('Missing required data for matching');
       return;
     }
 
-    // Get columns classified as table and column names
     const tableNameColumns = getClassifiedColumns('physical_table_name');
     const columnNameColumns = getClassifiedColumns('physical_column_name');
 
-    if (!tableNameColumns?.length || !columnNameColumns?.length) {
-      console.log('No classified columns found');
+    if (!tableNameColumns.length || !columnNameColumns.length) {
+      console.log('No classified columns found for matching');
       return;
     }
 
     const tableNameField = tableNameColumns[0].name;
     const columnNameField = columnNameColumns[0].name;
 
-    // Create arrays of valid strings for comparison
-    const tableNames = dataDictionaryData
+    console.log('Using fields for matching:', {
+      tableNameField,
+      columnNameField,
+    });
+
+    // Create arrays for table and column names
+    const tableNames = ddResourceFullData
       .map(entry => String(entry[tableNameField] || ''))
       .filter(Boolean);
     
-    const columnNames = dataDictionaryData
+    const columnNames = ddResourceFullData
       .map(entry => String(entry[columnNameField] || ''))
       .filter(Boolean);
 
-    console.log('Table Names:', tableNames);
-    console.log('Column Names:', columnNames);
+    console.log('Extracted Table Names:', tableNames);
+    console.log('Extracted Column Names:', columnNames);
+ 
 
-    const results = resourceSchema.map(sourceColumn => {
-      const standardizedName = String(sourceColumn.standardizedSourceName || '');
+    const results = resourcePreviewRows.map(sourceColumn => {
+
+      const standardizedName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName);
       const columnName = String(sourceColumn.name || '');
 
+      console.log('Extracted standardizedName :', standardizedName);
+
+      // Verbose logging for source columns
+      console.log('Evaluating Source Column:', { sourceColumn });
+
       if (!standardizedName || !columnName) {
-        console.log('Missing source column data:', sourceColumn);
+        console.log('Missing standardized or source column name:', { standardizedName, columnName, sourceColumn });
         return null;
       }
 
       const tableMatch = stringSimilarity.findBestMatch(standardizedName, tableNames);
       const columnMatch = stringSimilarity.findBestMatch(columnName, columnNames);
+
+      console.log('Matches Found:', {
+        tableMatch,
+        columnMatch,
+      });
 
       return {
         source_column_name: columnName,
@@ -71,24 +108,37 @@ const ResourceMappingTagging = ({ savedState }) => {
         matched_column_name: columnMatch.bestMatch.target,
         table_similarity_score: tableMatch.bestMatch.rating,
         column_similarity_score: columnMatch.bestMatch.rating,
-        tags: []
+        tags: [],
       };
     }).filter(Boolean);
 
+    console.log('Computed Match Results:', results);
     setMatchResults(results);
-  }, [resourceSchema, dataDictionarySchema, dataDictionaryData, getClassifiedColumns]);
+  }, [sourceData, getClassifiedColumns]);
 
+  // Trigger computation when data changes
   useEffect(() => {
-    console.log('Resource Schema:', resourceSchema);
-    console.log('DD Schema:', dataDictionarySchema);
-    console.log('DD Data:', dataDictionaryData);
+    console.log('Current Source Data:', sourceData);
     
-    if (resourceSchema && dataDictionarySchema && dataDictionaryData) {
+    if (sourceData.resourcePreviewRows && sourceData.ddResourcePreviewRows && sourceData.ddResourceFullData) {
       computeMatches();
+    } else {
+      console.log('Missing data to compute matches');
     }
-  }, [resourceSchema, dataDictionarySchema, dataDictionaryData, computeMatches]);
+  }, [sourceData, computeMatches]);
 
-  const [selectedTags, setSelectedTags] = useState({});
+  // Handle selected tags for each match result
+  const handleTagChange = (sourceColumnName, newTags) => {
+    setMatchResults((prevResults) =>
+      prevResults.map((match) =>
+        match.source_column_name === sourceColumnName
+          ? { ...match, tags: newTags }
+          : match
+      )
+    );
+    console.log(`Updated Tags for ${sourceColumnName}:`, newTags);
+  };
+
   // Render match results and tagging interface
   return (
     <Box>
@@ -110,12 +160,7 @@ const ResourceMappingTagging = ({ savedState }) => {
             freeSolo
             options={coreTags}
             value={match.tags}
-            onChange={(_, newTags) => {
-              setSelectedTags(prev => ({
-                ...prev,
-                [match.source_column_name]: newTags
-              }));
-            }}
+            onChange={(_, newTags) => handleTagChange(match.source_column_name, newTags)}
             renderTags={(value, getTagProps) =>
               value.map((option, index) => (
                 <Chip
@@ -141,4 +186,5 @@ const ResourceMappingTagging = ({ savedState }) => {
     </Box>
   );
 };
+
 export default ResourceMappingTagging;

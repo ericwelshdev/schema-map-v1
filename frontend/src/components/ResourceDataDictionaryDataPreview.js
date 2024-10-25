@@ -14,40 +14,48 @@ import KeyOffIcon from '@mui/icons-material/KeyOff';
 import { styled, lighten, darken, maxWidth } from '@mui/system';
 import { SquareChartGanttIcon, TablePropertiesIcon, Grid3X3Icon, LetterTextIcon } from "lucide-react";
 import { debounce } from 'lodash';
-
+import { initDB,  getData, setData } from '../utils/storageUtils';
 
 const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo, sampleData, rawData, onDataChange }) => {
-      const [tabValue, setTabValue] = useState(() => {
-        const savedTab = localStorage.getItem('previewTabValue');
-        return savedTab ? parseInt(savedTab) : 1;
-      });
- 
-      const [rows, setRows] = useState(() => {
-        const savedRows = localStorage.getItem('ddResourcePreviewRows');
-        if (savedRows) {
-          return JSON.parse(savedRows);
-        }
-        return schema ? schema.map((col, index) => ({
-      id: index,
-      ...col,
-      order: index + 1,
-      alternativeName: '',
-      comment: '',
-      isEditing: false,
-      isChanged: false,
-      isDisabled: false,
-      isUnsaved: false,
-      originalState: { id: index, ...col, alternativeName: '' }
-        })) : [];
-      });
+  const [tabValue, setTabValue] = useState(() => {
+    const savedTab = localStorage.getItem('previewTabValue');
+    return savedTab ? parseInt(savedTab) : 1;
+  });
+        const [rows, setRows] = useState([]);
 
-      useEffect(() => {
-        if (schema && !localStorage.getItem('previewTabValue')) {
-          setTabValue(1);
-          localStorage.setItem('previewTabValue', '1');
-        }
-      }, [schema]);      
-
+        useEffect(() => {
+          const loadSavedData = async () => {
+            try {
+              await initDB();
+              const savedRows = await getData('ddResourcePreviewRows');
+        
+              if (savedRows) {
+                setRows(savedRows);
+              } else if (schema) {
+                const initialRows = schema.map((col, index) => ({
+                  id: index,
+                  ...col,
+                  order: index + 1,
+                  alternativeName: '',
+                  comment: '',
+                  isPII: false,
+                  isPHI: false,
+                  isEditing: false,
+                  isChanged: false,
+                  isDisabled: false,
+                  isUnsaved: false,
+                  originalState: { id: index, ...col }
+                }));
+                setRows(initialRows);
+                await setData('ddResourcePreviewRows', initialRows);
+              }
+            } catch (error) {
+              console.error('Database operation failed:', error);
+            }
+          };
+    
+          loadSavedData();
+        }, [schema]);
       // Only update rows from schema if no saved state exists
     useEffect(() => {
       if (schema) {
@@ -65,7 +73,8 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
           originalState: { id: index, ...col }
         }));
         setRows(initialRows);
-        localStorage.setItem('ddResourcePreviewRows', JSON.stringify(initialRows));
+        // localStorage.setItem('ddResourcePreviewRows', JSON.stringify(initialRows));
+        setData('ddResourcePreviewRows', initialRows);
       }
     }, [schema]);
 
@@ -88,8 +97,10 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
 
   const persistRows = (updatedRows) => {
     setRows(updatedRows);
-    console.log('persistRows: localStorage.setItem -> ddResourcePreviewRows', updatedRows);
-    localStorage.setItem('ddResourcePreviewRows', JSON.stringify(updatedRows));
+    console.log('persistRows: setData ->resourcePreviewRows', updatedRows);
+    // localStorage.setItem('ddResourcePreviewRows', JSON.stringify(updatedRows));
+
+    setData('ddResourcePreviewRows', updatedRows);
   };
 
   const handleEditClick = (id) => {

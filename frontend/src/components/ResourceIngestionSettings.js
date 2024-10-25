@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Grid, Box, Button, TextField, MenuItem, FormControlLabel, Switch } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -12,24 +12,27 @@ const SmallTextField = styled(TextField)({
 });
 
 const ResourceIngestionSettings = ({ ingestionConfig, onConfigChange, onApplyChanges }) => {
-  useEffect(() => {
-    console.log('Ingestion Config:', ingestionConfig);
-  }, [ingestionConfig]);
+  const [localSettings, setLocalSettings] = useState(ingestionConfig.ingestionAppliedProperties || {});
+
+  const handleSettingChange = (field, value) => {
+    setLocalSettings(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleApply = () => {
+    onConfigChange({
+      ...ingestionConfig,
+      ingestionAppliedProperties: localSettings
+    });
+    onApplyChanges();
+  };
 
   const config = ingestionConfig.ingestionConfig || {};
 
-  const handleSettingChange = (field, value) => {
-    onConfigChange({
-      ...ingestionConfig,
-      ingestionAppliedProperties: {
-        ...ingestionConfig.ingestionAppliedProperties,
-        [field]: value
-      }
-    })
-  }
-
-  const renderField = (key, fieldConfig) => {
-    const value = ingestionConfig.ingestionAppliedProperties?.[fieldConfig.callArgField] ?? fieldConfig.default;
+  const renderField = (key, fieldConfig, settings) => {
+    const value = settings[fieldConfig.callArgField] ?? fieldConfig.default;
 
     switch (fieldConfig.uiType) {
       case 'boolean':
@@ -91,14 +94,14 @@ const ResourceIngestionSettings = ({ ingestionConfig, onConfigChange, onApplyCha
       <Grid container spacing={1}>
         {Object.entries(config).map(([key, fieldConfig]) => (
           <Grid item xs={4} key={key}>
-            {renderField(key, fieldConfig)}
+            {renderField(key, fieldConfig, localSettings)}
           </Grid>
         ))}
       </Grid>
       <Button 
         variant="contained" 
         color="primary" 
-        onClick={onApplyChanges} 
+        onClick={handleApply} 
         sx={{ mt: 2 }}
       >
         Apply Changes
