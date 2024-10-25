@@ -1,17 +1,19 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Box, Typography, TextField, Autocomplete, Chip, Tooltip } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
-import { Autocomplete, TextField, Box, Typography, Chip } from '@mui/material';
+import stringSimilarity from 'string-similarity';
+import { getData } from '../utils/storageUtils';
 import LockPersonIcon from '@mui/icons-material/LockPerson';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
-import stringSimilarity from 'string-similarity';
-import { getData, STORES } from '../utils/storageUtils';
+import BlockIcon from '@mui/icons-material/Block';
+import EditIcon from '@mui/icons-material/Edit';
 
 const coreTags = ['PII', 'Sensitive', 'Confidential', 'Business', 'Required'];
 
 const getTagColor = (tag) => {
   const colors = {
     PII: '#ffcdd2',
-    Sensitive: '#fff9c4',
+    Sensitive: '#fff9c4', 
     Confidential: '#ffccbc',
     Business: '#c8e6c9',
     Required: '#bbdefb'
@@ -30,132 +32,113 @@ const ResourceMappingTagging = ({ savedState }) => {
     resourceSetup: null
   });
 
-  const getDictionaryColumns = useCallback(() => {
-    return sourceData.ddResourcePreviewRows?.map(col => ({
-      value: col.name,
-      label: col.name,
-      description: col.description
-    })) || [];
+  const getClassifiedColumns = useCallback((classificationType) => {
+    return sourceData.ddResourcePreviewRows?.filter(
+      (column) => column.schemaClassification?.value === classificationType
+    );
   }, [sourceData.ddResourcePreviewRows]);
 
-  const handleMatchChange = useCallback((rowId, newValue) => {
-    setMatchResults(prev => prev.map(row => 
-      row.id === rowId 
-        ? { ...row, matched_column_name: newValue.value }
-        : row
-    ));
-  }, []);
+  const getDictionaryColumns = useCallback(() => {
+    const tableNameColumns = getClassifiedColumns('physical_table_name');
+    const columnNameColumns = getClassifiedColumns('physical_column_name');
+    
+    if (!sourceData.ddResourceFullData || !tableNameColumns.length || !columnNameColumns.length) {
+      return [];
+    }
+    const standardizedName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName);
+    const tableNameField = tableNameColumns[0].name;
+    const columnNameField = columnNameColumns[0].name;
 
+    return sourceData.ddResourceFullData.map(entry => ({
+      value: `${entry[tableNameField]}.${entry[columnNameField]}`,
+      tableName: entry[tableNameField],
+      columnName: entry[columnNameField],
+      description: entry.description || ''
+    })).filter(col => col.tableName && col.columnName);
+  }, [sourceData.ddResourceFullData, getClassifiedColumns]);
+
+  const computeMatches = useCallback(() => {
+    if (!sourceData.resourcePreviewRows?.length || !sourceData.ddResourceFullData?.length) {
+      setMatchResults([]);
+      return;
+    }
+
+    const standardizedTableName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
+    if (!standardizedTableName) {
+      setMatchResults([]);
+      return;
+    }
+
+    const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
+    const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
+  
+    if (!tableNameColumns.length || !columnNameColumns.length) {
+      setMatchResults([]);
+      return;
+    }
+
+    const tableNameField = tableNameColumns[0]?.name;
+    const columnNameField = columnNameColumns[0]?.name;
+
+    const validColumnNames = sourceData.ddResourceFullData
+      .map(row => String(row[columnNameField] || ''))
+      .filter(Boolean);
+
+    if (!validColumnNames.length) {
+      setMatchResults([]);
+      return;
+    }
+
+    const results = sourceData.resourcePreviewRows
+      .filter(sourceColumn => sourceColumn?.name)
+      .map(sourceColumn => {
+        const sourceName = String(sourceColumn.name);
+        const columnMatch = stringSimilarity.findBestMatch(sourceName, validColumnNames);
+
+        return {
+          source_column_name: sourceName,
+          matched_table_name: standardizedTableName,
+          matched_column_name: columnMatch.bestMatch.target,
+          column_similarity_score: columnMatch.bestMatch.rating,
+          isPII: Boolean(sourceColumn.isPII),
+          isPHI: Boolean(sourceColumn.isPHI),
+          isDisabled: Boolean(sourceColumn.isDisabled),
+          alternativeName: sourceColumn.alternativeName || '',
+          tags: Array.isArray(sourceColumn.tags) ? sourceColumn.tags : []
+        };
+      });
+
+    setMatchResults(results);
+  }, [sourceData, getClassifiedColumns, savedState]);
   useEffect(() => {
     const loadData = async () => {
       const data = {
+        // resourceSetup: await getData(STORES.RESOURCE_SETUP)
         ddResourceFullData: await getData('ddResourceFullData'),
         ddResourcePreviewRows: await getData('ddResourcePreviewRows'),
         resourcePreviewRows: await getData('resourcePreviewRows'),
         resourceSampleData: await getData('resourceSampleData'),
       };
       setSourceData(data);
-      console.log('Loaded Data:', data);
     };
-
     loadData();
   }, []);
 
-  // Get columns classified by a specific type
-  const getClassifiedColumns = useCallback((classificationType) => {
-    const classifiedColumns = sourceData.ddResourcePreviewRows?.filter(
-      (column) => column.schemaClassification?.value === classificationType
-    ) || [];
-
-    console.log(`Classified Columns for '${classificationType}':`, classifiedColumns);
-    return classifiedColumns;
-  }, [sourceData.ddResourcePreviewRows]);
-
-  // Compute matches between source and classified columns
-  const computeMatches = useCallback(() => {
-    const { resourcePreviewRows, ddResourceFullData } = sourceData;
-
-    if (!resourcePreviewRows?.length || !ddResourceFullData?.length) {
-      console.log('Missing required data for matching');
-      return;
-    }
-
-    const tableNameColumns = getClassifiedColumns('physical_table_name');
-    const columnNameColumns = getClassifiedColumns('physical_column_name');
-
-    if (!tableNameColumns.length || !columnNameColumns.length) {
-      console.log('No classified columns found for matching');
-      return;
-    }
-
-    const tableNameField = tableNameColumns[0].name;
-    const columnNameField = columnNameColumns[0].name;
-
-    console.log('Using fields for matching:', {
-      tableNameField,
-      columnNameField,
-    });
-
-    // Create arrays for table and column names
-    const tableNames = ddResourceFullData
-      .map(entry => String(entry[tableNameField] || ''))
-      .filter(Boolean);
-    
-    const columnNames = ddResourceFullData
-      .map(entry => String(entry[columnNameField] || ''))
-      .filter(Boolean);
-
-    console.log('Extracted Table Names:', tableNames);
-    console.log('Extracted Column Names:', columnNames);
- 
-
-    const results = resourcePreviewRows.map(sourceColumn => {
-
-      const standardizedName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName);
-      const columnName = String(sourceColumn.name || '');
-
-      console.log('Extracted standardizedName :', standardizedName);
-
-      // Verbose logging for source columns
-      console.log('Evaluating Source Column:', { sourceColumn });
-
-      if (!standardizedName || !columnName) {
-        console.log('Missing standardized or source column name:', { standardizedName, columnName, sourceColumn });
-        return null;
-      }
-
-      const tableMatch = stringSimilarity.findBestMatch(standardizedName, tableNames);
-      const columnMatch = stringSimilarity.findBestMatch(columnName, columnNames);
-
-      console.log('Matches Found:', {
-        tableMatch,
-        columnMatch,
-      });
-
-      return {
-        source_column_name: columnName,
-        matched_table_name: tableMatch.bestMatch.target,
-        matched_column_name: columnMatch.bestMatch.target,
-        table_similarity_score: tableMatch.bestMatch.rating,
-        column_similarity_score: columnMatch.bestMatch.rating,
-        tags: [],
-      };
-    }).filter(Boolean);
-
-    console.log('Computed Match Results:', results);
-    setMatchResults(results);
-  }, [sourceData, getClassifiedColumns, savedState?.resourceSetup?.resourceSetup?.standardizedSourceName]);
-
-  // Trigger computation when data changes
   useEffect(() => {
-    console.log('Current Source Data:', sourceData);
-    
-    if (sourceData.resourcePreviewRows && sourceData.ddResourcePreviewRows && sourceData.ddResourceFullData) {
-      computeMatches();
-    } else {
-      console.log('Missing data to compute matches');
-    }
-  }, [sourceData, computeMatches]);
+    computeMatches();
+  }, [computeMatches]);
+
+  const handleMatchChange = useCallback((rowId, newValue) => {
+    setMatchResults(prev => prev.map(row => 
+      row.id === rowId ? { ...row, matchedColumn: newValue } : row
+    ));
+  }, []);
+
+  const handleTagChange = useCallback((rowId, newTags) => {
+    setMatchResults(prev => prev.map(row => 
+      row.id === rowId ? { ...row, tags: newTags } : row
+    ));
+  }, []);
 
   const columns = [
     {
@@ -163,120 +146,132 @@ const ResourceMappingTagging = ({ savedState }) => {
       headerName: 'Source Column',
       flex: 1,
       renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography>{params.value}</Typography>
-          {params.row.isPII && <LockPersonIcon color="primary" />}
-          {params.row.isPHI && <LocalHospitalIcon color="primary" />}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Typography variant="body2">{params.value}</Typography>
+          <Box sx={{ display: 'flex', gap: 0.5, ml: 1 }}>
+            {params.row.isPII && <LockPersonIcon sx={{ fontSize: 16 }} color="primary" />}
+            {params.row.isPHI && <LocalHospitalIcon sx={{ fontSize: 16 }} color="primary" />}
+            {params.row.isDisabled && <BlockIcon sx={{ fontSize: 16 }} color="error" />}
+            {params.row.alternativeName && (
+              <Tooltip title={`Alternative Name: ${params.row.alternativeName}`}>
+                <EditIcon sx={{ fontSize: 16 }} color="info" />
+              </Tooltip>
+            )}
+          </Box>
         </Box>
       )
     },
     {
-      field: 'alternativeName',
-      headerName: 'Alternative Name',
-      flex: 1,
-      editable: true
-    },
-    {
       field: 'matchedColumn',
-      headerName: 'Matched Data Dictionary Column',
+      headerName: 'Data Dictionary Match',
       flex: 2,
       renderCell: (params) => (
         <Autocomplete
-          fullWidth
           size="small"
-          options={params.row.possibleMatches}
-          value={params.value}
+          fullWidth
+          options={getDictionaryColumns()}
+          value={params.row.matchedColumn}
           onChange={(_, newValue) => handleMatchChange(params.row.id, newValue)}
-          renderInput={(params) => <TextField {...params} />}
+          getOptionLabel={(option) => option ? `${option.tableName}.${option.columnName}` : ''}
+          isOptionEqualToValue={(option, value) => option?.value === value?.value}
+          renderInput={(params) => (
+            <TextField {...params} variant="outlined" size="small" />
+          )}
         />
       )
     },
     {
       field: 'matchScore',
-      headerName: 'Match Score',
-      width: 130,
+      headerName: 'Score',
+      width: 80,
       renderCell: (params) => (
         <Box sx={{
           width: '100%',
           bgcolor: params.value > 0.7 ? 'success.light' : params.value > 0.4 ? 'warning.light' : 'error.light',
-          p: 1,
-          borderRadius: 1
+          p: 0.5,
+          borderRadius: 1,
+          fontSize: '0.75rem',
+          textAlign: 'center'
         }}>
-          {(params.value * 100).toFixed(1)}%
+          {(params.value * 100).toFixed(0)}%
         </Box>
       )
     },
     {
       field: 'tags',
       headerName: 'Tags',
-      flex: 1,
+      flex: 1.5,
       renderCell: (params) => (
-        <Box sx={{ display: 'flex', gap: 0.5 }}>
-          {params.value.map((tag) => (
-            <Chip
-              key={tag}
-              label={tag}
-              size="small"
-              sx={{ backgroundColor: getTagColor(tag) }}
-            />
-          ))}
-        </Box>
+        <Autocomplete
+          multiple
+          size="small"
+          freeSolo
+          options={coreTags}
+          value={params.row.tags}
+          onChange={(_, newValue) => handleTagChange(params.row.id, newValue)}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip
+                {...getTagProps({ index })}
+                key={option}
+                label={option}
+                size="small"
+                sx={{ 
+                  backgroundColor: getTagColor(option),
+                  height: '20px',
+                  '& .MuiChip-label': {
+                    fontSize: '0.75rem'
+                  }
+                }}
+              />
+            ))
+          }
+          renderInput={(params) => (
+            <TextField {...params} variant="outlined" size="small" />
+          )}
+        />
       )
     }
   ];
 
-  const rows = matchResults.map((match, index) => ({
-    id: index,
-    sourceColumn: match.source_column_name,
-    alternativeName: match.alternative_name,
-    matchedColumn: match.matched_column_name,
-    possibleMatches: getDictionaryColumns(),
-    matchScore: match.column_similarity_score,
-    tags: match.tags,
-    isPII: match.isPII,
-    isPHI: match.isPHI,
-    isEnabled: match.isEnabled
-  }));
+  const rows = useMemo(() => 
+    matchResults.map((match, index) => ({
+      id: index,
+      sourceColumn: match.source_column_name,
+      alternativeName: match.alternative_name || '',
+      matchedColumn: {
+        tableName: match.matched_table_name,
+        columnName: match.matched_column_name
+      },
+      matchScore: match.column_similarity_score,
+      tags: match.tags || [],
+      isPII: match.isPII,
+      isPHI: match.isPHI,
+      isDisabled: match.isDisabled
+    })), [matchResults]);
 
   return (
     <Box sx={{ height: 600, width: '100%' }}>
       <DataGrid
         rows={rows}
         columns={columns}
-        pageSize={10}
-        rowsPerPageOptions={[10, 25, 50]}
-        checkboxSelection
+        pageSize={15}
+        rowsPerPageOptions={[15, 30, 50]}
         disableSelectionOnClick
-        density="comfortable"
-        // Performance optimizations
-        rowBuffer={10}
-        rowThreshold={100}
-        columnBuffer={5}
-        scrollbarSize={17}
-        getRowHeight={() => 'auto'}
-        // Disable expensive features
-        disableColumnMenu
-        disableColumnFilter
-        disableVirtualization={false}
-        // Cache row height
-        cacheRowHeight
-        // Optimize components
-        components={{
-          // BaseCheckbox: React.memo(Checkbox),
-          BaseTextField: React.memo(TextField)
-        }}
+        density="compact"
+        getRowHeight={() => 45}
         sx={{
           '& .MuiDataGrid-cell': { 
-            py: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
+            py: 0.5,
+            fontSize: '0.875rem'
           },
-          '& .match-high': { bgcolor: 'success.lighter' },
-          '& .match-medium': { bgcolor: 'warning.lighter' },
-          '& .match-low': { bgcolor: 'error.lighter' }
+          '& .MuiDataGrid-columnHeader': {
+            fontSize: '0.875rem'
+          }
         }}
       />
-    </Box>  );
+    </Box>
+  );
 };
 
 export default ResourceMappingTagging;
