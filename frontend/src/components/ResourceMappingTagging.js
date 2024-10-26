@@ -56,50 +56,69 @@ const ResourceMappingTagging = ({ savedState }) => {
       description: entry.description || ''
     })).filter(col => col.tableName && col.columnName);
   }, [sourceData.ddResourceFullData, getClassifiedColumns]);
-
-  const computeMatches = useCallback(() => {
-    if (!sourceData.resourcePreviewRows?.length || !sourceData.ddResourceFullData?.length) {
-      setMatchResults([]);
-      return;
-    }
-
-    const standardizedTableName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
-    if (!standardizedTableName) {
-      setMatchResults([]);
-      return;
-    }
-
-    const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
-    const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
+    const getColumnDataByClassification = useCallback((classificationType, rowData) => {
+      const classifiedColumns = getClassifiedColumns(classificationType);
+      if (!classifiedColumns?.length) return '';
   
-    if (!tableNameColumns.length || !columnNameColumns.length) {
-      setMatchResults([]);
-      return;
-    }
+      const columnName = classifiedColumns[0].name;
+      return rowData[columnName] || '';
+    }, [getClassifiedColumns]);
 
-    const tableNameField = tableNameColumns[0]?.name;
-    const columnNameField = columnNameColumns[0]?.name;
+    const computeMatches = useCallback(() => {
+      if (!sourceData.resourcePreviewRows?.length || !sourceData.ddResourceFullData?.length) {
+        setMatchResults([]);
+        return;
+      }
 
-    const validColumnNames = sourceData.ddResourceFullData
-      .map(row => String(row[columnNameField] || ''))
-      .filter(Boolean);
+      const standardizedTableName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
+      if (!standardizedTableName) {
+        setMatchResults([]);
+        return;
+      }
 
-    if (!validColumnNames.length) {
-      setMatchResults([]);
-      return;
-    }
+      const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
+      const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
 
-    const results = sourceData.resourcePreviewRows
-      .filter(sourceColumn => sourceColumn?.name)
-      .map(sourceColumn => {
-        const sourceName = String(sourceColumn.name);
-        const columnMatch = stringSimilarity.findBestMatch(sourceName, validColumnNames);
+      if (!tableNameColumns.length || !columnNameColumns.length) {
+        setMatchResults([]);
+        return;
+      }
+
+      const tableNameField = tableNameColumns[0]?.name;
+      const columnNameField = columnNameColumns[0]?.name;
+
+      const validColumnNames = sourceData.ddResourceFullData
+        .map(row => String(row[columnNameField] || ''))
+        .filter(Boolean);
+
+      if (!validColumnNames.length) {
+        setMatchResults([]);
+        return;
+      }
+
+      const results = sourceData.resourcePreviewRows.map(sourceColumn => {
+        const sourceName = String(sourceColumn?.name || '');
+        const columnMatch = validColumnNames.length ? 
+          stringSimilarity.findBestMatch(sourceName, validColumnNames) :
+          { bestMatch: { target: '', rating: 0 } };
+
+        // Get the matched row data from data dictionary
+        const matchedDDRow = sourceData.ddResourceFullData.find(
+          row => row[columnNameField] === columnMatch.bestMatch.target
+        );
 
         return {
           source_column_name: sourceName,
           matched_table_name: standardizedTableName,
           matched_column_name: columnMatch.bestMatch.target,
           column_similarity_score: columnMatch.bestMatch.rating,
+          logicalTableName: getColumnDataByClassification('logical_table_name', matchedDDRow),
+          logicalColumnName: getColumnDataByClassification('logical_column_name', matchedDDRow),
+          columnDescription: getColumnDataByClassification('column_description', matchedDDRow),
+          dataType: getColumnDataByClassification('data_type', matchedDDRow),
+          primaryKey: getColumnDataByClassification('primary_key', matchedDDRow),
+          foreignKey: getColumnDataByClassification('foreign_key', matchedDDRow),
+          nullable: getColumnDataByClassification('nullable', matchedDDRow),
           isPII: Boolean(sourceColumn.isPII),
           isPHI: Boolean(sourceColumn.isPHI),
           isDisabled: Boolean(sourceColumn.isDisabled),
@@ -108,13 +127,38 @@ const ResourceMappingTagging = ({ savedState }) => {
         };
       });
 
-    setMatchResults(results);
-  }, [sourceData, getClassifiedColumns, savedState]);
-  useEffect(() => {
-    const loadData = async () => {
-      const data = {
-        // resourceSetup: await getData(STORES.RESOURCE_SETUP)
-        ddResourceFullData: await getData('ddResourceFullData'),
+      setMatchResults(results);
+    }, [sourceData, getClassifiedColumns, getColumnDataByClassification, savedState]);
+
+    const handleMatchChange = useCallback((rowId, newValue) => {
+      const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
+      const columnNameField = columnNameColumns[0]?.name;
+
+      setMatchResults(prev => prev.map(row => {
+        if (row.id === rowId) {
+          const matchedDDRow = sourceData.ddResourceFullData.find(
+            ddRow => ddRow[columnNameField] === newValue.columnName
+          );
+
+          return {
+            ...row,
+            matchedColumn: newValue,
+            logicalTableName: getColumnDataByClassification('logical_table_name', matchedDDRow),
+            logicalColumnName: getColumnDataByClassification('logical_column_name', matchedDDRow),
+            columnDescription: getColumnDataByClassification('column_description', matchedDDRow),
+            dataType: getColumnDataByClassification('data_type', matchedDDRow),
+            primaryKey: getColumnDataByClassification('primary_key', matchedDDRow),
+            foreignKey: getColumnDataByClassification('foreign_key', matchedDDRow),
+            nullable: getColumnDataByClassification('nullable', matchedDDRow)
+          };
+        }
+        return row;
+      }));
+    }, [sourceData, getColumnDataByClassification, getClassifiedColumns]);
+    useEffect(() => {
+      const loadData = async () => {
+        const data = {
+          ddResourceFullData: await getData('ddResourceFullData'),
         ddResourcePreviewRows: await getData('ddResourcePreviewRows'),
         resourcePreviewRows: await getData('resourcePreviewRows'),
         resourceSampleData: await getData('resourceSampleData'),
@@ -128,11 +172,11 @@ const ResourceMappingTagging = ({ savedState }) => {
     computeMatches();
   }, [computeMatches]);
 
-  const handleMatchChange = useCallback((rowId, newValue) => {
-    setMatchResults(prev => prev.map(row => 
-      row.id === rowId ? { ...row, matchedColumn: newValue } : row
-    ));
-  }, []);
+  // const handleMatchChange = useCallback((rowId, newValue) => {
+  //   setMatchResults(prev => prev.map(row => 
+  //     row.id === rowId ? { ...row, matchedColumn: newValue } : row
+  //   ));
+  // }, []);
 
   const handleTagChange = useCallback((rowId, newTags) => {
     setMatchResults(prev => prev.map(row => 
@@ -203,34 +247,71 @@ const ResourceMappingTagging = ({ savedState }) => {
       flex: 1.5,
       renderCell: (params) => (
         <Autocomplete
-          multiple
-          size="small"
-          freeSolo
-          options={coreTags}
-          value={params.row.tags}
-          onChange={(_, newValue) => handleTagChange(params.row.id, newValue)}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => (
-              <Chip
-                {...getTagProps({ index })}
-                key={option}
-                label={option}
-                size="small"
-                sx={{ 
-                  backgroundColor: getTagColor(option),
-                  height: '20px',
-                  '& .MuiChip-label': {
-                    fontSize: '0.75rem'
-                  }
-                }}
-              />
-            ))
-          }
-          renderInput={(params) => (
-            <TextField {...params} variant="outlined" size="small" />
-          )}
-        />
+   multiple
+   limitTags={2}
+   freeSolo  // Allows adding new custom tags
+   options={coreTags} 
+   value={params.row.tags}
+   onChange={(_, newTags) => handleTagChange(params.row.id, newTags)}
+   renderInput={(params) => <TextField {...params} label="Tags" placeholder="Add Tag" />}
+   renderTags={(value, getTagProps) =>
+     value.map((option, index) => (
+       <Chip 
+         variant="outlined" 
+         label={option} 
+         {...getTagProps({ index })} 
+         style={{ backgroundColor: getTagColor(option) }} 
+       />
+     ))
+   }
+/>
+
       )
+    },
+    {
+      field: 'logicalTableName',
+      headerName: 'Logical Table Name',
+      flex: 1,
+      editable: true
+    },
+    {
+      field: 'logicalColumnName',
+      headerName: 'Logical Column Name',
+      flex: 1,
+      editable: true
+    },
+    {
+      field: 'columnDescription',
+      headerName: 'Column Description',
+      flex: 1.5,
+      editable: true
+    },
+    {
+      field: 'dataType',
+      headerName: 'Data Type',
+      flex: 1,
+      editable: true
+    },
+    {
+      field: 'primaryKey',
+      headerName: 'Primary Key',
+      width: 100,
+      type: 'boolean',
+      editable: true
+    },
+    {
+      field: 'foreignKey',
+      headerName: 'Foreign Key',
+      width: 100,
+      type: 'boolean',
+      editable: true
+    },
+    {
+      field: 'nullable',
+      headerName: 'Nullable',
+      width: 100,
+      type: 'boolean',
+      editable: true
     }
   ];
 
