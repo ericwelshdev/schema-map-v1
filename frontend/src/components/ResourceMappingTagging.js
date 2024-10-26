@@ -64,6 +64,7 @@ const ResourceMappingTagging = ({ savedState }) => {
       return rowData[columnName] || '';
     }, [getClassifiedColumns]);
 
+  // Compute matches between source columns and dictionary
     const computeMatches = useCallback(() => {
       if (!sourceData.resourcePreviewRows?.length || !sourceData.ddResourceFullData?.length) {
         setMatchResults([]);
