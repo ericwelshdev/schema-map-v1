@@ -130,14 +130,19 @@ const ResourceMappingTagging = ({ savedState }) => {
       setMatchResults(results);
     }, [sourceData, getClassifiedColumns, getColumnDataByClassification, savedState]);
 
+    const standardizedTableName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
+
     const handleMatchChange = useCallback((rowId, newValue) => {
       const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
       const columnNameField = columnNameColumns[0]?.name;
+      const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
+      const tableNameField = tableNameColumns[0]?.name;
 
       setMatchResults(prev => prev.map(row => {
         if (row.id === rowId) {
           const matchedDDRow = sourceData.ddResourceFullData.find(
-            ddRow => ddRow[columnNameField] === newValue.columnName
+            ddRow => ddRow[columnNameField] === newValue.columnName && 
+                 ddRow[tableNameField] === standardizedTableName
           );
 
           return {
@@ -154,7 +159,9 @@ const ResourceMappingTagging = ({ savedState }) => {
         }
         return row;
       }));
-    }, [sourceData, getColumnDataByClassification, getClassifiedColumns]);
+    }, [getClassifiedColumns, sourceData.ddResourceFullData, getColumnDataByClassification, standardizedTableName]);
+
+
     useEffect(() => {
       const loadData = async () => {
         const data = {
@@ -247,25 +254,32 @@ const ResourceMappingTagging = ({ savedState }) => {
       flex: 1.5,
       renderCell: (params) => (
         <Autocomplete
-   multiple
-   limitTags={2}
-   freeSolo  // Allows adding new custom tags
-   options={coreTags} 
-   value={params.row.tags}
-   onChange={(_, newTags) => handleTagChange(params.row.id, newTags)}
-   renderInput={(params) => <TextField {...params} label="Tags" placeholder="Add Tag" />}
-   renderTags={(value, getTagProps) =>
-     value.map((option, index) => (
-       <Chip 
-         variant="outlined" 
-         label={option} 
-         {...getTagProps({ index })} 
-         style={{ backgroundColor: getTagColor(option) }} 
-       />
-     ))
-   }
-/>
-
+          multiple
+          limitTags={2}
+          size="small"
+          freeSolo
+          options={coreTags}
+          value={params.row.tags}
+          onChange={(_, newValue) => handleTagChange(params.row.id, newValue)}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip
+                {...getTagProps({ index })}
+                key={option}
+                label={option}
+                size="small"
+                sx={{ 
+                  backgroundColor: getTagColor(option),
+                  height: '20px',
+                  '& .MuiChip-label': { fontSize: '0.75rem' }
+                }}
+              />
+            ))
+          }
+          renderInput={(params) => (
+            <TextField {...params} variant="outlined" size="small" placeholder="Add tags" />
+          )}
+        />
       )
     },
     {
@@ -328,7 +342,14 @@ const ResourceMappingTagging = ({ savedState }) => {
       tags: match.tags || [],
       isPII: match.isPII,
       isPHI: match.isPHI,
-      isDisabled: match.isDisabled
+      isDisabled: match.isDisabled,
+      logicalTableName: match.logicalTableName,
+      logicalColumnName: match.logicalColumnName,
+      columnDescription: match.columnDescription,
+      dataType: match.dataType,
+      primaryKey: match.primaryKey,
+      foreignKey: match.foreignKey,
+      nullable: match.nullable
     })), [matchResults]);
 
   return (
