@@ -26,6 +26,7 @@ const ResourceMappingTagging = ({ savedState }) => {
   const [selectedDictionaryTable, setSelectedDictionaryTable] = useState(standardizedName);
   const [tableStats, setTableStats] = useState(null);
   const [matchResults, setMatchResults] = useState([]);
+  const [openTableDialog, setOpenTableDialog] = useState(false);
   const [sourceData, setSourceData] = useState({
     ddResourceFullData: null,
     ddResourcePreviewRows: null,
@@ -247,6 +248,12 @@ const ResourceMappingTagging = ({ savedState }) => {
     ));
   }, []);
 
+
+
+
+
+
+
   const columns = [
     {
       field: 'sourceColumn',
@@ -407,49 +414,29 @@ const ResourceMappingTagging = ({ savedState }) => {
       foreignKey: match.foreignKey,
       nullable: match.nullable
     })), [matchResults]);
-    return (
-      <Box sx={{ height: 600, width: '100%' }}>
-        <Box sx={{ mb: 2 }}>
-          {tableStats && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="subtitle2">
-                Current Table: {selectedDictionaryTable} | 
-                Confidence Score: {tableStats.confidenceScore.toFixed(1)}% | 
-                Matched Columns: {tableStats.matchedColumns} | 
-                Unmatched Columns: {tableStats.unmatchedColumns}
-              </Typography>
-            </Alert>
-          )}
-          <Button 
-            variant="contained" 
-            onClick={() => setSelectedDictionaryTable(prevTable => 
-              // Logic for changing dictionary table
-            )}
-          >
-            Change Table
-          </Button>
-        </Box>
-      
-        <DataGrid
-          rows={rows}
-          columns={columns}
-          pageSize={15}
-          rowsPerPageOptions={[15, 30, 50]}
-          disableSelectionOnClick
-          density="compact"
-          getRowHeight={() => 45}
-          sx={{
-            '& .MuiDataGrid-cell': { 
-              py: 0.5,
-              fontSize: '0.875rem'
-            },
-            '& .MuiDataGrid-columnHeader': {
-              fontSize: '0.875rem'
-            }
-          }}
-        />
-      </Box>
-    );
-  };
+
+  return (
+    <Box sx={{ height: 600, width: '100%' }}>
+      <DataGrid
+        rows={rows}
+        columns={columns}
+        pageSize={15}
+        rowsPerPageOptions={[15, 30, 50]}
+        disableSelectionOnClick
+        density="compact"
+        getRowHeight={() => 45}
+        sx={{
+          '& .MuiDataGrid-cell': { 
+            py: 0.5,
+            fontSize: '0.875rem'
+          },
+          '& .MuiDataGrid-columnHeader': {
+            fontSize: '0.875rem'
+          }
+        }}
+      />
+    </Box>
+  );
+};
 
 export default ResourceMappingTagging;
