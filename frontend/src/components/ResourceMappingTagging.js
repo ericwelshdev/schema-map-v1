@@ -300,7 +300,7 @@ const ResourceMappingTagging = ({ savedState }) => {
     useEffect(() => {
       const loadData = async () => {
         const data = {
-          ddResourceFullData: await getData('ddResourceFullData'),
+        ddResourceFullData: await getData('ddResourceFullData'),
         ddResourcePreviewRows: await getData('ddResourcePreviewRows'),
         resourcePreviewRows: await getData('resourcePreviewRows'),
         resourceSampleData: await getData('resourceSampleData'),
@@ -397,44 +397,6 @@ const ResourceMappingTagging = ({ savedState }) => {
   
   
 
-// const TableSelectionDialog = ({ open, onClose, tables, onSelect }) => (
-//   <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-//     <DialogTitle>Select Table</DialogTitle>
-//     <DialogContent>
-//       <List>
-//         {tables.map((table) => (
-//           <ListItem 
-//             key={table.tableName} 
-//             button 
-//             onClick={() => onSelect(table.tableName)}
-//             sx={{
-//               borderRadius: 1,
-//               mb: 1,
-//               '&:hover': { backgroundColor: 'action.hover' }
-//             }}
-//           >
-//             <ListItemText
-//               primary={table.tableName}
-//               secondary={`Matched: ${table.matchedColumns} | Unmatched: ${table.unmatchedColumns}`}
-//             />
-//             <ListItemSecondaryAction>
-//               <Typography 
-//                 variant="body2" 
-//                 color={table.confidenceScore >= 60 ? 'success.main' : 'error.main'}
-//               >
-//                 {table.confidenceScore.toFixed(1)}%
-//               </Typography>
-//             </ListItemSecondaryAction>
-//           </ListItem>
-//         ))}
-//       </List>
-//     </DialogContent>
-//   </Dialog>
-// );
-
-
-
-
   const columns = [
     {
       field: 'sourceColumn',
@@ -495,10 +457,10 @@ const ResourceMappingTagging = ({ savedState }) => {
       headerName: 'Score',
       width: 80,
       renderCell: (params) => (
-        <Box sx={{
+        <Box sx={{        
           width: '100%',
           bgcolor: params.value > 0.7 ? 'success.light' : params.value > 0.4 ? 'warning.light' : 'error.light',
-          p: 0.5,
+          p: 0,
           borderRadius: 1,
           fontSize: '0.75rem',
           textAlign: 'center'
@@ -610,6 +572,7 @@ const ResourceMappingTagging = ({ savedState }) => {
       foreignKey: match.foreignKey,
       nullable: match.nullable
     })), [matchResults]);
+  
 
     
     return (
@@ -664,4 +627,5 @@ const ResourceMappingTagging = ({ savedState }) => {
 
   
 export default ResourceMappingTagging;
+
 
