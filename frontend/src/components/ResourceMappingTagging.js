@@ -10,7 +10,7 @@ import BlockIcon from '@mui/icons-material/Block';
 import EditIcon from '@mui/icons-material/Edit';
 
 import SearchIcon from '@mui/icons-material/Search';
-import ResourceDataDictionaryColumnMappingCandidateDialog from './ResourceDataDictionaryColumnMappingCandidateDialog';
+import ResourceDataDictionaryColumnMappingCandidateDialog  from './ResourceDataDictionaryColumnMappingCandidateDialog';
 import ResourceDataDictionaryTableSelectionDialog from './ResourceDataDictionaryTableSelectionDialog';
 
 
@@ -44,36 +44,73 @@ const ResourceMappingTagging = ({ savedState }) => {
 
   
   const handleOpenCandidateDialog = (row) => {
-    // Find the matching result for this row
-    const matchResult = matchResults.find(m => m.source_column_name === row.sourceColumn);
-    
-    // Map the candidates to the format expected by the dialog
-    const candidates = matchResult?.candidateMatches?.map(match => ({
+    const matchResult = matchResults.find((m) => m.source_column_name === row.sourceColumn);
+  
+    const candidates = matchResult?.candidateMatches?.map((match) => ({
+      tableName: match.ddRow?.tableName || selectedDictionaryTable, // Ensure tableName is included
       columnName: match.columnName,
       score: match.score,
       logicalTableName: getColumnDataByClassification('logical_table_name', match.ddRow),
       logicalColumnName: getColumnDataByClassification('logical_column_name', match.ddRow),
       dataType: getColumnDataByClassification('data_type', match.ddRow),
-      columnDescription: getColumnDataByClassification('column_description', match.ddRow)
+      columnDescription: getColumnDataByClassification('column_description', match.ddRow),
     })) || [];
   
     setSelectedRow({
+      id: row.id,
       sourceColumn: row.sourceColumn,
-      candidateMatches: candidates
+      matchedColumn: row.matchedColumn,
+      candidateMatches: candidates,
     });
     setOpenCandidateDialog(true);
   };
   
   
   
-  const handleCandidateSelect = (candidate) => {
-    if (selectedRow) {
-      handleMatchChange(selectedRow.id, {
-        tableName: selectedDictionaryTable,
-        columnName: candidate.columnName
-      });
-    }
-  };
+  
+  // const handleCandidateSelect = (candidate) => {
+  //   if (selectedRow) {
+  //     handleMatchChange(selectedRow.id, {
+  //       tableName: selectedDictionaryTable,
+  //       columnName: candidate.columnName
+  //     });
+  //   }
+  // };
+
+// Update handleCandidateSelect to accept both rowId and candidate
+// const handleCandidateSelect = (rowId, candidate) => {
+//   handleMatchChange(rowId, {
+//       tableName: selectedDictionaryTable,
+//       columnName: candidate.columnName,
+//   });
+// };
+
+// In the main component's handleCandidateSelect function
+const handleCandidateSelect = (candidate) => {
+  console.log('Selected handleCandidateSelect candidate:', candidate);  // Log the selected candidate for debugging
+  if (selectedRow) {
+    handleMatchChange(selectedRow.id, {
+      tableName: candidate?.tableName || 'No Table',  // Check candidate and provide fallback
+      columnName: candidate?.columnName || 'No Column',
+    });
+    setOpenCandidateDialog(false);
+  } else {
+    console.warn("Selected row is undefined in handleCandidateSelect.");
+  }
+};
+
+
+// Update the dialog component rendering to pass the selectedRow's id when calling handleCandidateSelect
+<ResourceDataDictionaryColumnMappingCandidateDialog
+  open={openCandidateDialog}
+  onClose={() => setOpenCandidateDialog(false)}
+  sourceColumn={selectedRow?.sourceColumn}
+  tableName={selectedDictionaryTable} 
+  candidates={selectedRow?.candidateMatches || []}
+  currentMapping={selectedRow?.matchedColumn}
+  onSelect={(mappingData) => handleCandidateSelect(selectedRow?.id, mappingData)} // Pass selectedRow.id here
+/>
+
 
   const [sourceData, setSourceData] = useState({
     ddResourceFullData: null,
@@ -613,13 +650,15 @@ const ResourceMappingTagging = ({ savedState }) => {
             }
           }}
         />
-        <ResourceDataDictionaryColumnMappingCandidateDialog
-          open={openCandidateDialog}
-          onClose={() => setOpenCandidateDialog(false)}
-          sourceColumn={selectedRow?.sourceColumn}
-          candidates={selectedRow?.candidateMatches || []}
-          onSelect={handleCandidateSelect}
-        />
+       <ResourceDataDictionaryColumnMappingCandidateDialog
+        open={openCandidateDialog}
+        onClose={() => setOpenCandidateDialog(false)}
+        sourceColumn={selectedRow?.sourceColumn}
+        candidates={selectedRow?.candidateMatches || []}
+        currentMapping={selectedRow?.matchedColumn}
+        onSelect={(mappingData) => handleCandidateSelect(selectedRow.id, mappingData)}
+      />
+
         </Box>
       </Box>
     );

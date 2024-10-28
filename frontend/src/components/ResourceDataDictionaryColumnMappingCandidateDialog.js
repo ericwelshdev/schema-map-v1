@@ -123,6 +123,7 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
   open, 
   onClose, 
   sourceColumn,
+  tableName,
   candidates = [],
   currentMapping = null,
   onSelect 
@@ -177,23 +178,55 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
   // };
 
 
-  const handleConfirmSelection = () => {
-    console.log('Confirming selection:', selectedCandidate);
-    if (selectedCandidate) {
-      const mappingData = {
-        tableName: selectedCandidate.tableName,
-        columnName: selectedCandidate.columnName,
-        logicalTableName: selectedCandidate.logicalTableName,
-        logicalColumnName: selectedCandidate.logicalColumnName,
-        dataType: selectedCandidate.dataType,
-        columnDescription: selectedCandidate.columnDescription,
-        score: selectedCandidate.score
-      };
-      console.log('Mapping data being sent:', mappingData);
-      onSelect(mappingData);
-      onClose();
-    }
-  };
+  // const handleConfirmSelection = () => {
+  //   console.log('Confirming selection:', selectedCandidate);
+  //   if (selectedCandidate) {
+  //     const mappingData = {
+  //       tableName: selectedCandidate.tableName,
+  //       columnName: selectedCandidate.columnName,
+  //       logicalTableName: selectedCandidate.logicalTableName,
+  //       logicalColumnName: selectedCandidate.logicalColumnName,
+  //       dataType: selectedCandidate.dataType,
+  //       columnDescription: selectedCandidate.columnDescription,
+  //       score: selectedCandidate.score
+  //     };
+  //     console.log('Mapping data being sent:', mappingData);
+  //     onSelect(mappingData);
+  //     onClose();
+  //   }
+  // };
+
+  // const handleConfirmSelection = () => {
+  //   console.log('Confirming selection:', selectedCandidate);
+  //   if (selectedCandidate) {
+  //     const mappingData = {
+  //       tableName: selectedCandidate.tableName,
+  //       columnName: selectedCandidate.columnName,
+  //       logicalTableName: selectedCandidate.logicalTableName,
+  //       logicalColumnName: selectedCandidate.logicalColumnName,
+  //       dataType: selectedCandidate.dataType,
+  //       columnDescription: selectedCandidate.columnDescription,
+  //       score: selectedCandidate.score
+  //     };
+  //     console.log('Mapping data being sent:', mappingData);
+  //     onSelect(rowId, mappingData); // Pass rowId and data to the parent component
+  //     onClose();
+  //   }
+  // };
+
+// In the dialog component's handleConfirmSelection function
+const handleConfirmSelection = () => {
+  console.log("Confirming selected candidate:", selectedCandidate);
+  if (selectedCandidate) {
+    onSelect(selectedCandidate); // Pass selected candidate to the main component
+    onClose();
+  } else {
+    console.warn("No candidate selected to confirm.");
+  }
+};
+  
+  
+  
   
 
   const getScoreColor = (score) => {
@@ -207,15 +240,16 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
 
 
   
-  // Set initial selection based on current mapping
-  useEffect(() => {
-    if (currentMapping) {
-      const existingMapping = candidates.find(c => 
-        `${c.tableName}.${c.columnName}` === `${currentMapping.tableName}.${currentMapping.columnName}`
-      );
-      setSelectedCandidate(existingMapping);
-    }
-  }, [currentMapping, candidates]);
+// This useEffect runs when the dialog opens and selects the current mapping candidate by default
+useEffect(() => {
+  if (currentMapping) {
+    const existingMapping = candidates.find(
+      (c) => `${c.tableName}.${c.columnName}` === `${currentMapping.tableName}.${currentMapping.columnName}`
+    );
+    setSelectedCandidate(existingMapping || null);
+  }
+}, [currentMapping, candidates]);
+
 
   useEffect(() => {
     if (selectedCandidate?.id === 'manual-map') {
