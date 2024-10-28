@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Box, Typography, TextField, Autocomplete, Chip, Tooltip } from '@mui/material';
+import { Box, Typography, TextField, Autocomplete, Chip, Tooltip , IconButton} from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import stringSimilarity from 'string-similarity';
 import { getData } from '../utils/storageUtils';
@@ -7,6 +7,10 @@ import LockPersonIcon from '@mui/icons-material/LockPerson';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import BlockIcon from '@mui/icons-material/Block';
 import EditIcon from '@mui/icons-material/Edit';
+
+import SearchIcon from '@mui/icons-material/Search';
+import ResourceDataDictionaryMappingCandidateDialog from './ResourceDataDictionaryMappingCandidateDialog';
+
 
 const coreTags = ['PII', 'Sensitive', 'Confidential', 'Business', 'Required'];
 
@@ -27,6 +31,24 @@ const ResourceMappingTagging = ({ savedState }) => {
   const [tableStats, setTableStats] = useState(null);
   const [matchResults, setMatchResults] = useState([]);
   const [openTableDialog, setOpenTableDialog] = useState(false);
+
+  const [openCandidateDialog, setOpenCandidateDialog] = useState(false);
+  const [selectedRow, setSelectedRow] = useState(null);
+
+  const handleOpenCandidateDialog = (row) => {
+    setSelectedRow(row);
+    setOpenCandidateDialog(true);
+  };
+  
+  const handleCandidateSelect = (candidate) => {
+    if (selectedRow) {
+      handleMatchChange(selectedRow.id, {
+        tableName: selectedDictionaryTable,
+        columnName: candidate.columnName
+      });
+    }
+  };
+
   const [sourceData, setSourceData] = useState({
     ddResourceFullData: null,
     ddResourcePreviewRows: null,
@@ -280,18 +302,33 @@ const ResourceMappingTagging = ({ savedState }) => {
       headerName: 'Data Dictionary Match',
       flex: 2,
       renderCell: (params) => (
-        <Autocomplete
-          size="small"
-          fullWidth
-          options={getDictionaryColumns()}
-          value={params.row.matchedColumn}
-          onChange={(_, newValue) => handleMatchChange(params.row.id, newValue)}
-          getOptionLabel={(option) => option ? `${option.tableName}.${option.columnName}` : ''}
-          isOptionEqualToValue={(option, value) => option?.value === value?.value}
-          renderInput={(params) => (
-            <TextField {...params} variant="outlined" size="small" />
-          )}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+          <Autocomplete
+            size="small"
+            fullWidth
+            options={[
+              { tableName: '', columnName: 'No Map' }, 
+              ...getDictionaryColumns()
+            ]}
+            value={params.row.matchScore < 0.4 ? { tableName: '', columnName: 'No Map' } : params.row.matchedColumn}
+            onChange={(_, newValue) => handleMatchChange(params.row.id, newValue)}
+            getOptionLabel={(option) => option ? 
+              option.columnName === 'No Map' ? 'No Map' : 
+              `${option.tableName}.${option.columnName}` : ''
+            }
+            isOptionEqualToValue={(option, value) => option?.columnName === value?.columnName}
+            renderInput={(params) => (
+              <TextField {...params} variant="outlined" size="small" />
+            )}
+          />
+          <IconButton
+            size="small"
+            onClick={() => handleOpenCandidateDialog(params.row)}
+            sx={{ ml: 1 }}
+          >
+            <SearchIcon fontSize="small" />
+          </IconButton>
+        </Box>
       )
     },
     {
@@ -414,29 +451,36 @@ const ResourceMappingTagging = ({ savedState }) => {
       foreignKey: match.foreignKey,
       nullable: match.nullable
     })), [matchResults]);
-
-  return (
-    <Box sx={{ height: 600, width: '100%' }}>
-      <DataGrid
-        rows={rows}
-        columns={columns}
-        pageSize={15}
-        rowsPerPageOptions={[15, 30, 50]}
-        disableSelectionOnClick
-        density="compact"
-        getRowHeight={() => 45}
-        sx={{
-          '& .MuiDataGrid-cell': { 
-            py: 0.5,
-            fontSize: '0.875rem'
-          },
-          '& .MuiDataGrid-columnHeader': {
-            fontSize: '0.875rem'
-          }
-        }}
-      />
-    </Box>
-  );
-};
+    return (
+      <Box sx={{ height: 600, width: '100%' }}>
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          pageSize={15}
+          rowsPerPageOptions={[15, 30, 50]}
+          disableSelectionOnClick
+          density="compact"
+          getRowHeight={() => 45}
+          sx={{
+            '& .MuiDataGrid-cell': { 
+              py: 0.5,
+              fontSize: '0.875rem'
+            },
+            '& .MuiDataGrid-columnHeader': {
+              fontSize: '0.875rem'
+            }
+          }}
+        />
+        <ResourceDataDictionaryMappingCandidateDialog
+          open={openCandidateDialog}
+          onClose={() => setOpenCandidateDialog(false)}
+          sourceColumn={selectedRow?.sourceColumn}
+          candidates={selectedRow?.candidateMatches || []}
+          onSelect={handleCandidateSelect}
+        />
+      </Box>
+    );
+  };
 
 export default ResourceMappingTagging;
+
