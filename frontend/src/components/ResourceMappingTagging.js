@@ -11,6 +11,8 @@ import EditIcon from '@mui/icons-material/Edit';
 
 import SearchIcon from '@mui/icons-material/Search';
 import ResourceDataDictionaryMappingCandidateDialog from './ResourceDataDictionaryMappingCandidateDialog';
+import ResourceDataDictionaryTableSelectionDialog from './ResourceDataDictionaryTableSelectionDialog';
+
 
 
 const coreTags = ['PII', 'Sensitive', 'Confidential', 'Business', 'Required'];
@@ -42,9 +44,27 @@ const ResourceMappingTagging = ({ savedState }) => {
 
   
   const handleOpenCandidateDialog = (row) => {
-    setSelectedRow(row);
+    // Find the matching result for this row
+    const matchResult = matchResults.find(m => m.source_column_name === row.sourceColumn);
+    
+    // Map the candidates to the format expected by the dialog
+    const candidates = matchResult?.candidateMatches?.map(match => ({
+      columnName: match.columnName,
+      score: match.score,
+      logicalTableName: getColumnDataByClassification('logical_table_name', match.ddRow),
+      logicalColumnName: getColumnDataByClassification('logical_column_name', match.ddRow),
+      dataType: getColumnDataByClassification('data_type', match.ddRow),
+      columnDescription: getColumnDataByClassification('column_description', match.ddRow)
+    })) || [];
+  
+    setSelectedRow({
+      sourceColumn: row.sourceColumn,
+      candidateMatches: candidates
+    });
     setOpenCandidateDialog(true);
   };
+  
+  
   
   const handleCandidateSelect = (candidate) => {
     if (selectedRow) {
@@ -78,10 +98,14 @@ const ResourceMappingTagging = ({ savedState }) => {
   }, [getClassifiedColumns]);
 
   const calculateTableStats = useCallback((tableName) => {
+    if (!tableName || !sourceData.ddResourceFullData) return null;
+  
     const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
     const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
     const tableNameField = tableNameColumns[0]?.name;
     const columnNameField = columnNameColumns[0]?.name;
+  
+    if (!tableNameField || !columnNameField) return null;
 
     const tableRows = sourceData.ddResourceFullData?.filter(row => 
       row[tableNameField] === tableName
@@ -95,25 +119,50 @@ const ResourceMappingTagging = ({ savedState }) => {
       .map(col => col.name);
 
     let matchCount = 0;
-    let totalScore = 0;
+    let totalColumnScore = 0;
+    let matchedColumnsScore = 0;
+    let totalMappedScore = 0;
+    let mappedCount = 0;
+    const totalColumns = sourceColumns.length;
+
     
+    matchResults.forEach(match => {
+      // Only include columns that are mapped (not set to "No Map")
+      if (match.matched_column_name !== 'No Map' && match.matched_column_name !== '') {
+        totalMappedScore += match.column_similarity_score;
+        mappedCount++;
+      }
+    });
+
     sourceColumns.forEach(sourceCol => {
       const scores = tableColumns.map(targetCol => 
         stringSimilarity.compareTwoStrings(sourceCol.toLowerCase(), targetCol.toLowerCase())
       );
       const bestScore = Math.max(...scores);
-      if (bestScore > 0.6) matchCount++;
-      totalScore += bestScore;
+      
+      if (bestScore > 0.6) {
+        matchCount++;
+        matchedColumnsScore += bestScore;
+      }
+      totalColumnScore += bestScore;
     });
+
+    const tableNameSimilarity = stringSimilarity.compareTwoStrings(
+      tableName.toLowerCase(),
+      standardizedName.toLowerCase()
+    );
 
     return {
       tableName,
       matchedColumns: matchCount,
       unmatchedColumns: sourceColumns.length - matchCount,
-      averageColumnScore: totalScore / sourceColumns.length,
-      confidenceScore: (matchCount / sourceColumns.length) * 100
+      averageColumnScore: totalColumnScore / sourceColumns.length,
+      matchedColumnsConfidence: mappedCount > 0 ? (totalMappedScore / mappedCount) * 100 : 0,
+      columnMatchConfidence: (mappedCount / totalColumns) * 100,
+      tableNameSimilarity: tableNameSimilarity * 100,
+      confidenceScore: (tableNameSimilarity * 0.4 + (matchCount / sourceColumns.length) * 0.6) * 100
     };
-  }, [sourceData, getClassifiedColumns]);
+  }, [sourceData, getClassifiedColumns, standardizedName, matchResults]);
 
   useEffect(() => {
     if (selectedDictionaryTable) {
@@ -276,6 +325,8 @@ const ResourceMappingTagging = ({ savedState }) => {
     ));
   }, []);
 
+  
+
 
     // Add this new function with the existing ones
     const getAllTableStats = useCallback(() => {
@@ -293,85 +344,92 @@ const ResourceMappingTagging = ({ savedState }) => {
 
 
   // Add these component definitions before the main ResourceMappingTagging component
-const TableStatsCard = ({ stats, onChangeTable }) => (
-  <Card sx={{ mb: 3 }}>
-    <CardContent>
-      <Grid container spacing={2} alignItems="center">
-        <Grid item xs={12} md={9}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={4}>
-              <Typography variant="subtitle2" color="textSecondary">Current Table</Typography>
-              <Typography variant="h6">{stats?.tableName}</Typography>
-            </Grid>
-            <Grid item xs={6} sm={3} md={2}>
-              <Typography variant="subtitle2" color="textSecondary">Confidence Score</Typography>
-              <Typography variant="h6" color={stats?.confidenceScore >= 60 ? 'success.main' : 'error.main'}>
-                {stats?.confidenceScore?.toFixed(1)}%
-              </Typography>
-            </Grid>
-            <Grid item xs={6} sm={3} md={2}>
-              <Typography variant="subtitle2" color="textSecondary">Matched Columns</Typography>
-              <Typography variant="h6">{stats?.matchedColumns}</Typography>
-            </Grid>
-            <Grid item xs={6} sm={3} md={2}>
-              <Typography variant="subtitle2" color="textSecondary">Unmatched Columns</Typography>
-              <Typography variant="h6">{stats?.unmatchedColumns}</Typography>
-            </Grid>
-            <Grid item xs={6} sm={3} md={2}>
-              <Typography variant="subtitle2" color="textSecondary">Column Score</Typography>
-              <Typography variant="h6">{(stats?.averageColumnScore * 100)?.toFixed(1)}%</Typography>
-            </Grid>
+  const TableStatsCard = ({ stats, onChangeTable }) => (
+    <Card sx={{ mb: 3 }}>
+      <CardContent>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={2.5}>
+            <Typography variant="subtitle2" color="textSecondary">Current Table</Typography>
+            <Typography variant="h6" noWrap>{stats?.tableName}</Typography>
+          </Grid>
+          <Grid item xs={1.5}>
+            <Typography variant="subtitle2" color="textSecondary">Overall</Typography>
+            <Typography variant="h6" color={stats?.confidenceScore >= 60 ? 'success.main' : 'error.main'}>
+              {stats?.confidenceScore?.toFixed(1)}%
+            </Typography>
+          </Grid>
+          <Grid item xs={1.5}>
+            <Typography variant="subtitle2" color="textSecondary">Table Match</Typography>
+            <Typography variant="h6" color={stats?.tableNameSimilarity >= 60 ? 'success.main' : 'error.main'}>
+              {stats?.tableNameSimilarity?.toFixed(1)}%
+            </Typography>
+          </Grid>
+          <Grid item xs={1.5}>
+            <Typography variant="subtitle2" color="textSecondary">Column Match</Typography>
+            <Typography variant="h6" color={stats?.columnMatchConfidence >= 60 ? 'success.main' : 'error.main'}>
+              {stats?.columnMatchConfidence?.toFixed(1)}%
+            </Typography>
+          </Grid>
+          <Grid item xs={1.5}>
+            <Typography variant="subtitle2" color="textSecondary">Match Quality</Typography>
+            <Typography variant="h6" color={stats?.matchedColumnsConfidence >= 60 ? 'success.main' : 'error.main'}>
+              {stats?.matchedColumnsConfidence?.toFixed(1)}%
+            </Typography>
+          </Grid>
+          <Grid item xs={1.5}>
+            <Typography variant="subtitle2" color="textSecondary">Columns</Typography>
+            <Typography variant="h6">{stats?.matchedColumns}/{stats?.matchedColumns + stats?.unmatchedColumns}</Typography>
+          </Grid>
+          <Grid item xs={2}>
+            <Button 
+              variant="contained" 
+              onClick={onChangeTable} 
+              fullWidth
+            >
+              Change Table
+            </Button>
           </Grid>
         </Grid>
-        <Grid item xs={12} md={3} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button 
-            variant="contained" 
-            onClick={onChangeTable}
-            sx={{ minWidth: 200 }}
-          >
-            Change Table
-          </Button>
-        </Grid>
-      </Grid>
-    </CardContent>
-  </Card>
-);
+      </CardContent>
+    </Card>
+  );
+  
+  
 
-
-const TableSelectionDialog = ({ open, onClose, tables, onSelect }) => (
-  <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-    <DialogTitle>Select Table</DialogTitle>
-    <DialogContent>
-      <List>
-        {tables.map((table) => (
-          <ListItem 
-            key={table.tableName} 
-            button 
-            onClick={() => onSelect(table.tableName)}
-            sx={{
-              borderRadius: 1,
-              mb: 1,
-              '&:hover': { backgroundColor: 'action.hover' }
-            }}
-          >
-            <ListItemText
-              primary={table.tableName}
-              secondary={`Matched: ${table.matchedColumns} | Unmatched: ${table.unmatchedColumns}`}
-            />
-            <ListItemSecondaryAction>
-              <Typography 
-                variant="body2" 
-                color={table.confidenceScore >= 60 ? 'success.main' : 'error.main'}
-              >
-                {table.confidenceScore.toFixed(1)}%
-              </Typography>
-            </ListItemSecondaryAction>
-          </ListItem>
-        ))}
-      </List>
-    </DialogContent>
-  </Dialog>
-);
+// const TableSelectionDialog = ({ open, onClose, tables, onSelect }) => (
+//   <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+//     <DialogTitle>Select Table</DialogTitle>
+//     <DialogContent>
+//       <List>
+//         {tables.map((table) => (
+//           <ListItem 
+//             key={table.tableName} 
+//             button 
+//             onClick={() => onSelect(table.tableName)}
+//             sx={{
+//               borderRadius: 1,
+//               mb: 1,
+//               '&:hover': { backgroundColor: 'action.hover' }
+//             }}
+//           >
+//             <ListItemText
+//               primary={table.tableName}
+//               secondary={`Matched: ${table.matchedColumns} | Unmatched: ${table.unmatchedColumns}`}
+//             />
+//             <ListItemSecondaryAction>
+//               <Typography 
+//                 variant="body2" 
+//                 color={table.confidenceScore >= 60 ? 'success.main' : 'error.main'}
+//               >
+//                 {table.confidenceScore.toFixed(1)}%
+//               </Typography>
+//             </ListItemSecondaryAction>
+//           </ListItem>
+//         ))}
+//       </List>
+//     </DialogContent>
+//   </Dialog>
+// );
 
 
 
@@ -551,24 +609,27 @@ const TableSelectionDialog = ({ open, onClose, tables, onSelect }) => (
       foreignKey: match.foreignKey,
       nullable: match.nullable
     })), [matchResults]);
+
+    
     return (
       <Box>
-        <TableStatsCard 
-          stats={tableStats}
-          onChangeTable={() => {
-            setAvailableTables(getAllTableStats());
-            setOpenTableSelection(true);
-          }}
-        />
-        <TableSelectionDialog
-          open={openTableSelection}
-          onClose={() => setOpenTableSelection(false)}
-          tables={availableTables}
-          onSelect={(tableName) => {
-            setSelectedDictionaryTable(tableName);
-            setOpenTableSelection(false);
-          }}
-        />
+    <TableStatsCard 
+      stats={tableStats}
+      onChangeTable={() => {
+        const availableTables = getAllTableStats();
+        setAvailableTables(availableTables.filter(t => t?.confidenceScore >= 60));
+        setOpenTableSelection(true);
+      }}
+    />
+    <ResourceDataDictionaryTableSelectionDialog
+      open={openTableSelection}
+      onClose={() => setOpenTableSelection(false)}
+      tables={availableTables}
+      onSelect={(tableName) => {
+        setSelectedDictionaryTable(tableName);
+        setOpenTableSelection(false);
+      }}
+    />
         <Box sx={{ height: 600, width: '100%' }}>
         <DataGrid
           rows={rows}
