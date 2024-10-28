@@ -22,6 +22,9 @@ const getTagColor = (tag) => {
 };
 
 const ResourceMappingTagging = ({ savedState }) => {
+  const standardizedName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
+  const [selectedDictionaryTable, setSelectedDictionaryTable] = useState(standardizedName);
+  const [tableStats, setTableStats] = useState(null);
   const [matchResults, setMatchResults] = useState([]);
   const [sourceData, setSourceData] = useState({
     ddResourceFullData: null,
@@ -38,88 +41,140 @@ const ResourceMappingTagging = ({ savedState }) => {
     );
   }, [sourceData.ddResourcePreviewRows]);
 
+  const getColumnDataByClassification = useCallback((classificationType, rowData) => {
+    const classifiedColumns = getClassifiedColumns(classificationType);
+    if (!classifiedColumns?.length || !rowData) return '';
+    const columnName = classifiedColumns[0].name;
+    return rowData[columnName] || '';
+  }, [getClassifiedColumns]);
+
+  const calculateTableStats = useCallback((tableName) => {
+    const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
+    const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
+    const tableNameField = tableNameColumns[0]?.name;
+    const columnNameField = columnNameColumns[0]?.name;
+
+    const tableRows = sourceData.ddResourceFullData?.filter(row => 
+      row[tableNameField] === tableName
+    );
+
+    if (!tableRows?.length) return null;
+
+    const tableColumns = tableRows.map(row => row[columnNameField]);
+    const sourceColumns = sourceData.resourcePreviewRows
+      .filter(col => !col.isDisabled)
+      .map(col => col.name);
+
+    let matchCount = 0;
+    let totalScore = 0;
+    
+    sourceColumns.forEach(sourceCol => {
+      const scores = tableColumns.map(targetCol => 
+        stringSimilarity.compareTwoStrings(sourceCol.toLowerCase(), targetCol.toLowerCase())
+      );
+      const bestScore = Math.max(...scores);
+      if (bestScore > 0.6) matchCount++;
+      totalScore += bestScore;
+    });
+
+    return {
+      tableName,
+      matchedColumns: matchCount,
+      unmatchedColumns: sourceColumns.length - matchCount,
+      averageColumnScore: totalScore / sourceColumns.length,
+      confidenceScore: (matchCount / sourceColumns.length) * 100
+    };
+  }, [sourceData, getClassifiedColumns]);
+
+  useEffect(() => {
+    if (selectedDictionaryTable) {
+      const stats = calculateTableStats(selectedDictionaryTable);
+      setTableStats(stats);
+      
+      if (stats?.confidenceScore < 100) {
+        // Handle showing warning to user about low confidence match
+      }
+    }
+  }, [selectedDictionaryTable, calculateTableStats]);
+
+  // Rest of the component code with matchResults usage...
+
   const getDictionaryColumns = useCallback(() => {
-    const tableNameColumns = getClassifiedColumns('physical_table_name');
-    const columnNameColumns = getClassifiedColumns('physical_column_name');
+    const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
+    const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
     
     if (!sourceData.ddResourceFullData || !tableNameColumns.length || !columnNameColumns.length) {
       return [];
     }
-    const standardizedName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName);
+
     const tableNameField = tableNameColumns[0].name;
     const columnNameField = columnNameColumns[0].name;
-
-    return sourceData.ddResourceFullData.map(entry => ({
-      value: `${entry[tableNameField]}.${entry[columnNameField]}`,
-      tableName: entry[tableNameField],
-      columnName: entry[columnNameField],
-      description: entry.description || ''
-    })).filter(col => col.tableName && col.columnName);
-  }, [sourceData.ddResourceFullData, getClassifiedColumns]);
-    const getColumnDataByClassification = useCallback((classificationType, rowData) => {
-      const classifiedColumns = getClassifiedColumns(classificationType);
-      if (!classifiedColumns?.length) return '';
-  
-      const columnName = classifiedColumns[0].name;
-      return rowData[columnName] || '';
-    }, [getClassifiedColumns]);
+    // Filter by selected table first
+    return sourceData.ddResourceFullData
+      .filter(entry => entry[tableNameField] === selectedDictionaryTable)
+      .map(entry => ({
+        columnName: entry[columnNameField],
+        tableName: entry[tableNameField],
+        logicalName: getColumnDataByClassification('logical_column_name', entry),
+        dataType: getColumnDataByClassification('data_type', entry),
+        description: getColumnDataByClassification('column_description', entry),
+        ddRow: entry
+      }))
+      .filter(col => col.columnName);
+  }, [sourceData, getClassifiedColumns, selectedDictionaryTable, getColumnDataByClassification]);
 
   // Compute matches between source columns and dictionary
-    const computeMatches = useCallback(() => {
-      if (!sourceData.resourcePreviewRows?.length || !sourceData.ddResourceFullData?.length) {
-        setMatchResults([]);
-        return;
-      }
+  const computeMatches = useCallback(() => {
+    if (!sourceData.resourcePreviewRows?.length || !sourceData.ddResourceFullData?.length) {
+      setMatchResults([]);
+      return;
+    }
 
-      const standardizedTableName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
-      if (!standardizedTableName) {
-        setMatchResults([]);
-        return;
-      }
+    const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
+    const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
+    const tableNameField = tableNameColumns[0]?.name;
+    const columnNameField = columnNameColumns[0]?.name;
 
-      const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
-      const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
+    // Only get columns from the selected table
+    const validColumnNames = sourceData.ddResourceFullData
+      .filter(row => row[tableNameField] === selectedDictionaryTable)
+      .map(row => ({
+        columnName: String(row[columnNameField] || ''),
+        ddRow: row
+      }))
+      .filter(item => item.columnName);
 
-      if (!tableNameColumns.length || !columnNameColumns.length) {
-        setMatchResults([]);
-        return;
-      }
+    const results = sourceData.resourcePreviewRows
+      .filter(sourceColumn => sourceColumn?.name)
+      .map((sourceColumn, index) => {
+        const sourceName = String(sourceColumn.name).toLowerCase();
+        const allMatches = validColumnNames
+          .map(({columnName, ddRow}) => ({
+            columnName,
+            ddRow,
+            score: stringSimilarity.compareTwoStrings(sourceName, columnName.toLowerCase())
+          }))
+          .filter(match => match.score > 0.3)
+          .sort((a, b) => b.score - a.score);
 
-      const tableNameField = tableNameColumns[0]?.name;
-      const columnNameField = columnNameColumns[0]?.name;
-
-      const validColumnNames = sourceData.ddResourceFullData
-        .map(row => String(row[columnNameField] || ''))
-        .filter(Boolean);
-
-      if (!validColumnNames.length) {
-        setMatchResults([]);
-        return;
-      }
-
-      const results = sourceData.resourcePreviewRows.map(sourceColumn => {
-        const sourceName = String(sourceColumn?.name || '');
-        const columnMatch = validColumnNames.length ? 
-          stringSimilarity.findBestMatch(sourceName, validColumnNames) :
-          { bestMatch: { target: '', rating: 0 } };
-
-        // Get the matched row data from data dictionary
-        const matchedDDRow = sourceData.ddResourceFullData.find(
-          row => row[columnNameField] === columnMatch.bestMatch.target
-        );
+        const bestMatch = allMatches[0];
 
         return {
+          id: index,
           source_column_name: sourceName,
-          matched_table_name: standardizedTableName,
-          matched_column_name: columnMatch.bestMatch.target,
-          column_similarity_score: columnMatch.bestMatch.rating,
-          logicalTableName: getColumnDataByClassification('logical_table_name', matchedDDRow),
-          logicalColumnName: getColumnDataByClassification('logical_column_name', matchedDDRow),
-          columnDescription: getColumnDataByClassification('column_description', matchedDDRow),
-          dataType: getColumnDataByClassification('data_type', matchedDDRow),
-          primaryKey: getColumnDataByClassification('primary_key', matchedDDRow),
-          foreignKey: getColumnDataByClassification('foreign_key', matchedDDRow),
-          nullable: getColumnDataByClassification('nullable', matchedDDRow),
+          matched_table_name: selectedDictionaryTable,
+          matched_column_name: bestMatch?.columnName || '',
+          column_similarity_score: bestMatch?.score || 0,
+          mappingStatus: bestMatch?.score > 0.3 ? 'mapped' : 'unmapped',
+          hasMultipleCandidates: allMatches.length > 1,
+          candidateMatches: allMatches,
+          logicalTableName: getColumnDataByClassification('logical_table_name', bestMatch?.ddRow),
+          logicalColumnName: getColumnDataByClassification('logical_column_name', bestMatch?.ddRow),
+          columnDescription: getColumnDataByClassification('column_description', bestMatch?.ddRow),
+          dataType: getColumnDataByClassification('data_type', bestMatch?.ddRow),
+          primaryKey: getColumnDataByClassification('primary_key', bestMatch?.ddRow),
+          foreignKey: getColumnDataByClassification('foreign_key', bestMatch?.ddRow),
+          nullable: getColumnDataByClassification('nullable', bestMatch?.ddRow),
           isPII: Boolean(sourceColumn.isPII),
           isPHI: Boolean(sourceColumn.isPHI),
           isDisabled: Boolean(sourceColumn.isDisabled),
@@ -128,8 +183,8 @@ const ResourceMappingTagging = ({ savedState }) => {
         };
       });
 
-      setMatchResults(results);
-    }, [sourceData, getClassifiedColumns, getColumnDataByClassification, savedState]);
+    setMatchResults(results);
+  }, [sourceData, getClassifiedColumns, selectedDictionaryTable, getColumnDataByClassification]);
 
     const standardizedTableName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
 
@@ -352,29 +407,49 @@ const ResourceMappingTagging = ({ savedState }) => {
       foreignKey: match.foreignKey,
       nullable: match.nullable
     })), [matchResults]);
-
-  return (
-    <Box sx={{ height: 600, width: '100%' }}>
-      <DataGrid
-        rows={rows}
-        columns={columns}
-        pageSize={15}
-        rowsPerPageOptions={[15, 30, 50]}
-        disableSelectionOnClick
-        density="compact"
-        getRowHeight={() => 45}
-        sx={{
-          '& .MuiDataGrid-cell': { 
-            py: 0.5,
-            fontSize: '0.875rem'
-          },
-          '& .MuiDataGrid-columnHeader': {
-            fontSize: '0.875rem'
-          }
-        }}
-      />
-    </Box>
-  );
-};
+    return (
+      <Box sx={{ height: 600, width: '100%' }}>
+        <Box sx={{ mb: 2 }}>
+          {tableStats && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="subtitle2">
+                Current Table: {selectedDictionaryTable} | 
+                Confidence Score: {tableStats.confidenceScore.toFixed(1)}% | 
+                Matched Columns: {tableStats.matchedColumns} | 
+                Unmatched Columns: {tableStats.unmatchedColumns}
+              </Typography>
+            </Alert>
+          )}
+          <Button 
+            variant="contained" 
+            onClick={() => setSelectedDictionaryTable(prevTable => 
+              // Logic for changing dictionary table
+            )}
+          >
+            Change Table
+          </Button>
+        </Box>
+      
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          pageSize={15}
+          rowsPerPageOptions={[15, 30, 50]}
+          disableSelectionOnClick
+          density="compact"
+          getRowHeight={() => 45}
+          sx={{
+            '& .MuiDataGrid-cell': { 
+              py: 0.5,
+              fontSize: '0.875rem'
+            },
+            '& .MuiDataGrid-columnHeader': {
+              fontSize: '0.875rem'
+            }
+          }}
+        />
+      </Box>
+    );
+  };
 
 export default ResourceMappingTagging;
