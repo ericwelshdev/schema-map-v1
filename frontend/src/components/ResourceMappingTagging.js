@@ -10,7 +10,7 @@ import BlockIcon from '@mui/icons-material/Block';
 import EditIcon from '@mui/icons-material/Edit';
 
 import SearchIcon from '@mui/icons-material/Search';
-import ResourceDataDictionaryMappingCandidateDialog from './ResourceDataDictionaryMappingCandidateDialog';
+import ResourceDataDictionaryColumnMappingCandidateDialog from './ResourceDataDictionaryColumnMappingCandidateDialog';
 import ResourceDataDictionaryTableSelectionDialog from './ResourceDataDictionaryTableSelectionDialog';
 
 
@@ -271,14 +271,14 @@ const ResourceMappingTagging = ({ savedState }) => {
       const columnNameField = columnNameColumns[0]?.name;
       const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
       const tableNameField = tableNameColumns[0]?.name;
-
+    
       setMatchResults(prev => prev.map(row => {
         if (row.id === rowId) {
           const matchedDDRow = sourceData.ddResourceFullData.find(
             ddRow => ddRow[columnNameField] === newValue.columnName && 
                  ddRow[tableNameField] === standardizedTableName
           );
-
+    
           return {
             ...row,
             matchedColumn: newValue,
@@ -294,6 +294,7 @@ const ResourceMappingTagging = ({ savedState }) => {
         return row;
       }));
     }, [getClassifiedColumns, sourceData.ddResourceFullData, getColumnDataByClassification, standardizedTableName]);
+    
 
 
     useEffect(() => {
@@ -649,7 +650,7 @@ const ResourceMappingTagging = ({ savedState }) => {
             }
           }}
         />
-        <ResourceDataDictionaryMappingCandidateDialog
+        <ResourceDataDictionaryColumnMappingCandidateDialog
           open={openCandidateDialog}
           onClose={() => setOpenCandidateDialog(false)}
           sourceColumn={selectedRow?.sourceColumn}
