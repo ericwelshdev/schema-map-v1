@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Typography, TextField, Autocomplete, Chip, Tooltip , IconButton} from '@mui/material';
+import { Dialog,   DialogTitle,   DialogContent,  Card,   CardContent,   Grid,   Button,   List,  ListItem,  ListItemText,  ListItemSecondaryAction} from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import stringSimilarity from 'string-similarity';
 import { getData } from '../utils/storageUtils';
@@ -31,10 +32,15 @@ const ResourceMappingTagging = ({ savedState }) => {
   const [tableStats, setTableStats] = useState(null);
   const [matchResults, setMatchResults] = useState([]);
   const [openTableDialog, setOpenTableDialog] = useState(false);
+  const [openTableSelection, setOpenTableSelection] = useState(false);
+  const [availableTables, setAvailableTables] = useState([]);
 
   const [openCandidateDialog, setOpenCandidateDialog] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
 
+
+
+  
   const handleOpenCandidateDialog = (row) => {
     setSelectedRow(row);
     setOpenCandidateDialog(true);
@@ -271,7 +277,101 @@ const ResourceMappingTagging = ({ savedState }) => {
   }, []);
 
 
+    // Add this new function with the existing ones
+    const getAllTableStats = useCallback(() => {
+      const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
+      const uniqueTables = [...new Set(sourceData.ddResourceFullData?.map(
+        row => row[tableNameColumns[0]?.name]
+      ))];
+  
+      return uniqueTables
+        .map(tableName => calculateTableStats(tableName))
+        .filter(stats => stats?.confidenceScore >= 60)
+        .sort((a, b) => b.confidenceScore - a.confidenceScore);
+    }, [sourceData, getClassifiedColumns, calculateTableStats]);
 
+
+
+  // Add these component definitions before the main ResourceMappingTagging component
+const TableStatsCard = ({ stats, onChangeTable }) => (
+  <Card sx={{ mb: 3 }}>
+    <CardContent>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} md={9}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6} md={4}>
+              <Typography variant="subtitle2" color="textSecondary">Current Table</Typography>
+              <Typography variant="h6">{stats?.tableName}</Typography>
+            </Grid>
+            <Grid item xs={6} sm={3} md={2}>
+              <Typography variant="subtitle2" color="textSecondary">Confidence Score</Typography>
+              <Typography variant="h6" color={stats?.confidenceScore >= 60 ? 'success.main' : 'error.main'}>
+                {stats?.confidenceScore?.toFixed(1)}%
+              </Typography>
+            </Grid>
+            <Grid item xs={6} sm={3} md={2}>
+              <Typography variant="subtitle2" color="textSecondary">Matched Columns</Typography>
+              <Typography variant="h6">{stats?.matchedColumns}</Typography>
+            </Grid>
+            <Grid item xs={6} sm={3} md={2}>
+              <Typography variant="subtitle2" color="textSecondary">Unmatched Columns</Typography>
+              <Typography variant="h6">{stats?.unmatchedColumns}</Typography>
+            </Grid>
+            <Grid item xs={6} sm={3} md={2}>
+              <Typography variant="subtitle2" color="textSecondary">Column Score</Typography>
+              <Typography variant="h6">{(stats?.averageColumnScore * 100)?.toFixed(1)}%</Typography>
+            </Grid>
+          </Grid>
+        </Grid>
+        <Grid item xs={12} md={3} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button 
+            variant="contained" 
+            onClick={onChangeTable}
+            sx={{ minWidth: 200 }}
+          >
+            Change Table
+          </Button>
+        </Grid>
+      </Grid>
+    </CardContent>
+  </Card>
+);
+
+
+const TableSelectionDialog = ({ open, onClose, tables, onSelect }) => (
+  <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <DialogTitle>Select Table</DialogTitle>
+    <DialogContent>
+      <List>
+        {tables.map((table) => (
+          <ListItem 
+            key={table.tableName} 
+            button 
+            onClick={() => onSelect(table.tableName)}
+            sx={{
+              borderRadius: 1,
+              mb: 1,
+              '&:hover': { backgroundColor: 'action.hover' }
+            }}
+          >
+            <ListItemText
+              primary={table.tableName}
+              secondary={`Matched: ${table.matchedColumns} | Unmatched: ${table.unmatchedColumns}`}
+            />
+            <ListItemSecondaryAction>
+              <Typography 
+                variant="body2" 
+                color={table.confidenceScore >= 60 ? 'success.main' : 'error.main'}
+              >
+                {table.confidenceScore.toFixed(1)}%
+              </Typography>
+            </ListItemSecondaryAction>
+          </ListItem>
+        ))}
+      </List>
+    </DialogContent>
+  </Dialog>
+);
 
 
 
@@ -452,7 +552,24 @@ const ResourceMappingTagging = ({ savedState }) => {
       nullable: match.nullable
     })), [matchResults]);
     return (
-      <Box sx={{ height: 600, width: '100%' }}>
+      <Box>
+        <TableStatsCard 
+          stats={tableStats}
+          onChangeTable={() => {
+            setAvailableTables(getAllTableStats());
+            setOpenTableSelection(true);
+          }}
+        />
+        <TableSelectionDialog
+          open={openTableSelection}
+          onClose={() => setOpenTableSelection(false)}
+          tables={availableTables}
+          onSelect={(tableName) => {
+            setSelectedDictionaryTable(tableName);
+            setOpenTableSelection(false);
+          }}
+        />
+        <Box sx={{ height: 600, width: '100%' }}>
         <DataGrid
           rows={rows}
           columns={columns}
@@ -478,9 +595,11 @@ const ResourceMappingTagging = ({ savedState }) => {
           candidates={selectedRow?.candidateMatches || []}
           onSelect={handleCandidateSelect}
         />
+        </Box>
       </Box>
     );
   };
 
+  
 export default ResourceMappingTagging;
 
