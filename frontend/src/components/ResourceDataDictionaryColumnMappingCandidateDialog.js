@@ -26,8 +26,8 @@ const ManualMappingForm = ({ open, onClose, onSubmit, sourceColumn }) => {
     logicalColumnName: '',
     dataType: '',
     description: ''
-  });
-  console.log('Manual form data:', formData);
+  });  
+  // console.log('Manual form data:', formData);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({
@@ -130,7 +130,7 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
 }) => {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showManualForm, setShowManualForm] = useState(false);
-
+  console.log('candidates form ResourceDataDictionaryColumnMappingCandidateDialog:', candidates);
   useEffect(() => {
     if (currentMapping) {
       const existingMapping = candidates.find(c => c.columnName === currentMapping.columnName);      
@@ -141,10 +141,8 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
   const handleRowClick = (params) => {
     console.log('Row clicked:', params.row);
     setSelectedCandidate(params.row);
-    if (params.row.id === 'manual-map') {
-      setShowManualForm(true);
-    }
   };
+  
 
   const handleManualSubmit = (formData) => {
     console.log('Manual mapping submitted:', formData);
@@ -216,16 +214,26 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
 
 // In the dialog component's handleConfirmSelection function
 const handleConfirmSelection = () => {
-  console.log("Confirming selected candidate:", selectedCandidate);
   if (selectedCandidate) {
-    onSelect(selectedCandidate); // Pass selected candidate to the main component
+    // Create a clean mapping object
+    const mappingData = {
+      tableName: selectedCandidate.tableName,
+      columnName: selectedCandidate.columnName,
+      logicalTableName: selectedCandidate.logicalTableName,
+      logicalColumnName: selectedCandidate.logicalColumnName,
+      dataType: selectedCandidate.dataType,
+      columnDescription: selectedCandidate.columnDescription,
+      score: selectedCandidate.score
+    };
+    
+    // Pass the mapping data directly to the parent
+    onSelect(mappingData);
     onClose();
-  } else {
-    console.warn("No candidate selected to confirm.");
   }
 };
-  
-  
+
+
+
   
   
 
@@ -428,7 +436,10 @@ useEffect(() => {
             disableColumnFilter
             hideFooterSelectedRowCount
             density="compact"
-            onRowClick={handleRowClick}
+            onRowClick={(params) => {
+              console.log('DataGrid -> Row clicked with data:', params.row);              
+              setSelectedCandidate(params.row);
+            }}
             sx={{
               '& .MuiDataGrid-row': {
                 cursor: 'pointer'

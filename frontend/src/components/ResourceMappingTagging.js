@@ -44,26 +44,27 @@ const ResourceMappingTagging = ({ savedState }) => {
 
   
   const handleOpenCandidateDialog = (row) => {
-    const matchResult = matchResults.find((m) => m.source_column_name === row.sourceColumn);
-  
-    const candidates = matchResult?.candidateMatches?.map((match) => ({
-      tableName: match.ddRow?.tableName || selectedDictionaryTable, // Ensure tableName is included
+    const matchResult = matchResults.find(m => m.source_column_name === row.sourceColumn);
+    
+    const candidates = matchResult?.candidateMatches?.map(match => ({
+      tableName: selectedDictionaryTable,
       columnName: match.columnName,
       score: match.score,
       logicalTableName: getColumnDataByClassification('logical_table_name', match.ddRow),
       logicalColumnName: getColumnDataByClassification('logical_column_name', match.ddRow),
       dataType: getColumnDataByClassification('data_type', match.ddRow),
-      columnDescription: getColumnDataByClassification('column_description', match.ddRow),
-    })) || [];
+      columnDescription: getColumnDataByClassification('column_description', match.ddRow)
+    }));
   
     setSelectedRow({
       id: row.id,
       sourceColumn: row.sourceColumn,
-      matchedColumn: row.matchedColumn,
-      candidateMatches: candidates,
+      matchedColumn: row.matchedColumn, // Pass current selection
+      candidateMatches: candidates
     });
     setOpenCandidateDialog(true);
   };
+  
   
   
   
@@ -86,22 +87,48 @@ const ResourceMappingTagging = ({ savedState }) => {
 // };
 
 // In the main component's handleCandidateSelect function
-const handleCandidateSelect = (candidate) => {
-  console.log('Selected handleCandidateSelect candidate:', candidate);  // Log the selected candidate for debugging
+// const handleCandidateSelect = (candidate) => {
+//   console.log('Selected handleCandidateSelect candidate:', candidate);  // Log the selected candidate for debugging
+//   if (selectedRow) {
+//     handleMatchChange(selectedRow.id, {
+//       tableName: candidate?.tableName || 'No Table',  // Check candidate and provide fallback
+//       columnName: candidate?.columnName || 'No Column',
+//     });
+//     setOpenCandidateDialog(false);
+//   } else {
+//     console.warn("Selected row is undefined in handleCandidateSelect.");
+//   }
+// };
+
+// const handleCandidateSelect = (candidate) => {
+//   console.log('handleCandidateSelect-> Selected candidate:', candidate);
+//   if (selectedRow) {
+//     handleMatchChange(selectedRow.id, {
+//       tableName: candidate.tableName,
+//       columnName: candidate.columnName,
+//       logicalTableName: candidate.logicalTableName,
+//       logicalColumnName: candidate.logicalColumnName,
+//       dataType: candidate.dataType,
+//       columnDescription: candidate.columnDescription,
+//       score: candidate.score
+//     });
+//   }
+// };
+
+const handleCandidateSelect = (mappingData) => {
+  console.log('handleCandidateSelect ->  received mappingData:', mappingData);
   if (selectedRow) {
+    // Use the full mapping data object
     handleMatchChange(selectedRow.id, {
-      tableName: candidate?.tableName || 'No Table',  // Check candidate and provide fallback
-      columnName: candidate?.columnName || 'No Column',
+      tableName: mappingData.tableName,
+      columnName: mappingData.columnName
     });
-    setOpenCandidateDialog(false);
-  } else {
-    console.warn("Selected row is undefined in handleCandidateSelect.");
   }
 };
 
 
 // Update the dialog component rendering to pass the selectedRow's id when calling handleCandidateSelect
-<ResourceDataDictionaryColumnMappingCandidateDialog
+{/* <ResourceDataDictionaryColumnMappingCandidateDialog
   open={openCandidateDialog}
   onClose={() => setOpenCandidateDialog(false)}
   sourceColumn={selectedRow?.sourceColumn}
@@ -109,7 +136,7 @@ const handleCandidateSelect = (candidate) => {
   candidates={selectedRow?.candidateMatches || []}
   currentMapping={selectedRow?.matchedColumn}
   onSelect={(mappingData) => handleCandidateSelect(selectedRow?.id, mappingData)} // Pass selectedRow.id here
-/>
+/> */}
 
 
   const [sourceData, setSourceData] = useState({
@@ -304,12 +331,14 @@ const handleCandidateSelect = (candidate) => {
     const standardizedTableName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
 
     const handleMatchChange = useCallback((rowId, newValue) => {
+      console.log('handleMatchChange -> called with rowId:', rowId, 'and newValue:', newValue);
       const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
       const columnNameField = columnNameColumns[0]?.name;
       const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
       const tableNameField = tableNameColumns[0]?.name;
     
       setMatchResults(prev => prev.map(row => {
+        console.log('handleMatchChange -> Checking row:', row);
         if (row.id === rowId) {
           const matchedDDRow = sourceData.ddResourceFullData.find(
             ddRow => ddRow[columnNameField] === newValue.columnName && 
@@ -459,7 +488,7 @@ const handleCandidateSelect = (candidate) => {
       field: 'matchedColumn',
       headerName: 'Data Dictionary Match',
       flex: 2,
-      renderCell: (params) => (
+      renderCell: (params) => (        
         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
           <Autocomplete
             size="small"
@@ -564,27 +593,27 @@ const handleCandidateSelect = (candidate) => {
       flex: 1,
       editable: true
     },
-    {
-      field: 'primaryKey',
-      headerName: 'Primary Key',
-      width: 100,
-      type: 'boolean',
-      editable: true
-    },
-    {
-      field: 'foreignKey',
-      headerName: 'Foreign Key',
-      width: 100,
-      type: 'boolean',
-      editable: true
-    },
-    {
-      field: 'nullable',
-      headerName: 'Nullable',
-      width: 100,
-      type: 'boolean',
-      editable: true
-    }
+    // {
+    //   field: 'primaryKey',
+    //   headerName: 'Primary Key',
+    //   width: 100,
+    //   type: 'boolean',
+    //   editable: true
+    // },
+    // {
+    //   field: 'foreignKey',
+    //   headerName: 'Foreign Key',
+    //   width: 100,
+    //   type: 'boolean',
+    //   editable: true
+    // },
+    // {
+    //   field: 'nullable',
+    //   headerName: 'Nullable',
+    //   width: 100,
+    //   type: 'boolean',
+    //   editable: true
+    // }
   ];
 
   const rows = useMemo(() => 
@@ -654,9 +683,10 @@ const handleCandidateSelect = (candidate) => {
         open={openCandidateDialog}
         onClose={() => setOpenCandidateDialog(false)}
         sourceColumn={selectedRow?.sourceColumn}
+        tableName={selectedDictionaryTable} 
         candidates={selectedRow?.candidateMatches || []}
         currentMapping={selectedRow?.matchedColumn}
-        onSelect={(mappingData) => handleCandidateSelect(selectedRow.id, mappingData)}
+        onSelect={(mappingData) => handleCandidateSelect(selectedRow?.id, mappingData)}
       />
 
         </Box>
