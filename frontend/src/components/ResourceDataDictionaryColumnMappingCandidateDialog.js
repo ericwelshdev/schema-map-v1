@@ -123,26 +123,24 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
   open, 
   onClose, 
   sourceColumn,
-  tableName,
   candidates = [],
   currentMapping = null,
   onSelect 
 }) => {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showManualForm, setShowManualForm] = useState(false);
-  console.log('candidates form ResourceDataDictionaryColumnMappingCandidateDialog:', candidates);
+  console.log('candidates form ResourceMappingTagging:', candidates);
+  console.log('currentMapping form ResourceMappingTagging:', currentMapping);
+
+
   useEffect(() => {
     if (currentMapping) {
-      const existingMapping = candidates.find(c => c.columnName === currentMapping.columnName);      
+      const existingMapping = candidates.find(c => c.columnName === currentMapping.columnName && c.tableName === currentMapping.tableName);   
+      console.log('existingMapping:', existingMapping);
       setSelectedCandidate(existingMapping);
     }
   }, [currentMapping, candidates]);
 
-  const handleRowClick = (params) => {
-    console.log('Row clicked:', params.row);
-    setSelectedCandidate(params.row);
-  };
-  
 
   const handleManualSubmit = (formData) => {
     console.log('Manual mapping submitted:', formData);
@@ -214,28 +212,23 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
 
 // In the dialog component's handleConfirmSelection function
 const handleConfirmSelection = () => {
-  if (selectedCandidate) {
-    // Create a clean mapping object
-    const mappingData = {
-      tableName: selectedCandidate.tableName,
-      columnName: selectedCandidate.columnName,
-      logicalTableName: selectedCandidate.logicalTableName,
-      logicalColumnName: selectedCandidate.logicalColumnName,
-      dataType: selectedCandidate.dataType,
-      columnDescription: selectedCandidate.columnDescription,
-      score: selectedCandidate.score
-    };
-    
-    // Pass the mapping data directly to the parent
-    onSelect(mappingData);
-    onClose();
-  }
+  console.log('Sending selected candidate:', selectedCandidate);
+  // Create a new object with only the needed properties
+  const mappingData = {
+    tableName: selectedCandidate.tableName,
+    columnName: selectedCandidate.columnName,
+    logicalTableName: selectedCandidate.logicalTableName,
+    logicalColumnName: selectedCandidate.logicalColumnName,
+    dataType: selectedCandidate.dataType,
+    columnDescription: selectedCandidate.columnDescription,
+    score: selectedCandidate.score
+  };
+  // Pass the mapping data directly
+  onSelect(mappingData);
+  onClose();
 };
 
 
-
-  
-  
 
   const getScoreColor = (score) => {
     if (score === -1) return '#bbdefb'; // Light blue for manual map
@@ -249,14 +242,14 @@ const handleConfirmSelection = () => {
 
   
 // This useEffect runs when the dialog opens and selects the current mapping candidate by default
-useEffect(() => {
-  if (currentMapping) {
-    const existingMapping = candidates.find(
-      (c) => `${c.tableName}.${c.columnName}` === `${currentMapping.tableName}.${currentMapping.columnName}`
-    );
-    setSelectedCandidate(existingMapping || null);
-  }
-}, [currentMapping, candidates]);
+// useEffect(() => {
+//   if (currentMapping) {
+//     const existingMapping = candidates.find(
+//       (c) => `${c.tableName}.${c.columnName}` === `${currentMapping.tableName}.${currentMapping.columnName}`
+//     );
+//     setSelectedCandidate(existingMapping || null);
+//   }
+// }, [currentMapping, candidates]);
 
 
   useEffect(() => {
@@ -299,7 +292,9 @@ useEffect(() => {
       width: 50,
       renderCell: (params) => (
         <Radio
-          checked={selectedCandidate?.id === params.row.id}
+          checked={selectedCandidate && 
+            params.row.columnName === selectedCandidate.columnName && 
+            params.row.tableName === selectedCandidate.tableName}
           size="small"
           readOnly
         />
