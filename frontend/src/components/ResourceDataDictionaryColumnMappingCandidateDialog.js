@@ -25,6 +25,11 @@ import {
 import { DataGrid } from '@mui/x-data-grid';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
+import DoNotTouchIcon from '@mui/icons-material/DoNotTouch';
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import AssistantIcon from '@mui/icons-material/Assistant';
+import BackHandIcon from '@mui/icons-material/BackHand';
+
 
 
 const dataTypeOptions = [
@@ -66,37 +71,47 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
       setSelectedCandidate(existingMapping);
     }
   }, [currentMapping, initialCandidates]);
+
+  const [allMappings, setAllMappings] = useState([]);
+
+
   
-  const [allMappings, setAllMappings] = useState([
-    {
-      id: 'manual-map',
-      columnName: 'Manual Map',
-      score: -1,
-      logicalTableName: '',
-      logicalColumnName: '',
-      dataType: '',
-      columnDescription: 'Create a new dictionary mapping'
-    },
-    {
-      id: 'no-map',
-      columnName: 'No Map',
-      score: 0,
-      logicalTableName: '',
-      logicalColumnName: '',
-      dataType: '',
-      columnDescription: 'Explicitly mark this column as unmapped'
-    },
-    ...initialCandidates.map((candidate, index) => ({
-      id: index,
-      ...candidate
-    }))
-  ]);
+  useEffect(() => {
+    setAllMappings([
+      {
+        id: 'manual-map',
+        columnName: '',
+        score: -1,
+        logicalTableName: '',
+        logicalColumnName: '',
+        dataType: '',
+        columnDescription: 'Create a new dictionary mapping'
+      },
+      {
+        id: 'no-map',
+        columnName: 'No Map',
+        score: 0,
+        logicalTableName: '',
+        logicalColumnName: '',
+        dataType: '',
+        columnDescription: 'Explicitly mark this column as unmapped'
+      },
+      ...initialCandidates.map((candidate, index) => ({
+        id: candidate.id || `candidate-${index}`,
+        ...candidate
+      }))
+    ]);
+  }, [initialCandidates]);
+  
+  
   
 
   const handleManualSubmit = (formData) => {
     console.log('handleManualSubmit-> Manual mapping submitted:', formData);
+
+    const isEditing = selectedCandidate?.id && selectedCandidate.id !== 'manual-map';
     const newMapping = {
-      id: selectedCandidate?.id || `manual-${Date.now()}`,
+      id: isEditing ? selectedCandidate.id : `manual-${Date.now()}`,
       columnName: formData.physicalColumnName,
       tableName: formData.physicalTableName,
       logicalTableName: formData.logicalTableName,
@@ -107,12 +122,11 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
       foreignKey: formData.foreignKey,
       isPHI: formData.isPHI,
       isPII: formData.isPII,
-      score: -1
+      score: 1
     };
-    console.log('New mapping created:', newMapping);
-
+  
     setAllMappings(prev => {
-      if (selectedCandidate?.id) {
+      if (isEditing) {
         return prev.map(mapping => 
           mapping.id === selectedCandidate.id ? newMapping : mapping
         );
@@ -120,11 +134,10 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
       return [...prev, newMapping];
     });
     
-    setSelectedCandidate(newMapping);
+    setSelectedCandidate(null);
     setShowManualForm(false);
   };
-
-
+  
 
   const ManualMappingForm = ({ 
     open, 
@@ -136,20 +149,19 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
   }) => {
     console.log('sourceColumn from ManualMappingForm:', sourceColumn);
     console.log('resourceSchema from ManualMappingForm:', resourceSchema);
-  
-  
+    console.log('selectedCandidate from ManualMappingForm:', selectedCandidate);
     const [manualMapping, setManualMapping] = useState({
-      physicalTableName: resourceSchema.matched_table_name || '',
-      physicalColumnName: resourceSchema.source_column_name || '',
-      logicalTableName: resourceSchema.logicalTableName || '',
-      logicalColumnName: '',
-      dataType: resourceSchema.sourceDataType || 'STRING',
+      physicalTableName: selectedCandidate?.tableName || resourceSchema.matched_table_name || '',
+      physicalColumnName: selectedCandidate?.columnName || resourceSchema.source_column_name || '',
+      logicalTableName: selectedCandidate?.logicalTableName || resourceSchema.logicalTableName || '',
+      logicalColumnName: selectedCandidate?.logicalColumnName || '',
+      dataType: selectedCandidate?.dataType || resourceSchema.sourceDataType || 'STRING',
       description: '',
-      primaryKey: resourceSchema.sourcePrimaryKey || false,
-      foreignKey: resourceSchema.sourceForeignKey || false,
-      isPHI: resourceSchema.sourcePHI || false,
-      isPII: resourceSchema.sourcePII || false,
-      isNullable: resourceSchema.sourceNullable || false
+      primaryKey: selectedCandidate?.primaryKey || resourceSchema.sourcePrimaryKey || false,
+      foreignKey: selectedCandidate?.foreignKey || resourceSchema.sourceForeignKey || false,
+      isPHI: selectedCandidate?.isPHI || resourceSchema.sourcePHI || false,
+      isPII: selectedCandidate?.isPII || resourceSchema.sourcePII || false,
+      isNullable: selectedCandidate?.isNullable || resourceSchema.sourceNullable || false
     });
   
     const handleChange = (field, value) => {
@@ -166,38 +178,13 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
       });
     };
     
-    const handleManualSubmit = (formData) => {
-      const newMapping = {
-        id: formData.id,
-        columnName: formData.physicalColumnName,
-        tableName: formData.physicalTableName,
-        logicalTableName: formData.logicalTableName,
-        logicalColumnName: formData.logicalColumnName,
-        dataType: formData.dataType,
-        columnDescription: formData.description,
-        primaryKey: formData.primaryKey,
-        foreignKey: formData.foreignKey,
-        isPHI: formData.isPHI,
-        isPII: formData.isPII,
-        score: -1
-      };
-    
-      setAllMappings(prev => {
-        if (formData.id && formData.id.startsWith('manual-')) {
-          return prev.map(mapping => 
-            mapping.id === formData.id ? newMapping : mapping
-          );
-        }
-        return [...prev, newMapping];
-      });
       
-      setShowManualForm(false);
-    };
-    
-  
+    const isEditMode = selectedCandidate?.id && selectedCandidate.id !== 'manual-map';
+
     return (
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle>Create Manual Mapping</DialogTitle>
+      <DialogTitle>{isEditMode ? 'Edit Mapping' : 'Create New Mapping'}</DialogTitle>
+      
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={6}>
@@ -299,7 +286,7 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
                 <FormControlLabel
                   control={
                     <Checkbox 
-                      checked={manualMapping.isPII}
+                      checked={manualMapping.isNullable}
                       onChange={(e) => handleChange('isNullable', e.target.checked)}
                       size="small"
                     />
@@ -322,15 +309,13 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button 
-            variant="contained" 
-            onClick={handleCreateMapping}
-            disabled={!manualMapping.physicalTableName || !manualMapping.physicalColumnName}
-          >
-          {selectedCandidate?.id ? 'Update Mapping' : 'Create Mapping'}
-      </Button>
-        </DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button 
+          variant="contained" 
+          onClick={handleCreateMapping}
+          disabled={!manualMapping.physicalTableName || !manualMapping.physicalColumnName}>{isEditMode ? 'Update Mapping' : 'Create Mapping'}
+        </Button>
+      </DialogActions>
       </Dialog>
     );
   };  
@@ -385,47 +370,41 @@ const handleConfirmSelection = () => {
   }, [selectedCandidate]);
 
 
-    // Add No Map option to candidates
-    // const allCandidates = [
-    //   {
-    //     id: 'manual-map',
-    //     columnName: 'Manual Map',
-    //     score: -1,
-    //     logicalTableName: '',
-    //     logicalColumnName: '',
-    //     dataType: '',
-    //     columnDescription: 'Create a new dictionary mapping'
-    //   },
-    //   {
-    //     id: 'no-map',
-    //     columnName: 'No Map',
-    //     score: 0,
-    //     logicalTableName: '',
-    //     logicalColumnName: '',
-    //     dataType: '',
-    //     columnDescription: 'Explicitly mark this column as unmapped'
-    //   },
-    //   ...initialCandidates.map((candidate, index) => ({
-    //     id: index,
-    //     ...candidate
-    //   }))
-    // ];
-
   const candidateColumns = [
     {
-      field: 'select',
-      headerName: '',
-      width: 50,
-      renderCell: (params) => (
-        <Radio
-          checked={selectedCandidate && 
-            params.row.columnName === selectedCandidate.columnName && 
-            params.row.tableName === selectedCandidate.tableName}
-          size="small"
-          readOnly
-        />
-      )
+      field: 'type',
+      headerName: 'Type',
+      width: 120,
+      renderCell: (params) => {
+        const getTypeInfo = (id) => {
+          if (id === 'manual-map') return { label: 'Manual', icon: <BackHandIcon color="primary" /> };
+          if (id === 'no-map') return { label: 'No Map', icon: <DoNotTouchIcon  color="error" /> };
+          if (id.toString().startsWith('manual-')) return { label: 'Manual', icon: <BackHandIcon color="primary" /> };
+          return { label: 'Sourced', icon: <AssistantIcon color="success" /> };
+        };
+  
+        const typeInfo = getTypeInfo(params.row.id);
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {typeInfo.icon}
+            <Typography variant="body2">{typeInfo.label}</Typography>
+          </Box>
+        );
+      }
     },
+    // {
+    //   field: 'select',
+    //   headerName: '',
+    //   width: 25,
+    //   renderCell: (params) => (
+    //     <Radio
+    //       checked={selectedCandidate && 
+    //         params.row.columnName === selectedCandidate.columnNamee}
+    //       size="small"
+    //       readOnly
+    //     />
+    //   )
+    // },
     { 
       field: 'columnName', 
       headerName: 'Column Name', 
@@ -519,18 +498,9 @@ const handleConfirmSelection = () => {
     }
   ];
 
-  // const formatMappingForParent = (data) => {
-  //   console.log('Formatting mapping data:', data);
-  //   return {
-  //     tableName: data.tableName || data.physicalTableName,
-  //     columnName: data.columnName || data.physicalColumnName,
-  //     logicalTableName: data.logicalTableName,
-  //     logicalColumnName: data.logicalColumnName,
-  //     dataType: data.dataType,
-  //     columnDescription: data.description || data.columnDescription,
-  //     score: data.score
-  //   };
-  // };  
+  const handleClose = () => {
+    onClose(allMappings);
+    };
 
   return (
     <Dialog 
@@ -574,19 +544,39 @@ const handleConfirmSelection = () => {
             pageSize={5}
             rowsPerPageOptions={[5]}
             disableColumnMenu
-            disableSelectionOnClick
+            
+            disableMultipleSelection={true}
+            checkboxSelection
             disableColumnSelector
-            disableColumnFilter
-            hideFooterSelectedRowCount
+            disableColumnFilter 
+            
+           
             density="compact"
+            isRowSelectable={(params) => params.row.id !== 'manual-map'}
+            onSelectionModelChange={(newSelection) => {
+              const selected = allMappings.find(m => m.id === newSelection[0]);
+              setSelectedCandidate(selected);
+            }}
+            selectionModel={selectedCandidate ? [selectedCandidate.id] : []}
             onRowClick={(params) => {
               console.log('DataGrid -> Row clicked with data:', params.row);              
               setSelectedCandidate(params.row);
             }}
+            // onCellClick={(params) => {
+            //   if (params.field === '__check__' && params.row.id !== 'manual-map') {
+            //     setSelectedCandidate(params.row);
+            //   }
+            // }}                  
             sx={{
+              '& .MuiDataGrid-cell:focus': {
+                outline: 'none',
+              },
               '& .MuiDataGrid-row': {
-                cursor: 'pointer'
-              }
+                cursor: 'pointer',
+                '&.Mui-selected': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.08) !important',
+                },
+              },
             }}
             initialState={{
               sorting: {
@@ -595,9 +585,14 @@ const handleConfirmSelection = () => {
             }}
           />
         </Box>
+
+
+
+
+
         
         {selectedCandidate && selectedCandidate.id !== 'no-map' && selectedCandidate.id !== 'manual-map' && (
-          <Card sx={{ mt: 1 }} variant="outlined">
+          <Card raised={true} sx={{ mt: 1 }} variant="outlined">
             <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
               <Grid container spacing={1}>
               <Grid item xs={6} md={3}>
@@ -641,13 +636,17 @@ const handleConfirmSelection = () => {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button 
-          variant="contained" 
-          onClick={handleConfirmSelection}
-          disabled={!selectedCandidate}
+        <Button
+          variant="contained"
+          onClick={() => {
+            onSelect(selectedCandidate);
+            handleClose();
+          }}
+          disabled={!selectedCandidate || selectedCandidate.id === 'manual-map'}
         >
           Confirm Selection
         </Button>
+
       </DialogActions>
 
       <ManualMappingForm 
