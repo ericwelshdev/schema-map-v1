@@ -97,13 +97,19 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
       localStorage.setItem('previewTabValue', newValue);
     };
 
-  const persistRows = (updatedRows) => {
-    setRows(updatedRows);
-    console.log('persistRows: setData ->resourcePreviewRows', updatedRows);
-    // localStorage.setItem('ddResourcePreviewRows', JSON.stringify(updatedRows));
-    setData('resourcePreviewRows', updatedRows);
-    console.log('Saved Updated rows:', updatedRows);
-  };
+    const persistRows = async (updatedRows) => {
+      setRows(updatedRows);
+      console.log('persistRows: setData ->resourcePreviewRows', updatedRows);
+  
+      await setData('resourcePreviewRows', updatedRows);
+      
+      onDataChange?.({
+        processedSchema: updatedRows,
+        sampleData,
+        resourceInfo
+      });
+      console.log('Saved Updated rows:', updatedRows);
+    };
 
   const handleEditClick = (id) => {
     persistRows(rows.map(row => row.id === id ? { ...row, isEditing: true, isUnsaved: true } : row));
@@ -420,7 +426,8 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
         <Typography>No sample data available</Typography>
       )
     );
-  const renderRawData = () => (
+
+    const renderRawData = () => (
     <Box sx={{ mt:4, height: 350, width: '100%', overflow: 'auto' }}>
     <TextField
       multiline

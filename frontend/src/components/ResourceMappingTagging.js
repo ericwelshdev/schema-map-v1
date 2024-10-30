@@ -8,8 +8,10 @@ import LockPersonIcon from '@mui/icons-material/LockPerson';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import BlockIcon from '@mui/icons-material/Block';
 import EditIcon from '@mui/icons-material/Edit';
-
+import SaveIcon from '@mui/icons-material/Save';
+import CancelIcon from '@mui/icons-material/Cancel';
 import SearchIcon from '@mui/icons-material/Search';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ResourceDataDictionaryColumnMappingCandidateDialog  from './ResourceDataDictionaryColumnMappingCandidateDialog';
 import ResourceDataDictionaryTableSelectionDialog from './ResourceDataDictionaryTableSelectionDialog';
 
@@ -42,6 +44,10 @@ const ResourceMappingTagging = ({ savedState }) => {
 
   const [openCandidateDialog, setOpenCandidateDialog] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
+
+const [isEditing, setIsEditing] = useState(false);
+const [unsavedChanges, setUnsavedChanges] = useState(false);
+
 
   const [sourceData, setSourceData] = useState({
     ddResourceFullData: null,
@@ -313,11 +319,6 @@ const ResourceMappingTagging = ({ savedState }) => {
 
  const standardizedTableName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
 
-  
-    
-    
-    
-
 
     useEffect(() => {
       const loadData = async () => {
@@ -486,8 +487,42 @@ const ResourceMappingTagging = ({ savedState }) => {
 }, [selectedRow, handleMatchChange])
 
 
+// Add these handler functions
+const handleSaveAll = () => {
+  setMatchResults(prev => prev.map(row => ({ 
+    ...row, 
+    isUnsaved: false, 
+    isEditing: false 
+  })));
+  setUnsavedChanges(false);
+};
 
+const handleCancelAll = () => {
+  setMatchResults(prev => prev.map(row => ({ 
+    ...row, 
+    isChanged: false, 
+    isUnsaved: false, 
+    isEditing: false 
+  })));
+  setUnsavedChanges(false);
+};
 
+const handleCellChange = (params) => {
+  setMatchResults(prev => prev.map(row => {
+    if (row.id === params.id) {
+      const newValue = params.value !== undefined ? params.value : row[params.field];
+      return {
+        ...row,
+        [params.field]: newValue,
+        isEditing: true,
+        isUnsaved: true,
+        isChanged: true
+      };
+    }
+    return row;
+  }));
+  setUnsavedChanges(true);
+};
 
   // Add these component definitions before the main ResourceMappingTagging component
   const TableStatsCard = ({ stats, onChangeTable }) => (
@@ -739,7 +774,24 @@ const ResourceMappingTagging = ({ savedState }) => {
         setOpenTableSelection(false);
       }}
     />
-        <Box sx={{ height: 600, width: '100%' }}>
+<Box sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
+      <Box sx={{ mt:-1, mb: -1, display: 'flex', justifyContent: 'flex-end' }}>
+        <Button 
+          startIcon={<SaveIcon/>} 
+          onClick={handleSaveAll} 
+          disabled={!unsavedChanges}
+        >
+          Save All
+        </Button>
+        <Button 
+          startIcon={<CancelIcon />} 
+          onClick={handleCancelAll} 
+          disabled={!unsavedChanges}
+        >
+          Cancel All
+        </Button>
+      </Box>
+      <Box sx={{ height: 600, width: '100%', overflow: 'auto' }}>
         <DataGrid
           rows={rows}
           columns={columns}
@@ -747,7 +799,28 @@ const ResourceMappingTagging = ({ savedState }) => {
           rowsPerPageOptions={[15, 30, 50]}
           disableSelectionOnClick
           density="compact"
+          editMode="cell"
           getRowHeight={() => 45}
+          processRowUpdate={(newRow, oldRow) => {
+          handleCellChange({
+              id: newRow.id,
+              field: Object.keys(newRow).find(key => newRow[key] !== oldRow[key]),
+              value: newRow[Object.keys(newRow).find(key => newRow[key] !== oldRow[key])]
+            });
+            return newRow;
+          }}
+          isCellEditable={(params) => !params.row.isDisabled}
+          components={{
+            ColumnUnsortedIcon: CheckCircleOutlineIcon,
+          }}
+          componentsProps={{
+            row: {
+              style: (params) => ({
+                backgroundColor: params.row.isDisabled ? '#f5f5f5' : 'inherit',
+                opacity: params.row.isDisabled ? 0.7 : 1,
+              }),
+            },
+          }}          
           sx={{
             '& .MuiDataGrid-cell': { 
               py: 0.5,
@@ -755,7 +828,11 @@ const ResourceMappingTagging = ({ savedState }) => {
             },
             '& .MuiDataGrid-columnHeader': {
               fontSize: '0.875rem'
-            }
+            },
+            '& .disabled-cell': {
+              backgroundColor: '#f5f5f5',
+              cursor: 'not-allowed',
+            },
           }}
         />
         <ResourceDataDictionaryColumnMappingCandidateDialog
@@ -770,8 +847,9 @@ const ResourceMappingTagging = ({ savedState }) => {
 
 
 
-        </Box>
-      </Box>
+     </Box>
+    </Box>
+  </Box>
     );
   };
 

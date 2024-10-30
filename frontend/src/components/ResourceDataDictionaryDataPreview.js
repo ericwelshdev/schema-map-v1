@@ -6,6 +6,8 @@ import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import LockPersonIcon from '@mui/icons-material/LockPerson';
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import UndoIcon from '@mui/icons-material/Undo';
 import WarningIcon from '@mui/icons-material/Warning';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
@@ -96,11 +98,17 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
       localStorage.setItem('previewTabValue', newValue);
   };
 
-  const persistRows = (updatedRows) => {
+  const persistRows = async (updatedRows) => {
     setRows(updatedRows);
     console.log('persistRows: setData ->ddResourcePreviewRows', updatedRows);
-    // localStorage.setItem('ddResourcePreviewRows', JSON.stringify(updatedRows));
-    setData('ddResourcePreviewRows', updatedRows);
+
+    await setData('ddResourcePreviewRows', updatedRows);
+    
+    onDataChange?.({
+      processedSchema: updatedRows,
+      sampleData,
+      resourceInfo
+    });
     console.log('Saved Updated rows:', updatedRows);
   };
 
@@ -485,7 +493,9 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
         <Typography>No sample data available</Typography>
       )
     
-  );  const renderRawData = () => (
+  );  
+  
+  const renderRawData = () => (
     <Box sx={{ mt:4, height: 350, width: '100%', overflow: 'auto' }}>
     <TextField
       multiline

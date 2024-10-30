@@ -6,18 +6,19 @@ import ResourceDataDictionaryAssignment from './ResourceDataDictionaryAssignment
 import ResourceApiIngestionSetup from './ResourceApiIngestionSetup';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataDictionaryDataPreview from './ResourceDataDictionaryDataPreview';
-import { initDB,  getData, setData } from '../utils/storageUtils';
 
 const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
   // console.log('ResourceDataDictionaryConfiguration-> Incoming savedState:', savedState);
 
   const [ddResourceConfig, setResourceConfig] = useState(() => {
     const saved = localStorage.getItem('ddResourceGeneralConfig');
+    console.log("savedState:", savedState);
     return saved ? JSON.parse(saved) : {
     expandedAccordion: 'ingestionSetup',
     activeTab: 0,
     sourceInfo: null,
     schema: null,
+    fullData: null,
     sampleData: null,
     rawData: null,
     ingestionSettings: {},
@@ -49,8 +50,7 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
   useEffect(() => {
     if (ddResourceConfig) {
       onStateChange(ddResourceConfig);
-      // localStorage.setItem('ddResourceGeneralConfig', JSON.stringify(ddResourceConfig));
-      getData('ddResourcePreviewRows');
+      localStorage.setItem('ddResourceGeneralConfig', JSON.stringify(ddResourceConfig));
     }
   }, [ddResourceConfig, onStateChange]);
 
@@ -75,6 +75,7 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
     handleConfigChange({
       processedSchema: resourceData.processedSchema,
       schema: resourceData.schema,
+      fullData: resourceData.fullData,
       sampleData: resourceData.sampleData,
       resourceInfo: resourceData.resourceInfo
     });

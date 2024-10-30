@@ -594,7 +594,7 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
 
         
         {selectedCandidate && selectedCandidate.id !== 'no-map' && selectedCandidate.id !== 'manual-map' && (
-          <Card raised={true} sx={{ mt: 1 }} variant="outlined">
+          <Card raised={true} sx={{ mt: 1 }} >
             <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
               <Grid container spacing={1}>
               <Grid item xs={6} md={3}>

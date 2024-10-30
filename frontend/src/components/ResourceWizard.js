@@ -14,90 +14,87 @@ const ResourceWizard = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [slideDirection, setSlideDirection] = useState('left');
   const [prevStep, setPrevStep] = useState(0);
+    const [wizardState, setWizardState] = useState(() => {
+      const savedState = localStorage.getItem('wizardState');
+      if (savedState) {
+        return JSON.parse(savedState);
+      }    
+      return {
+        resourceSetup: {
+          resourceName: '',
+          standardizedSourceName: '',
+          collection: 'None',
+          resourceTags: ['source'],
+          resourceDescription: '',
+          resourceType: 'file'
+        },
+        resourceConfig: {
+          expandedAccordion: 'ingestionSetup',
+          activeTab: 0,
+          sourceInfo: null,
+          schema: null,
+          processedSchema: null,
+          fullData: null,
+          sampleData: null,
+          rawData: null,
+          ingestionSettings: {},
+          ingestionConfig: {},
+          uploadStatus: null,
+          error: null
+        },
+        dataDictionarySetup: {
+          resourceName: '',
+          standardizedSourceName: '',
+          collection: 'None',
+          resourceTags: ['datadictionary'],
+          resourceDescription: '',
+          resourceType: 'dd_new'
+        },
+        dataDictionaryConfig: {
+          expandedAccordion: 'ingestionSetup',
+          activeTab: 0,
+          sourceInfo: null,
+          schema: null,
+          processedSchema: null,
+          fullData: null,
+          sampleData: null,
+          rawData: null,
+          ingestionSettings: {},
+          ingestionConfig: {},
+          uploadStatus: null,
+          error: null,
+          previewRows: null
+        }
+      };
+    });
 
-  const [wizardState, setWizardState] = useState(() => {
-    // Check for existing state in localStorage
-    const savedState = localStorage.getItem('wizardState');
-    if (savedState) {
-      return JSON.parse(savedState);
-    }    
-    // Return clean initial state
-    return {
-      resourceSetup: {
-        resourceName: '',
-        standardizedSourceName: '',
-        collection: 'None',
-        resourceTags: ['source'],
-        resourceDescription: '',
-        resourceType: 'file'
-      },
-      resourceConfig: {
-        expandedAccordion: 'ingestionSetup',
-        activeTab: 0,
-        sourceInfo: null,
-        schema: null,
-        processedSchema: null,
-        fullData: null,
-        sampleData: null,
-        rawData: null,
-        ingestionSettings: {},
-        ingestionConfig: {},
-        uploadStatus: null,
-        error: null
-      },
-      dataDictionarySetup: {
-        resourceName: '',
-        standardizedSourceName: '',
-        collection: 'None',
-        resourceTags: ['datadictionary'],
-        resourceDescription: '',
-        resourceType: 'dd_new'
-      },
-      dataDictionaryConfig: {
-        expandedAccordion: 'ingestionSetup',
-        activeTab: 0,
-        sourceInfo: null,
-        schema: null,
-        processedSchema: null,
-        fullData: null,
-        sampleData: null,
-        rawData: null,
-        ingestionSettings: {},
-        ingestionConfig: {},
-        uploadStatus: null,
-        error: null
+
+    useEffect(() => {
+      initDB();
+    
+      const essentialState = {
+        resourceSetup: wizardState.resourceSetup,
+        dataDictionarySetup: wizardState.dataDictionarySetup,
+        currentStep: wizardState.currentStep
+      };
+      localStorage.setItem('wizardStateEssential', JSON.stringify(essentialState));
+    
+      if (wizardState.resourceConfig?.fullData) {
+        setData('resourceFullData', wizardState.resourceConfig.fullData);
       }
-    };
-  });
-
-
-  useEffect(() => {
-    initDB();
-    
-    // Store essential state in localStorage
-    const essentialState = {
-      resourceSetup: wizardState.resourceSetup,
-      dataDictionarySetup: wizardState.dataDictionarySetup,
-      currentStep: wizardState.currentStep
-    };
-    localStorage.setItem('wizardStateEssential', JSON.stringify(essentialState));
-    
-    console.log("wizardState in useEffect:", wizardState);
-    // Store large datasets in IndexedDB
-    if (wizardState.resourceConfig?.fullData) {
-      setData('resourceFullData', wizardState.resourceConfig?.fullData);
-    }
-    if (wizardState.resourceConfig?.sampleData) {
-      setData('resourceSampleData', wizardState.resourceConfig.sampleData);
-    }
-    if (wizardState.resourceConfig?.sampleData) {
-      setData('ddResourceFullData', wizardState.dataDictionaryConfig.fullData);
-    }    
-    if (wizardState.resourceConfig?.sampleData) {
-      setData('ddResourceSampleData', wizardState.dataDictionaryConfig.sampleData);
-    }    
-  }, [wizardState]);
-
+      if (wizardState.resourceConfig?.sampleData) {
+        setData('resourceSampleData', wizardState.resourceConfig.sampleData);
+      }
+      if (wizardState.dataDictionaryConfig?.fullData) {
+        setData('ddResourceFullData', wizardState.dataDictionaryConfig.fullData);
+      }    
+      if (wizardState.dataDictionaryConfig?.sampleData) {
+        setData('ddResourceSampleData', wizardState.dataDictionaryConfig.sampleData);
+      }
+      if (wizardState.dataDictionaryConfig?.previewRows) {
+        setData('ddResourcePreviewRows', wizardState.dataDictionaryConfig.previewRows);
+      }
+    }, [wizardState]);
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -114,19 +111,69 @@ const ResourceWizard = () => {
       setSlideDirection('left');
     }
   }, [activeStep]);
+    const handleNext = async () => {
+      setSlideDirection('left');
+      setPrevStep(activeStep);
+    
+      // Save current step state before moving
+      // const currentStepData = {
+      //   resourcePreviewRows: await getData('resourcePreviewRows'),
+      //   ddResourcePreviewRows: await getData('ddResourcePreviewRows'),
+      //   ddResourceFullData: await getData('ddResourceFullData'),
+      //   resourceSampleData: await getData('resourceSampleData'),
+      //   ddResourceSampleData: await getData('ddResourceSampleData')
+      // };
 
-  const handleNext = () => {
-    setSlideDirection('left');
-    setPrevStep(activeStep);
-    setActiveStep((prevStep) => prevStep + 1);
-  };
+      // setWizardState(prev => ({
+      //   ...prev,
+      //   dataDictionaryConfig: {
+      //     ...prev.dataDictionaryConfig,
+      //     processedSchema: currentStepData.ddResourcePreviewRows,
+      //     fullData: currentStepData.ddResourceFullData,
+      //     sampleData: currentStepData.ddResourceSampleData
+      //   },
+      //   resourceConfig: {
+      //     ...prev.resourceConfig,
+      //     processedSchema: currentStepData.resourcePreviewRows,
+      //     sampleData: currentStepData.resourceSampleData
+      //   }
+      // }));
 
-  const handleBack = () => {
-    setSlideDirection('right');
-    setPrevStep(activeStep);
-    setActiveStep((prevStep) => prevStep - 1);
-  };
+      setActiveStep((prevStep) => prevStep + 1);
+    };
 
+    const handleBack = async () => {
+      setSlideDirection('right');
+      setPrevStep(activeStep);
+
+      // // Load saved state when moving back
+      // const savedStepData = {
+      //   resourcePreviewRows: await getData('resourcePreviewRows'),
+      //   ddResourcePreviewRows: await getData('ddResourcePreviewRows'),
+      //   ddResourceFullData: await getData('ddResourceFullData'),
+      //   resourceSampleData: await getData('resourceSampleData'),
+      //   ddResourceSampleData: await getData('ddResourceSampleData')
+      // };
+
+      // setWizardState(prev => ({
+      //   ...prev,
+      //   dataDictionaryConfig: {
+      //     ...prev.dataDictionaryConfig,
+      //     processedSchema: savedStepData.ddResourcePreviewRows,
+      //     fullData: savedStepData.ddResourceFullData,
+      //     sampleData: savedStepData.ddResourceSampleData,
+      //     uploadStatus: savedStepData.ddResourcePreviewRows ? 'success' : null
+      //   },
+      //   resourceConfig: {
+      //     ...prev.resourceConfig,
+      //     processedSchema: savedStepData.resourcePreviewRows,
+      //     sampleData: savedStepData.resourceSampleData,
+      //     uploadStatus: savedStepData.resourcePreviewRows ? 'success' : null
+      //   }
+      // }));
+
+      setActiveStep((prevStep) => prevStep - 1);
+    };
   const handleSkip = () => {
     setSlideDirection('left');
     setPrevStep(activeStep);
