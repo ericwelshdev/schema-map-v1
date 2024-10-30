@@ -24,6 +24,8 @@ import {
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
+
 
 const dataTypeOptions = [
   'STRING',
@@ -37,237 +39,302 @@ const dataTypeOptions = [
   'CHAR'
 ];
 
-const ManualMappingForm = ({ 
-  open, 
-  onClose, 
-  onSubmit, 
-  sourceColumn,
-  resourceSchema
-}) => {
-  console.log('sourceColumn from ManualMappingForm:', sourceColumn);
-  console.log('resourceSchema from ManualMappingForm:', resourceSchema);
-
-
-  const [manualMapping, setManualMapping] = useState({
-    physicalTableName: resourceSchema.matched_table_name || '',
-    physicalColumnName: resourceSchema.source_column_name || '',
-    logicalTableName: resourceSchema.logicalTableName || '',
-    logicalColumnName: '',
-    dataType: resourceSchema.sourceDataType || 'STRING',
-    description: '',
-    primaryKey: resourceSchema.sourcePrimaryKey || false,
-    foreignKey: resourceSchema.sourceForeignKey || false,
-    isPHI: resourceSchema.sourcePHI || false,
-    isPII: resourceSchema.sourcePII || false,
-    isNullable: resourceSchema.sourceNullable || false
-  });
-
-  const handleChange = (field, value) => {
-    setManualMapping(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleCreateMapping = () => {
-    const newMapping = {
-      tableName: manualMapping.physicalTableName,
-      columnName: manualMapping.physicalColumnName,
-      logicalTableName: manualMapping.logicalTableName,
-      logicalColumnName: manualMapping.logicalColumnName,
-      dataType: manualMapping.dataType,
-      columnDescription: manualMapping.description,
-      primaryKey: manualMapping.primaryKey,
-      foreignKey: manualMapping.foreignKey,
-      isPHI: manualMapping.isPHI,
-      isPII: manualMapping.isPII,
-      score: -1
-    };
-    onSubmit(newMapping);
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Create Manual Mapping</DialogTitle>
-      <DialogContent>
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          <Grid item xs={6}>
-            <TextField
-              fullWidth
-              label="Physical Table Name"
-              value={manualMapping.physicalTableName}
-              onChange={(e) => handleChange('physicalTableName', e.target.value)}
-              size="small"
-              required
-            />
-          </Grid>
-          <Grid item xs={6}>
-            <TextField
-              fullWidth
-              label="Physical Column Name"
-              value={manualMapping.physicalColumnName}
-              onChange={(e) => handleChange('physicalColumnName', e.target.value)}
-              size="small"
-              required
-            />
-          </Grid>
-          <Grid item xs={6}>
-            <TextField
-              fullWidth
-              label="Logical Table Name"
-              value={manualMapping.logicalTableName}
-              onChange={(e) => handleChange('logicalTableName', e.target.value)}
-              size="small"
-              required
-            />
-          </Grid>
-          <Grid item xs={6}>
-            <TextField
-              fullWidth
-              label="Logical Column Name"
-              value={manualMapping.logicalColumnName}
-              onChange={(e) => handleChange('logicalColumnName', e.target.value)}
-              size="small"
-              required
-            />
-          </Grid>
-          <Grid item xs={6}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Data Type</InputLabel>
-              <Select
-                value={manualMapping.dataType}
-                onChange={(e) => handleChange('dataType', e.target.value)}
-                label="Data Type"
-              >
-                {dataTypeOptions.map(type => (
-                  <MenuItem key={type} value={type}>{type}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12}>
-            <FormGroup row>
-              <FormControlLabel
-                control={
-                  <Checkbox 
-                    checked={manualMapping.primaryKey}
-                    onChange={(e) => handleChange('primaryKey', e.target.checked)}
-                    size="small"
-                  />
-                }
-                label="Primary Key"
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox 
-                    checked={manualMapping.foreignKey}
-                    onChange={(e) => handleChange('foreignKey', e.target.checked)}
-                    size="small"
-                  />
-                }
-                label="Foreign Key"
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox 
-                    checked={manualMapping.isPHI}
-                    onChange={(e) => handleChange('isPHI', e.target.checked)}
-                    size="small"
-                  />
-                }
-                label="PHI Indicator"
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox 
-                    checked={manualMapping.isPII}
-                    onChange={(e) => handleChange('isPII', e.target.checked)}
-                    size="small"
-                  />
-                }
-                label="PII Indicator"
-              />
-<FormControlLabel
-                control={
-                  <Checkbox 
-                    checked={manualMapping.isPII}
-                    onChange={(e) => handleChange('isNullable', e.target.checked)}
-                    size="small"
-                  />
-                }
-                label="Allow Nulls"
-              />              
-            </FormGroup>
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Description"
-              value={manualMapping.description}
-              onChange={(e) => handleChange('description', e.target.value)}
-              size="small"
-              multiline
-              rows={2}
-            />
-          </Grid>
-        </Grid>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button 
-          variant="contained" 
-          onClick={handleCreateMapping}
-          disabled={!manualMapping.physicalTableName || !manualMapping.physicalColumnName}
-        >
-          Create Mapping
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
 
 const ResourceDataDictionaryColumnMappingCandidateDialog = ({ 
   open, 
   onClose, 
   sourceColumn,
-  candidates = [],
+  candidates: initialCandidates = [],
   currentMapping = null,
   resourceSchema = null,
   onSelect 
 }) => {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showManualForm, setShowManualForm] = useState(false);
-  console.log('candidates form ResourceDataDictionaryColumnMappingCandidateDialog:', candidates);
-  console.log('resourceSchema form ResourceDataDictionaryColumnMappingCandidateDialog:', resourceSchema);
 
-  console.log('currentMapping form ResourceDataDictionaryColumnMappingCandidateDialog:', currentMapping);
-  console.log('sourceColumn form ResourceDataDictionaryColumnMappingCandidateDialog:', sourceColumn);
+
+  // console.log('candidates form ResourceDataDictionaryColumnMappingCandidateDialog:', candidates);
+  // console.log('resourceSchema form ResourceDataDictionaryColumnMappingCandidateDialog:', resourceSchema);
+
+  // console.log('currentMapping form ResourceDataDictionaryColumnMappingCandidateDialog:', currentMapping);
+  // console.log('sourceColumn form ResourceDataDictionaryColumnMappingCandidateDialog:', sourceColumn);
 
   useEffect(() => {
     if (currentMapping) {
-      const existingMapping = candidates.find(c => c.columnName === currentMapping.columnName && c.tableName === currentMapping.tableName);   
-      console.log('useEffect -> existingMapping:', existingMapping);
+      const existingMapping = initialCandidates.find(c => c.columnName === currentMapping.columnName && c.tableName === currentMapping.tableName);  
+      console.log('useEffect -> existingMapping:', existingMapping);      
       setSelectedCandidate(existingMapping);
     }
-  }, [currentMapping, candidates]);
-
+  }, [currentMapping, initialCandidates]);
+  
+  const [allMappings, setAllMappings] = useState([
+    {
+      id: 'manual-map',
+      columnName: 'Manual Map',
+      score: -1,
+      logicalTableName: '',
+      logicalColumnName: '',
+      dataType: '',
+      columnDescription: 'Create a new dictionary mapping'
+    },
+    {
+      id: 'no-map',
+      columnName: 'No Map',
+      score: 0,
+      logicalTableName: '',
+      logicalColumnName: '',
+      dataType: '',
+      columnDescription: 'Explicitly mark this column as unmapped'
+    },
+    ...initialCandidates.map((candidate, index) => ({
+      id: index,
+      ...candidate
+    }))
+  ]);
+  
 
   const handleManualSubmit = (formData) => {
     console.log('handleManualSubmit-> Manual mapping submitted:', formData);
     const newMapping = {
-      tableName: formData.physicalTableName,
+      id: selectedCandidate?.id || `manual-${Date.now()}`,
       columnName: formData.physicalColumnName,
+      tableName: formData.physicalTableName,
       logicalTableName: formData.logicalTableName,
       logicalColumnName: formData.logicalColumnName,
       dataType: formData.dataType,
       columnDescription: formData.description,
+      primaryKey: formData.primaryKey,
+      foreignKey: formData.foreignKey,
+      isPHI: formData.isPHI,
+      isPII: formData.isPII,
       score: -1
     };
     console.log('New mapping created:', newMapping);
-    onSelect(formatMappingForParent({...formData, score: -1}));
+
+    setAllMappings(prev => {
+      if (selectedCandidate?.id) {
+        return prev.map(mapping => 
+          mapping.id === selectedCandidate.id ? newMapping : mapping
+        );
+      }
+      return [...prev, newMapping];
+    });
+    
+    setSelectedCandidate(newMapping);
     setShowManualForm(false);
-    onClose();
   };
+
+
+
+  const ManualMappingForm = ({ 
+    open, 
+    onClose, 
+    onSubmit,
+    sourceColumn,
+    resourceSchema,
+    selectedCandidate  
+  }) => {
+    console.log('sourceColumn from ManualMappingForm:', sourceColumn);
+    console.log('resourceSchema from ManualMappingForm:', resourceSchema);
+  
+  
+    const [manualMapping, setManualMapping] = useState({
+      physicalTableName: resourceSchema.matched_table_name || '',
+      physicalColumnName: resourceSchema.source_column_name || '',
+      logicalTableName: resourceSchema.logicalTableName || '',
+      logicalColumnName: '',
+      dataType: resourceSchema.sourceDataType || 'STRING',
+      description: '',
+      primaryKey: resourceSchema.sourcePrimaryKey || false,
+      foreignKey: resourceSchema.sourceForeignKey || false,
+      isPHI: resourceSchema.sourcePHI || false,
+      isPII: resourceSchema.sourcePII || false,
+      isNullable: resourceSchema.sourceNullable || false
+    });
+  
+    const handleChange = (field, value) => {
+      setManualMapping(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    };
+  
+    const handleCreateMapping = () => {
+      onSubmit({
+        ...manualMapping,
+        id: selectedCandidate?.id || `manual-${Date.now()}`
+      });
+    };
+    
+    const handleManualSubmit = (formData) => {
+      const newMapping = {
+        id: formData.id,
+        columnName: formData.physicalColumnName,
+        tableName: formData.physicalTableName,
+        logicalTableName: formData.logicalTableName,
+        logicalColumnName: formData.logicalColumnName,
+        dataType: formData.dataType,
+        columnDescription: formData.description,
+        primaryKey: formData.primaryKey,
+        foreignKey: formData.foreignKey,
+        isPHI: formData.isPHI,
+        isPII: formData.isPII,
+        score: -1
+      };
+    
+      setAllMappings(prev => {
+        if (formData.id && formData.id.startsWith('manual-')) {
+          return prev.map(mapping => 
+            mapping.id === formData.id ? newMapping : mapping
+          );
+        }
+        return [...prev, newMapping];
+      });
+      
+      setShowManualForm(false);
+    };
+    
+  
+    return (
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+        <DialogTitle>Create Manual Mapping</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Physical Table Name"
+                value={manualMapping.physicalTableName}
+                onChange={(e) => handleChange('physicalTableName', e.target.value)}
+                size="small"
+                required
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Physical Column Name"
+                value={manualMapping.physicalColumnName}
+                onChange={(e) => handleChange('physicalColumnName', e.target.value)}
+                size="small"
+                required
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Logical Table Name"
+                value={manualMapping.logicalTableName}
+                onChange={(e) => handleChange('logicalTableName', e.target.value)}
+                size="small"
+                required
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Logical Column Name"
+                value={manualMapping.logicalColumnName}
+                onChange={(e) => handleChange('logicalColumnName', e.target.value)}
+                size="small"
+                required
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Data Type</InputLabel>
+                <Select
+                  value={manualMapping.dataType}
+                  onChange={(e) => handleChange('dataType', e.target.value)}
+                  label="Data Type"
+                >
+                  {dataTypeOptions.map(type => (
+                    <MenuItem key={type} value={type}>{type}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <FormGroup row>
+                <FormControlLabel
+                  control={
+                    <Checkbox 
+                      checked={manualMapping.primaryKey}
+                      onChange={(e) => handleChange('primaryKey', e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label="Primary Key"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox 
+                      checked={manualMapping.foreignKey}
+                      onChange={(e) => handleChange('foreignKey', e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label="Foreign Key"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox 
+                      checked={manualMapping.isPHI}
+                      onChange={(e) => handleChange('isPHI', e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label="PHI Indicator"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox 
+                      checked={manualMapping.isPII}
+                      onChange={(e) => handleChange('isPII', e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label="PII Indicator"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox 
+                      checked={manualMapping.isPII}
+                      onChange={(e) => handleChange('isNullable', e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label="Allow Nulls"
+                />              
+              </FormGroup>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                value={manualMapping.description}
+                onChange={(e) => handleChange('description', e.target.value)}
+                size="small"
+                multiline
+                rows={2}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleCreateMapping}
+            disabled={!manualMapping.physicalTableName || !manualMapping.physicalColumnName}
+          >
+          {selectedCandidate?.id ? 'Update Mapping' : 'Create Mapping'}
+      </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };  
+
 
 // In the dialog component's handleConfirmSelection function
 const handleConfirmSelection = () => {
@@ -319,30 +386,30 @@ const handleConfirmSelection = () => {
 
 
     // Add No Map option to candidates
-  const allCandidates = [
-    {
-      id: 'manual-map',
-      columnName: 'Manual Map',
-      score: -1,
-      logicalTableName: '',
-      logicalColumnName: '',
-      dataType: '',
-      columnDescription: 'Create a new dictionary mapping'
-    },
-    {
-      id: 'no-map',
-      columnName: 'No Map',
-      score: 0,
-      logicalTableName: '',
-      logicalColumnName: '',
-      dataType: '',
-      columnDescription: 'Explicitly mark this column as unmapped'
-    },
-    ...candidates.map((candidate, index) => ({
-      id: index,
-      ...candidate
-    }))
-  ];
+    // const allCandidates = [
+    //   {
+    //     id: 'manual-map',
+    //     columnName: 'Manual Map',
+    //     score: -1,
+    //     logicalTableName: '',
+    //     logicalColumnName: '',
+    //     dataType: '',
+    //     columnDescription: 'Create a new dictionary mapping'
+    //   },
+    //   {
+    //     id: 'no-map',
+    //     columnName: 'No Map',
+    //     score: 0,
+    //     logicalTableName: '',
+    //     logicalColumnName: '',
+    //     dataType: '',
+    //     columnDescription: 'Explicitly mark this column as unmapped'
+    //   },
+    //   ...initialCandidates.map((candidate, index) => ({
+    //     id: index,
+    //     ...candidate
+    //   }))
+    // ];
 
   const candidateColumns = [
     {
@@ -427,21 +494,43 @@ const handleConfirmSelection = () => {
           </Typography>
         </Tooltip>
       )
+    },
+    {
+      field: 'actions',
+      headerName: '',
+      width: 50,
+      renderCell: (params) => {
+        if (params.row.id.toString().startsWith('manual-')) {
+          return (
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedCandidate(params.row);
+                setShowManualForm(true);
+              }}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          );
+        }
+        return null;
+      }
     }
   ];
 
-  const formatMappingForParent = (data) => {
-    console.log('Formatting mapping data:', data);
-    return {
-      tableName: data.tableName || data.physicalTableName,
-      columnName: data.columnName || data.physicalColumnName,
-      logicalTableName: data.logicalTableName,
-      logicalColumnName: data.logicalColumnName,
-      dataType: data.dataType,
-      columnDescription: data.description || data.columnDescription,
-      score: data.score
-    };
-  };  
+  // const formatMappingForParent = (data) => {
+  //   console.log('Formatting mapping data:', data);
+  //   return {
+  //     tableName: data.tableName || data.physicalTableName,
+  //     columnName: data.columnName || data.physicalColumnName,
+  //     logicalTableName: data.logicalTableName,
+  //     logicalColumnName: data.logicalColumnName,
+  //     dataType: data.dataType,
+  //     columnDescription: data.description || data.columnDescription,
+  //     score: data.score
+  //   };
+  // };  
 
   return (
     <Dialog 
@@ -480,7 +569,7 @@ const handleConfirmSelection = () => {
       <DialogContent sx={{ py: 1 }}>
         <Box sx={{ height: 400 }}>
           <DataGrid
-            rows={allCandidates}
+            rows={allMappings}
             columns={candidateColumns}
             pageSize={5}
             rowsPerPageOptions={[5]}
@@ -567,6 +656,7 @@ const handleConfirmSelection = () => {
         onSubmit={handleManualSubmit}
         sourceColumn={sourceColumn}
         resourceSchema={resourceSchema}
+        selectedCandidate={selectedCandidate}
       />
     </Dialog>
   );
