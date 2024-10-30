@@ -166,10 +166,25 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
     const tableNameField = tableNameColumns[0]?.name;
     const columnNameField = columnNameColumns[0]?.name;
   
+  // Get all rows for this table
     const tableRows = sourceData.ddResourceFullData?.filter(row => 
-      row[tableNameField] === tableName
-    );
+    row[tableNameField] === tableName
+  );
   
+  
+  // Count primary and foreign keys
+  const pkCount = tableRows.filter(row => 
+    getColumnDataByClassification('primary_key', row) === 'YES'
+  ).length;
+
+  const fkCount = tableRows.filter(row => 
+    getColumnDataByClassification('foreign_key', row) === 'YES'
+  ).length;
+
+  const nullableCount = tableRows.filter(row => 
+    getColumnDataByClassification('nullable', row) === 'NULL'
+  ).length;
+
     const tableColumns = tableRows.map(row => row[columnNameField]);
     
     const sourceColumns = sourceData.resourcePreviewRows.filter(col => !col.isDisabled);
@@ -686,7 +701,7 @@ useEffect(() => {
             </Typography>
           </Grid>
           <Grid item xs={1.5}>
-            <Typography variant="subtitle2" color="textSecondary">Table Match</Typography>
+            <Typography variant="subtitle2" color="textSecondary">Name Match</Typography>
             <Typography variant="h6" color={stats?.tableNameSimilarity >= 60 ? 'success.main' : 'error.main'}>
               {stats?.tableNameSimilarity?.toFixed(1)}%
             </Typography>
@@ -698,31 +713,32 @@ useEffect(() => {
             </Typography>
           </Grid>
           <Grid item xs={1.5}>
-            <Typography variant="subtitle2" color="textSecondary">Match Quality</Typography>
-            <Typography variant="h6" color={stats?.matchedColumnsConfidence >= 60 ? 'success.main' : 'error.main'}>
-              {stats?.matchedColumnsConfidence?.toFixed(1)}%
+            <Typography variant="subtitle2" color="textSecondary">Quality</Typography>
+            <Typography variant="h6" color={stats?.matchQuality >= 60 ? 'success.main' : 'error.main'}>
+              {stats?.matchQuality?.toFixed(1)}%
             </Typography>
           </Grid>
           <Grid item xs={1.5}>
-            <Typography variant="subtitle2" color="textSecondary">Columns</Typography>
-            <Typography variant="h6">{stats?.matchedColumns}/{stats?.matchedColumns + stats?.unmatchedColumns}</Typography>
+            <Typography variant="subtitle2" color="textSecondary">Columns Mapped</Typography>
+            <Typography variant="h6">
+              {stats?.matchedColumns}/{stats?.totalColumns - stats?.disabledColumns}
+              {stats?.disabledColumns > 0 && (
+                <Typography component="span" variant="caption" color="text.secondary">
+                  {` (${stats?.disabledColumns} disabled)`}
+                </Typography>
+              )}
+            </Typography>
           </Grid>
           <Grid item xs={2}>
-          <Button 
-            variant="contained" 
-            onClick={() => {
-              const tables = getAllTableStats();
-              setAvailableTables(tables);
-              setOpenTableDialog(true);
-            }}
-            fullWidth>
-            Change Table
-          </Button>
+            <Button variant="contained" onClick={onChangeTable} fullWidth>
+              Change Table
+            </Button>
           </Grid>
         </Grid>
       </CardContent>
     </Card>
   );
+  
   
   
 
