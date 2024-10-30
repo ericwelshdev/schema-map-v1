@@ -29,6 +29,11 @@ import DoNotTouchIcon from '@mui/icons-material/DoNotTouch';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import AssistantIcon from '@mui/icons-material/Assistant';
 import BackHandIcon from '@mui/icons-material/BackHand';
+import PIIIcon from '@mui/icons-material/Security';
+import PHIIcon from '@mui/icons-material/HealthAndSafety';
+import PrimaryKeyIcon  from '@mui/icons-material/Key';
+import ForeignKeyIcon  from '@mui/icons-material/Link';
+import NullableIcon  from '@mui/icons-material/PrivacyTip';
 
 
 
@@ -64,15 +69,34 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
   // console.log('currentMapping form ResourceDataDictionaryColumnMappingCandidateDialog:', currentMapping);
   // console.log('sourceColumn form ResourceDataDictionaryColumnMappingCandidateDialog:', sourceColumn);
 
-  useEffect(() => {
-    if (currentMapping) {
-      const existingMapping = initialCandidates.find(c => c.columnName === currentMapping.columnName && c.tableName === currentMapping.tableName);  
-      console.log('useEffect -> existingMapping:', existingMapping);      
-      setSelectedCandidate(existingMapping);
-    }
-  }, [currentMapping, initialCandidates]);
-
   const [allMappings, setAllMappings] = useState([]);
+
+  // useEffect(() => {
+  //   if (currentMapping) {
+  //     const existingMapping = initialCandidates.find(c => c.columnName === currentMapping.columnName && c.tableName === currentMapping.tableName);  
+  //     console.log('useEffect -> existingMapping:', existingMapping);      
+  //     setSelectedCandidate(existingMapping);
+  //   }
+  // }, [currentMapping, initialCandidates]);
+
+  
+// Update the initial selection logic
+useEffect(() => {
+  if (currentMapping && allMappings.length > 0) {
+    const matchingRow = allMappings.find(mapping => 
+      mapping.columnName === currentMapping.matched_column_name &&
+      mapping.tableName === currentMapping.matched_table_name
+    );
+    if (matchingRow) {
+      
+      setSelectedCandidate(matchingRow);
+      console.log('useEffect -> Row clicked with data:', matchingRow);   
+    }
+  }
+}, [currentMapping, allMappings]);
+
+
+
 
 
   
@@ -135,7 +159,7 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
       return [...prev, newMapping];
     });
     
-    setSelectedCandidate(null);
+    setSelectedCandidate(newMapping);
     setShowManualForm(false);
   };
   
@@ -164,7 +188,7 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
       isPII: selectedCandidate?.isPII || resourceSchema.sourcePII || false,
       isNullable: selectedCandidate?.isNullable || resourceSchema.sourceNullable || false
     });
-  
+    console.log('manualMapping from ManualMappingForm:', manualMapping);
     const handleChange = (field, value) => {
       setManualMapping(prev => ({
         ...prev,
@@ -459,9 +483,13 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
     { 
       field: 'dataType', 
       headerName: 'Data Type', 
-      width: 120,
+      width: 100,
       renderCell: (params) => (
-        <Typography variant="body2">{params.value}</Typography>
+        <Tooltip title={params.value}>
+          <Typography variant="body2" noWrap>
+            {params.value}
+          </Typography>
+        </Tooltip>
       )
     },
     { 
@@ -547,19 +575,19 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
             rowsPerPageOptions={[5]}
             disableColumnMenu
             
-            disableMultipleSelection={true}
-            checkboxSelection
+            disableMultipleSelection={true}          
             disableColumnSelector
-            disableColumnFilter 
-            
-           
+            disableColumnFilter             
+            checkboxSelection={false}
+            singleSelect={true}
             density="compact"
             isRowSelectable={(params) => params.row.id !== 'manual-map'}
             onSelectionModelChange={(newSelection) => {
               const selected = allMappings.find(m => m.id === newSelection[0]);
+              console.log('DataGrid -> Row onSelectionModelChange:', selected);  
               setSelectedCandidate(selected);
             }}
-            selectionModel={selectedCandidate ? [selectedCandidate.id] : []}
+            selectionModel={[selectedCandidate?.id].filter(Boolean)}
             onRowClick={(params) => {
               console.log('DataGrid -> Row clicked with data:', params.row);              
               setSelectedCandidate(params.row);
@@ -575,10 +603,16 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
               },
               '& .MuiDataGrid-row': {
                 cursor: 'pointer',
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.08) !important',
-                },
               },
+              '& .MuiDataGrid-row.Mui-selected': {
+                backgroundColor: '#bbdefb !important',
+                '&:hover': {
+                  backgroundColor: '#90caf9 !important',
+                }
+              },
+              '& .MuiDataGrid-row:hover': {
+                backgroundColor: '#f5f5f5'
+              }
             }}
             initialState={{
               sorting: {
@@ -594,50 +628,62 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
 
         
         {selectedCandidate && selectedCandidate.id !== 'no-map' && selectedCandidate.id !== 'manual-map' && (
-          <Card raised={true} sx={{ mt: 1 }} >
-            <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
-              <Grid container spacing={1}>
+        <Card raised={true} sx={{ mt: 1, borderRadius: 2, boxShadow: 3 }}>
+          <CardContent sx={{ py: 1, px: 2, '&:last-child': { pb: 1 } }}>
+            <Grid container spacing={1}>
               <Grid item xs={6} md={3}>
-                  <Typography variant="caption" color="textSecondary">Logical Table</Typography>
-                  <Typography variant="body2" noWrap>{selectedCandidate.logicalTableName}</Typography>
-                </Grid>
-                <Grid item xs={6} md={3}>
-                  <Typography variant="caption" color="textSecondary">Logical Column</Typography>
-                  <Typography variant="body2" noWrap>{selectedCandidate.logicalColumnName}</Typography>
-                </Grid>
-                <Grid item xs={2}>
-                  <Typography variant="caption" color="textSecondary">Data Type</Typography>
-                  <Typography variant="body2" noWrap>{selectedCandidate.dataType}</Typography>
-                </Grid>
-                <Grid item xs={6} md={3}>
-                  <Typography variant="caption" color="textSecondary">Allow Nulls</Typography>
-                  <Typography variant="body2" noWrap>{selectedCandidate?.isNullable}</Typography>
-                </Grid>                
-                <Grid item xs={6} md={3}>
-                  <Typography variant="caption" color="textSecondary">Primary Key</Typography>
-                  <Typography variant="body2" noWrap>{selectedCandidate?.primaryKey}</Typography>
-                </Grid>
-                <Grid item xs={6} md={3}>
-                  <Typography variant="caption" color="textSecondary">Foreign Key</Typography>
-                  <Typography variant="body2" noWrap>{selectedCandidate?.foreignKey}</Typography>
-                </Grid>                
-                <Grid item xs={6} md={3}>
-                  <Typography variant="caption" color="textSecondary">PHI Indicator</Typography>
-                  <Typography variant="body2" noWrap>{selectedCandidate?.isPHI}</Typography>
-                </Grid>  
-                <Grid item xs={6} md={3}>
-                  <Typography variant="caption" color="textSecondary">PII Indicator</Typography>
-                  <Typography variant="body2" noWrap>{selectedCandidate?.isPII}</Typography>
-                </Grid>                                                   
-                <Grid item xs={12}>
-                  <Typography variant="caption" color="textSecondary">Description</Typography>
-                  <Typography variant="body2" noWrap>{selectedCandidate.columnDescription}</Typography>
-                </Grid> 
-                          
+                <Typography variant="caption" color="textSecondary">Logical Table</Typography>
+                <Typography variant="body2" noWrap>{selectedCandidate.logicalTableName}</Typography>
               </Grid>
-            </CardContent>
-          </Card>
-        )}
+              <Grid item xs={6} md={3}>
+                <Typography variant="caption" color="textSecondary">Logical Column</Typography>
+                <Typography variant="body2" noWrap>{selectedCandidate.logicalColumnName}</Typography>
+              </Grid>
+              <Grid item xs={6} md={2}>
+                <Typography variant="caption" color="textSecondary">Data Type</Typography>
+                <Typography variant="body2" noWrap>{selectedCandidate.dataType}</Typography>
+              </Grid>
+
+              {/* Icon group for indicators with crossed-out state handling */}
+              <Grid item xs={6} md={4}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Tooltip title={selectedCandidate.isNullable ? "Nullable" : "Not Nullable"}>
+                    {selectedCandidate.isNullable ? 
+                      <NullableIcon  color="action" fontSize="small" /> : 
+                      <NullableIcon  color="disabled" fontSize="small" />}
+                  </Tooltip>
+                  <Tooltip title={selectedCandidate.primaryKey ? "Primary Key" : "Not a Primary Key"}>
+                    {selectedCandidate.primaryKey ? 
+                      <PrimaryKeyIcon color="primary" fontSize="small" /> : 
+                      <PrimaryKeyIcon color="disabled" fontSize="small" />}
+                  </Tooltip>
+                  <Tooltip title={selectedCandidate.foreignKey ? "Foreign Key" : "Not a Foreign Key"}>
+                    {selectedCandidate.foreignKey ? 
+                      <ForeignKeyIcon  color="secondary" fontSize="small" /> : 
+                      <ForeignKeyIcon  color="disabled" fontSize="small" />}
+                  </Tooltip>
+                  <Tooltip title={selectedCandidate.isPHI ? "PHI Indicator" : "Not PHI"}>
+                    {selectedCandidate.isPHI ? 
+                      <PHIIcon color="error" fontSize="small" /> : 
+                      <PHIIcon color="disabled" fontSize="small" />}
+                  </Tooltip>
+                  <Tooltip title={selectedCandidate.isPII ? "PII Indicator" : "Not PII"}>
+                    {selectedCandidate.isPII ? 
+                      <PIIIcon color="warning" fontSize="small" /> : 
+                      <PIIIcon color="disabled" fontSize="small" />}
+                  </Tooltip>
+                </Box>
+              </Grid>
+
+              {/* Description with adjusted width to fit new layout */}
+              <Grid item xs={12}>
+                <Typography variant="caption" color="textSecondary">Description</Typography>
+                <Typography variant="body2" noWrap>{selectedCandidate.columnDescription}</Typography>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>

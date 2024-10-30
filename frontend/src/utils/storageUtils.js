@@ -8,7 +8,8 @@ export const STORES = {
   RESOURCE_PREVIEW: 'resourcePreviewRows',
   DD_PREVIEW: 'ddResourcePreviewRows',
   RESOURCE_CONFIG: 'resourceGeneralConfig',
-  DD_CONFIG: 'ddResourceGeneralConfig'
+  DD_CONFIG: 'ddResourceGeneralConfig',
+  RESOURCE_TO_DD_MAP: 'ddResourceMappingRows'
 };
 
 

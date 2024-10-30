@@ -1,19 +1,21 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Typography, TextField, Autocomplete, Chip, Tooltip , IconButton} from '@mui/material';
 import { Card,   CardContent,   Grid,   Button } from '@mui/material';
-import { DataGrid } from '@mui/x-data-grid';
+import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import stringSimilarity from 'string-similarity';
-import { getData, setData } from '../utils/storageUtils';
+import { initDB, getData, setData } from '../utils/storageUtils';
 import LockPersonIcon from '@mui/icons-material/LockPerson';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import BlockIcon from '@mui/icons-material/Block';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
+import UndoIcon from '@mui/icons-material/Undo';
 import CancelIcon from '@mui/icons-material/Cancel';
 import SearchIcon from '@mui/icons-material/Search';
+import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ResourceDataDictionaryColumnMappingCandidateDialog  from './ResourceDataDictionaryColumnMappingCandidateDialog';
-import ResourceDataDictionaryTableSelectionDialog from './ResourceDataDictionaryTableSelectionDialog';
+import ResourceDataDictionaryTableMappingCandidateDialog from './ResourceDataDictionaryTableMappingCandidateDialog';
 
 
 
@@ -33,7 +35,7 @@ const getTagColor = (tag) => {
 
 
 
-const ResourceMappingTagging = ({ savedState }) => {
+const ResourceMappingTagging = ({ savedState, onDataChange }) => {
   const standardizedName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
   const [selectedDictionaryTable, setSelectedDictionaryTable] = useState(standardizedName);
   const [tableStats, setTableStats] = useState(null);
@@ -55,7 +57,8 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
     ddResourceSampleData: null,
     resourcePreviewRows: null,
     resourceSampleData: null,
-    resourceSetup: null
+    resourceSetup: null,
+    ddResourceMapping: null
   });
   
 
@@ -146,6 +149,16 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
   
 
   const calculateTableStats = useCallback((tableName) => {
+
+  // Stats being calculated:
+  // 1. matchedColumns: Count of columns with similarity score > 0.6
+  // 2. unmatchedColumns: Total source columns minus matched columns
+  // 3. averageColumnScore: Total column similarity scores divided by number of columns
+  // 4. matchedColumnsConfidence: Average score of mapped columns (excluding "No Map")
+  // 5. columnMatchConfidence: Percentage of total columns that are mapped
+  // 6. tableNameSimilarity: String similarity between table names
+  // 7. confidenceScore: Weighted average (40% table name + 60% column matches)
+
     if (!tableName || !sourceData.ddResourceFullData) return null;
   
     const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
@@ -153,64 +166,74 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
     const tableNameField = tableNameColumns[0]?.name;
     const columnNameField = columnNameColumns[0]?.name;
   
-    if (!tableNameField || !columnNameField) return null;
-
     const tableRows = sourceData.ddResourceFullData?.filter(row => 
       row[tableNameField] === tableName
     );
-
-    if (!tableRows?.length) return null;
-
+  
     const tableColumns = tableRows.map(row => row[columnNameField]);
-    const sourceColumns = sourceData.resourcePreviewRows
-      .filter(col => !col.isDisabled)
-      .map(col => col.name);
-
+    
+    const sourceColumns = sourceData.resourcePreviewRows.filter(col => !col.isDisabled);
+    const disabledColumns = sourceData.resourcePreviewRows.filter(col => col.isDisabled);
+    const totalActiveColumns = sourceColumns.length;
+    const totalDisabledColumns = disabledColumns.length;
+  
     let matchCount = 0;
     let totalColumnScore = 0;
     let matchedColumnsScore = 0;
     let totalMappedScore = 0;
     let mappedCount = 0;
-    const totalColumns = sourceColumns.length;
-
-    
-    matchResults.forEach(match => {
-      // Only include columns that are mapped (not set to "No Map")
-      if (match.matched_column_name !== 'No Map' && match.matched_column_name !== '') {
-        totalMappedScore += match.column_similarity_score;
-        mappedCount++;
-      }
-    });
-
+    let highQualityMatches = 0;
+  
+    // Calculate match quality
     sourceColumns.forEach(sourceCol => {
       const scores = tableColumns.map(targetCol => 
-        stringSimilarity.compareTwoStrings(sourceCol.toLowerCase(), targetCol.toLowerCase())
+        stringSimilarity.compareTwoStrings(sourceCol.name.toLowerCase(), targetCol.toLowerCase())
       );
       const bestScore = Math.max(...scores);
       
-      if (bestScore > 0.6) {
+      if (bestScore > 0.3) {
         matchCount++;
+        if (bestScore > 0.6) {
+          highQualityMatches++;
+        }
         matchedColumnsScore += bestScore;
       }
       totalColumnScore += bestScore;
     });
-
+  
+    // Calculate column match percentage
+    const columnMatchConfidence = (matchCount / totalActiveColumns) * 100;
+  
+    // Calculate match quality (average score of matched columns)
+    const matchQuality = matchCount > 0 ? (matchedColumnsScore / matchCount) * 100 : 0;
+  
     const tableNameSimilarity = stringSimilarity.compareTwoStrings(
       tableName.toLowerCase(),
       standardizedName.toLowerCase()
     );
-
+  
+    // Overall confidence combines table name similarity and column matches
+    const confidenceScore = (
+      tableNameSimilarity * 0.3 + 
+      (columnMatchConfidence / 100) * 0.4 + 
+      (matchQuality / 100) * 0.3
+    ) * 100;
+  
     return {
       tableName,
       matchedColumns: matchCount,
-      unmatchedColumns: sourceColumns.length - matchCount,
-      averageColumnScore: totalColumnScore / sourceColumns.length,
-      matchedColumnsConfidence: mappedCount > 0 ? (totalMappedScore / mappedCount) * 100 : 0,
-      columnMatchConfidence: (mappedCount / totalColumns) * 100,
+      unmatchedColumns: totalActiveColumns - matchCount,
+      disabledColumns: totalDisabledColumns,
+      totalColumns: totalActiveColumns + totalDisabledColumns,
+      highQualityMatches,
+      columnMatchConfidence,
+      matchQuality,
       tableNameSimilarity: tableNameSimilarity * 100,
-      confidenceScore: (tableNameSimilarity * 0.4 + (matchCount / sourceColumns.length) * 0.6) * 100
+      confidenceScore
     };
-  }, [sourceData, getClassifiedColumns, standardizedName, matchResults]);
+  }, [sourceData, getClassifiedColumns, standardizedName]);
+  
+  
 
   useEffect(() => {
     if (selectedDictionaryTable) {
@@ -251,17 +274,23 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
 
   // Compute matches between source columns and dictionary
   const computeMatches = useCallback(() => {
-    if (!sourceData.resourcePreviewRows?.length || !sourceData.ddResourceFullData?.length) {
+    if (!sourceData?.resourcePreviewRows?.length || !sourceData?.ddResourceFullData?.length) {
       setMatchResults([]);
       return;
     }
-
+  
+    console.log('Computing matches with:', {
+      sourceColumns: sourceData.resourcePreviewRows,
+      dictionaryData: sourceData.ddResourceFullData,
+      selectedTable: selectedDictionaryTable
+    });
+  
     const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
     const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
     const tableNameField = tableNameColumns[0]?.name;
     const columnNameField = columnNameColumns[0]?.name;
-
-    // Only get columns from the selected table
+  
+    // Get valid columns from selected table
     const validColumnNames = sourceData.ddResourceFullData
       .filter(row => row[tableNameField] === selectedDictionaryTable)
       .map(row => ({
@@ -269,7 +298,9 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
         ddRow: row
       }))
       .filter(item => item.columnName);
-
+  
+    console.log('Valid columns for matching:', validColumnNames);
+  
     const results = sourceData.resourcePreviewRows
       .filter(sourceColumn => sourceColumn?.name)
       .map((sourceColumn, index) => {
@@ -282,9 +313,10 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
           }))
           .filter(match => match.score > 0.3)
           .sort((a, b) => b.score - a.score);
-
+  
+        console.log(`Matches for ${sourceName}:`, allMatches);
+  
         const bestMatch = allMatches[0];
-        // console.log('!!! -> sourceColumn', sourceColumn);
         return {
           id: index,
           source_column_name: sourceName,
@@ -313,10 +345,11 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
           tags: Array.isArray(sourceColumn.tags) ? sourceColumn.tags : []
         };
       });
-
+  
+    console.log('Final match results:', results);
     setMatchResults(results);
   }, [sourceData, getClassifiedColumns, selectedDictionaryTable, getColumnDataByClassification]);
-
+  
  const standardizedTableName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
 
 
@@ -327,7 +360,9 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
         ddResourcePreviewRows: await getData('ddResourcePreviewRows'),
         resourcePreviewRows: await getData('resourcePreviewRows'),
         resourceSampleData: await getData('resourceSampleData'),
+        ddResourceMapping: await getData('ddResourceMapping'),
       };
+      console.log('Loaded source data:', data);
       setSourceData(data);
     };
     loadData();
@@ -337,33 +372,45 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
     computeMatches();
   }, [computeMatches]);
 
-  // const handleMatchChange = useCallback((rowId, newValue) => {
-  //   setMatchResults(prev => prev.map(row => 
-  //     row.id === rowId ? { ...row, matchedColumn: newValue } : row
-  //   ));
-  // }, []);
 
-  const handleTagChange = useCallback((rowId, newTags) => {
-    setMatchResults(prev => prev.map(row => 
-      row.id === rowId ? { ...row, tags: newTags } : row
-    ));
-  }, []);
-
-  
+// Add persistRows function
+const persistRows = useCallback(async (updatedRows) => {
+  setMatchResults(updatedRows);
+  await setData('ddResourceMappingRows', updatedRows);
+  onDataChange?.({
+    processedMapping: updatedRows
+  });
+}, [onDataChange]);
 
 
     // Add this new function with the existing ones
     const getAllTableStats = useCallback(() => {
       const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
-      const uniqueTables = [...new Set(sourceData.ddResourceFullData?.map(
-        row => row[tableNameColumns[0]?.name]
-      ))];
-  
-      return uniqueTables
-        .map(tableName => calculateTableStats(tableName))
-        .filter(stats => stats?.confidenceScore >= 60)
-        .sort((a, b) => b.confidenceScore - a.confidenceScore);
-    }, [sourceData, getClassifiedColumns, calculateTableStats]);
+      const columnNameField = tableNameColumns[0]?.name;
+      
+      if (!columnNameField || !sourceData.ddResourceFullData) {
+        return [];
+      }
+    
+      // Get unique table names from data dictionary
+      const uniqueTables = [...new Set(
+        sourceData.ddResourceFullData.map(row => row[columnNameField])
+      )].filter(Boolean);
+    
+      console.log('Found unique tables:', uniqueTables);
+    
+      // Calculate stats for each table
+      const tableStats = uniqueTables.map(tableName => {
+        const stats = calculateTableStats(tableName);
+        // console.log(`Stats for table ${tableName}:`, stats);
+        return stats;
+      }).filter(stats => stats !== null);
+    
+      // console.log('Final table stats:', tableStats);
+      return tableStats;
+    }, [sourceData.ddResourceFullData, getClassifiedColumns, calculateTableStats]);
+    
+    
 
 
   
@@ -391,7 +438,6 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
     console.log('Opening dialog with resourceSchema:', matchResult);
     setOpenCandidateDialog(true);
   };
-  
   const handleMatchChange = useCallback((rowId, newValue, score) => {
     console.log('!!handleMatchChange -> called with rowId:', rowId, 'newValue:', newValue, 'score:', score);
     const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
@@ -399,18 +445,17 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
     const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
     const tableNameField = tableNameColumns[0]?.name;
   
-    setMatchResults(prev => prev.map(row => {
+    const updatedRows = matchResults.map(row => {
       if (row.id === rowId) {
-        // Calculate similarity score for new mapping
-        console.log('!!!!handleMatchChange -> stringSimilarity -> row.source_column_name == newValue.columnName:', row.source_column_name,  newValue.columnName);
-        const newScore = newValue.columnName === 'No Map' ? 0 : 
+        console.log('!!!!handleMatchChange -> stringSimilarity -> row.source_column_name == newValue.columnName:', row.source_column_name, newValue.columnName);
+        const newScore = newValue.columnName === 'No Map' ? 0 :
           stringSimilarity.compareTwoStrings(
             row.source_column_name.toLowerCase(),
             newValue.columnName.toLowerCase()
           );
   
         const matchedDDRow = sourceData.ddResourceFullData.find(
-          ddRow => ddRow[columnNameField] === newValue.columnName && 
+          ddRow => ddRow[columnNameField] === newValue.columnName &&
                 ddRow[tableNameField] === standardizedTableName
         );
   
@@ -426,12 +471,19 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
           dataType: getColumnDataByClassification('data_type', matchedDDRow),
           primaryKey: getColumnDataByClassification('primary_key', matchedDDRow),
           foreignKey: getColumnDataByClassification('foreign_key', matchedDDRow),
-          nullable: getColumnDataByClassification('nullable', matchedDDRow)
+          nullable: getColumnDataByClassification('nullable', matchedDDRow),
+          isEditing: true,
+          isUnsaved: true,
+          isChanged: true,
+          originalState: row.originalState || { ...row }
         };
       }
       return row;
-    }));
-  }, [getClassifiedColumns, sourceData.ddResourceFullData, getColumnDataByClassification, standardizedTableName]);
+    });
+  
+    persistRows(updatedRows);
+  }, [getClassifiedColumns, sourceData.ddResourceFullData, getColumnDataByClassification, standardizedTableName, matchResults, persistRows]);
+  
 
   const handleCandidateSelect = useCallback(async (selectedMapping) => {
   console.log('!!!! -handleCandidateSelect -> called!');
@@ -484,7 +536,12 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
     
     handleMatchChange(selectedRow.id, newMapping);
   }
-}, [selectedRow, handleMatchChange])
+}, [selectedRow, handleMatchChange, persistDataDictionaryEntry])
+
+
+
+
+
 
 
 // Add these handler functions
@@ -524,9 +581,98 @@ const handleCellChange = (params) => {
   setUnsavedChanges(true);
 };
 
+
+// Add these handler functions
+const handleSaveClick = (id) => {
+  setMatchResults(prev => prev.map(row => {
+    if (row.id === id) {
+      const currentState = {
+        ...row,
+        isEditing: false,
+        isUnsaved: false
+      };
+      return {
+        ...currentState,
+        isChanged: true,
+        originalState: { ...currentState }
+      };
+    }
+    return row;
+  }));
+};
+
+const handleCancelClick = (id) => {
+  setMatchResults(prev => prev.map(row => {
+    if (row.id === id) {
+      return { ...row.originalState, id: row.id, isEditing: false, isChanged: false, isUnsaved: false };
+    }
+    return row;
+  }));
+};
+
+const handleDisableClick = (id) => {
+  setMatchResults(prev => prev.map(row => {
+    if (row.id === id) {
+      const newDisabledState = !row.isDisabled;
+      const isChanged = newDisabledState !== row.originalState?.isDisabled;
+      return { ...row, isDisabled: newDisabledState, isChanged, isUnsaved: true, isEditing: true };
+    }
+    return row;
+  }));
+};
+
+const handleUndoClick = (id) => {
+  setMatchResults(prev => prev.map(row => {
+    if (row.id === id) {
+      return {
+        ...row.originalState,
+        id: row.id,
+        isEditing: false,
+        isChanged: false,
+        isUnsaved: false
+      };
+    }
+    return row;
+  }));
+};
+
+const handleTagChange = useCallback((rowId, newTags) => {
+  const updatedRows = matchResults.map(row => {
+    if (row.id === rowId) {
+      return {
+        ...row,
+        tags: newTags,
+        isEditing: true,
+        isUnsaved: true,
+        isChanged: true
+      };
+    }
+    return row;
+  });
+  persistRows(updatedRows);
+}, [matchResults, persistRows]);
+
+
+useEffect(() => {
+  const loadSavedData = async () => {
+    try {
+      const savedRows = await getData('ddResourceMappingRows');
+      if (savedRows) {
+        setMatchResults(savedRows);
+      }
+    } catch (error) {
+      console.error('Database operation failed:', error);
+    }
+  };
+  loadSavedData();
+}, []);
+
+
+
+
   // Add these component definitions before the main ResourceMappingTagging component
   const TableStatsCard = ({ stats, onChangeTable }) => (
-    <Card sx={{ mb: 3 }}>
+    <Card sx={{ mb: 1 }}>
       <CardContent>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={2.5}>
@@ -562,13 +708,16 @@ const handleCellChange = (params) => {
             <Typography variant="h6">{stats?.matchedColumns}/{stats?.matchedColumns + stats?.unmatchedColumns}</Typography>
           </Grid>
           <Grid item xs={2}>
-            <Button 
-              variant="contained" 
-              onClick={onChangeTable} 
-              fullWidth
-            >
-              Change Table
-            </Button>
+          <Button 
+            variant="contained" 
+            onClick={() => {
+              const tables = getAllTableStats();
+              setAvailableTables(tables);
+              setOpenTableDialog(true);
+            }}
+            fullWidth>
+            Change Table
+          </Button>
           </Grid>
         </Grid>
       </CardContent>
@@ -578,10 +727,21 @@ const handleCellChange = (params) => {
   
 
   const columns = [
+      {
+        field: 'status',
+        headerName: '',
+        width: 50,
+        renderCell: (params) => (
+          params.row.isChanged ?
+            (params.row.isUnsaved ? <WarningIcon color="warning" /> : <CheckCircleOutlineIcon color="primary" />)
+            : null
+        ),
+      },
     {
       field: 'sourceColumn',
       headerName: 'Source Column',
       flex: 1,
+      editable: false,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Typography variant="body2">{params.value}</Typography>
@@ -602,9 +762,10 @@ const handleCellChange = (params) => {
       field: 'matchedColumn',
       headerName: 'Data Dictionary Match',
       flex: 2,
+      height: 30,
       renderCell: (params) => (        
         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
-          <Autocomplete
+          <Autocomplete          
             size="small"
             fullWidth
             options={[
@@ -619,7 +780,7 @@ const handleCellChange = (params) => {
             }
             isOptionEqualToValue={(option, value) => option?.columnName === value?.columnName}
             renderInput={(params) => (
-              <TextField {...params} variant="outlined" size="small" />
+              <TextField {...params} variant="outlined" size="small"  />
             )}
           />
           <IconButton
@@ -687,48 +848,70 @@ const handleCellChange = (params) => {
       field: 'logicalTableName',
       headerName: 'Logical Table Name',
       flex: 1,
-      editable: true
+      editable: false,
     },
     {
       field: 'logicalColumnName',
       headerName: 'Logical Column Name',
       flex: 1,
-      editable: true
+      editable: false,
     },
     {
       field: 'columnDescription',
       headerName: 'Column Description',
       flex: 1.5,
-      editable: true
+      editable: false,
+
     },
     {
       field: 'dataType',
       headerName: 'Data Type',
       flex: 1,
-      editable: true
+      editable: false
     },
-    // {
-    //   field: 'primaryKey',
-    //   headerName: 'Primary Key',
-    //   width: 100,
-    //   type: 'boolean',
-    //   editable: true
-    // },
-    // {
-    //   field: 'foreignKey',
-    //   headerName: 'Foreign Key',
-    //   width: 100,
-    //   type: 'boolean',
-    //   editable: true
-    // },
-    // {
-    //   field: 'nullable',
-    //   headerName: 'Nullable',
-    //   width: 100,
-    //   type: 'boolean',
-    //   editable: true
-    // }
+    {
+      field: 'actions',
+      type: 'actions',
+      headerName: 'Actions',
+      width: 150,
+      getActions: ({ id }) => {
+        const row = rows.find(r => r.id === id);
+        if (!row) return [];
+        
+        const isEditing = row.isEditing;
+  
+        if (isEditing) {
+          return [
+            <GridActionsCellItem
+              icon={<SaveIcon />}
+              label="Save"
+              onClick={() => handleSaveClick(id)}
+            />,
+            <GridActionsCellItem
+              icon={<CancelIcon />}
+              label="Cancel"
+              onClick={() => handleCancelClick(id)}
+            />
+          ];
+        }
+  
+        return [
+          <GridActionsCellItem
+            icon={<BlockIcon color={row.isDisabled ? "primary" : "disabled"} />}
+            label="Disable"
+            onClick={() => handleDisableClick(id)}
+          />,
+          <GridActionsCellItem
+            icon={<UndoIcon />}
+            label="Undo"
+            onClick={() => handleUndoClick(id)}
+            disabled={!row.isChanged}
+          />
+        ];
+      }
+    }
   ];
+  
 
   const rows = useMemo(() => 
     matchResults.map((match, index) => ({
@@ -758,22 +941,23 @@ const handleCellChange = (params) => {
     return (
       <Box>
     <TableStatsCard 
+      sx={{'& .MuiCard-root': { mb: 0 }}}
+      gutterBottom={false}
       stats={tableStats}
-      onChangeTable={() => {
-        const availableTables = getAllTableStats();
-        setAvailableTables(availableTables.filter(t => t?.confidenceScore >= 60));
-        setOpenTableSelection(true);
-      }}
+      onChangeTable={() => setOpenTableDialog(true)}
     />
-    <ResourceDataDictionaryTableSelectionDialog
-      open={openTableSelection}
-      onClose={() => setOpenTableSelection(false)}
+    <ResourceDataDictionaryTableMappingCandidateDialog
+      open={openTableDialog}
+      onClose={() => setOpenTableDialog(false)}
       tables={availableTables}
+      currentTable={selectedDictionaryTable}
       onSelect={(tableName) => {
         setSelectedDictionaryTable(tableName);
-        setOpenTableSelection(false);
+        setOpenTableDialog(false);
+        computeMatches();
       }}
     />
+
 <Box sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
       <Box sx={{ mt:-1, mb: -1, display: 'flex', justifyContent: 'flex-end' }}>
         <Button 
@@ -791,7 +975,7 @@ const handleCellChange = (params) => {
           Cancel All
         </Button>
       </Box>
-      <Box sx={{ height: 600, width: '100%', overflow: 'auto' }}>
+      <Box sx={{ height: 550, width: '100%', overflow: 'auto' }}>
         <DataGrid
           rows={rows}
           columns={columns}
@@ -823,8 +1007,8 @@ const handleCellChange = (params) => {
           }}          
           sx={{
             '& .MuiDataGrid-cell': { 
-              py: 0.5,
-              fontSize: '0.875rem'
+              py: 0.25,
+              fontSize: '0.8rem'              
             },
             '& .MuiDataGrid-columnHeader': {
               fontSize: '0.875rem'
@@ -833,6 +1017,10 @@ const handleCellChange = (params) => {
               backgroundColor: '#f5f5f5',
               cursor: 'not-allowed',
             },
+            '& .MuiDataGrid-row': {
+              minHeight: '30px', // Set row minimum height
+              maxHeight: '30px' // Ensure consistent height
+            }
           }}
         />
         <ResourceDataDictionaryColumnMappingCandidateDialog
@@ -844,9 +1032,6 @@ const handleCellChange = (params) => {
           resourceSchema={selectedRow?.resourceSchema}
           onSelect={handleCandidateSelect}
         />
-
-
-
      </Box>
     </Box>
   </Box>
@@ -855,5 +1040,3 @@ const handleCellChange = (params) => {
 
   
 export default ResourceMappingTagging;
-
-
