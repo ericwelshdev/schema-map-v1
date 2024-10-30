@@ -71,57 +71,62 @@ const ResourceMappingTagging = ({ savedState }) => {
 
 
   const persistDataDictionaryEntry = async (newDictionaryEntry) => {
-    // Get the schema classifications from preview rows
-    const schemaClassifications = sourceData.ddResourcePreviewRows.reduce((acc, column) => {
+    // Get all columns and their classifications from preview rows
+    const columnMappings = sourceData.ddResourcePreviewRows.reduce((acc, column) => {
       if (column.schemaClassification?.value) {
-        acc[column.schemaClassification.value] = column.name;
+        // Multiple columns can have the same classification
+        if (!acc[column.schemaClassification.value]) {
+          acc[column.schemaClassification.value] = [];
+        }
+        acc[column.schemaClassification.value].push(column.name);
       }
       return acc;
     }, {});
   
-    // Get all column names from the data dictionary schema
+    // Initialize all dictionary columns with empty strings
     const allDictionaryColumns = sourceData.ddResourcePreviewRows.map(column => column.name);
-  
-    // Initialize mapped entry with empty strings for all columns
     const mappedEntry = allDictionaryColumns.reduce((acc, columnName) => {
       acc[columnName] = '';
       return acc;
     }, {});
   
-    // Map classified values
-    Object.entries(schemaClassifications).forEach(([classification, dictionaryColumn]) => {
-      switch(classification) {
-        case 'physical_table_name':
-          mappedEntry[dictionaryColumn] = newDictionaryEntry.tableName || '';
-          break;
-        case 'physical_column_name':
-          mappedEntry[dictionaryColumn] = newDictionaryEntry.columnName || '';
-          break;
-        case 'logical_table_name':
-          mappedEntry[dictionaryColumn] = newDictionaryEntry.logicalTableName || '';
-          break;
-        case 'logical_column_name':
-          mappedEntry[dictionaryColumn] = newDictionaryEntry.logicalColumnName || '';
-          break;
-        case 'data_type':
-          mappedEntry[dictionaryColumn] = newDictionaryEntry.dataType || '';
-          break;
+    // Map values based on classifications
+    Object.entries(columnMappings).forEach(([classification, columnNames]) => {
+      // For each column with this classification, set the appropriate value
+      columnNames.forEach(columnName => {
+        let value = '';
+        switch(classification) {
+          case 'physical_table_name':
+            value = newDictionaryEntry.tableName;
+            break;
+          case 'physical_column_name':
+            value = newDictionaryEntry.columnName;
+            break;
+          case 'logical_table_name':
+            value = newDictionaryEntry.logicalTableName;
+            break;
+          case 'logical_column_name':
+            value = newDictionaryEntry.logicalColumnName;
+            break;
+          case 'data_type':
+            value = newDictionaryEntry.dataType;
+            break;
+          case 'column_description':
+            value = newDictionaryEntry.columnDescription;
+            break;
+          case 'primary_key':
+            value = newDictionaryEntry.primaryKey ? 'YES' : 'NO';
+            break;
+          case 'foreign_key':
+            value = newDictionaryEntry.foreignKey ? 'YES' : 'NO';
+            break;
           case 'nullable':
-            mappedEntry[dictionaryColumn] = newDictionaryEntry.nullable || '';
-            break;          
-        case 'column_description':
-          mappedEntry[dictionaryColumn] = newDictionaryEntry.columnDescription || '';
-          break;
-        case 'primary_key':
-          mappedEntry[dictionaryColumn] = newDictionaryEntry.primaryKey ? 'YES' : 'NO';
-          break;
-        case 'foreign_key':
-          mappedEntry[dictionaryColumn] = newDictionaryEntry.foreignKey ? 'YES' : 'NO';
-          break;
-      }
+            value = newDictionaryEntry.isNullable ? 'NULL' : 'NOT NULL';
+            break;
+        }
+        mappedEntry[columnName] = value || '';
+      });
     });
-
-    console.log("persistDataDictionaryEntry-> Mapped Entry:", mappedEntry);
   
     const currentDictData = await getData('ddResourceFullData');
     await setData('ddResourceFullData', [...currentDictData, mappedEntry]);
@@ -131,6 +136,7 @@ const ResourceMappingTagging = ({ savedState }) => {
       ddResourceFullData: [...prev.ddResourceFullData, mappedEntry]
     }));
   };
+  
   
 
   const calculateTableStats = useCallback((tableName) => {
