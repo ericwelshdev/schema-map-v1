@@ -122,6 +122,7 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
       foreignKey: formData.foreignKey,
       isPHI: formData.isPHI,
       isPII: formData.isPII,
+      isNullable: formData.isNullable,
       score: 1
     };
   
@@ -243,6 +244,16 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
             </Grid>
             <Grid item xs={12}>
               <FormGroup row>
+              <FormControlLabel
+                  control={
+                    <Checkbox 
+                      checked={manualMapping.isNullable}
+                      onChange={(e) => handleChange('isNullable', e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label="Allow Nulls"
+                />                 
                 <FormControlLabel
                   control={
                     <Checkbox 
@@ -283,16 +294,7 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
                   }
                   label="PII Indicator"
                 />
-                <FormControlLabel
-                  control={
-                    <Checkbox 
-                      checked={manualMapping.isNullable}
-                      onChange={(e) => handleChange('isNullable', e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label="Allow Nulls"
-                />              
+             
               </FormGroup>
             </Grid>
             <Grid item xs={12}>
@@ -322,22 +324,22 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
 
 
 // In the dialog component's handleConfirmSelection function
-const handleConfirmSelection = () => {
-  console.log('Sending selected candidate:', selectedCandidate);
-  // Create a new object with only the needed properties
-  const mappingData = {
-    tableName: selectedCandidate.tableName,
-    columnName: selectedCandidate.columnName,
-    logicalTableName: selectedCandidate.logicalTableName,
-    logicalColumnName: selectedCandidate.logicalColumnName,
-    dataType: selectedCandidate.dataType,
-    columnDescription: selectedCandidate.columnDescription,
-    score: selectedCandidate.score
-  };
-  // Pass the mapping data directly
-  onSelect(mappingData);
-  onClose();
-};
+// const handleConfirmSelection = () => {
+//   console.log('Sending selected candidate:', selectedCandidate);
+//   // Create a new object with only the needed properties
+//   const mappingData = {
+//     tableName: selectedCandidate.tableName,
+//     columnName: selectedCandidate.columnName,
+//     logicalTableName: selectedCandidate.logicalTableName,
+//     logicalColumnName: selectedCandidate.logicalColumnName,
+//     dataType: selectedCandidate.dataType,
+//     columnDescription: selectedCandidate.columnDescription,
+//     score: selectedCandidate.score
+//   };
+//   // Pass the mapping data directly
+//   onSelect(mappingData);
+//   onClose();
+// };
 
 
 
@@ -608,6 +610,10 @@ const handleConfirmSelection = () => {
                   <Typography variant="body2" noWrap>{selectedCandidate.dataType}</Typography>
                 </Grid>
                 <Grid item xs={6} md={3}>
+                  <Typography variant="caption" color="textSecondary">Allow Nulls</Typography>
+                  <Typography variant="body2" noWrap>{selectedCandidate?.isNullable}</Typography>
+                </Grid>                
+                <Grid item xs={6} md={3}>
                   <Typography variant="caption" color="textSecondary">Primary Key</Typography>
                   <Typography variant="body2" noWrap>{selectedCandidate?.primaryKey}</Typography>
                 </Grid>
@@ -622,8 +628,7 @@ const handleConfirmSelection = () => {
                 <Grid item xs={6} md={3}>
                   <Typography variant="caption" color="textSecondary">PII Indicator</Typography>
                   <Typography variant="body2" noWrap>{selectedCandidate?.isPII}</Typography>
-                </Grid>                                  
-                 
+                </Grid>                                                   
                 <Grid item xs={12}>
                   <Typography variant="caption" color="textSecondary">Description</Typography>
                   <Typography variant="body2" noWrap>{selectedCandidate.columnDescription}</Typography>

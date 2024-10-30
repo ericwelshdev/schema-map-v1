@@ -3,7 +3,7 @@ import { Box, Typography, TextField, Autocomplete, Chip, Tooltip , IconButton} f
 import { Card,   CardContent,   Grid,   Button } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import stringSimilarity from 'string-similarity';
-import { getData } from '../utils/storageUtils';
+import { getData, setData } from '../utils/storageUtils';
 import LockPersonIcon from '@mui/icons-material/LockPerson';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import BlockIcon from '@mui/icons-material/Block';
@@ -28,6 +28,9 @@ const getTagColor = (tag) => {
   return colors[tag] || '#e0e0e0';
 };
 
+
+
+
 const ResourceMappingTagging = ({ savedState }) => {
   const standardizedName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
   const [selectedDictionaryTable, setSelectedDictionaryTable] = useState(standardizedName);
@@ -40,48 +43,6 @@ const ResourceMappingTagging = ({ savedState }) => {
   const [openCandidateDialog, setOpenCandidateDialog] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
 
-
-
-  
-  const handleOpenCandidateDialog = (row) => {
-    console.log('Opening dialog with row:', row);
-    const matchResult = matchResults.find(m => m.source_column_name === row.sourceColumn);
-    
-    const candidates = matchResult?.candidateMatches?.map(match => ({
-      tableName: selectedDictionaryTable,
-      columnName: match.columnName,
-      score: match.score,
-      logicalTableName: getColumnDataByClassification('logical_table_name', match.ddRow),
-      logicalColumnName: getColumnDataByClassification('logical_column_name', match.ddRow),
-      dataType: getColumnDataByClassification('data_type', match.ddRow),
-      columnDescription: getColumnDataByClassification('column_description', match.ddRow)
-    }));
-  
-    setSelectedRow({
-      id: row.id,
-      sourceColumn: row.sourceColumn,
-      matchedColumn: matchResult,
-      candidateMatches: candidates,
-      resourceSchema: matchResult
-    });
-    console.log('Opening dialog with resourceSchema:', matchResult);
-    setOpenCandidateDialog(true);
-  };
-  
-
-const handleCandidateSelect = (selectedCandidate) => {
-  console.log('Received selectedCandidate mapping data:', selectedCandidate);
-  if (selectedRow && selectedCandidate) {
-    const newMapping = {
-      tableName: selectedCandidate.tableName,
-      columnName: selectedCandidate.columnName
-    };
-    console.log('New mapping for row:',selectedRow.id, newMapping);
-    handleMatchChange(selectedRow.id, newMapping);
-  }
-};
-
-
   const [sourceData, setSourceData] = useState({
     ddResourceFullData: null,
     ddResourcePreviewRows: null,
@@ -90,6 +51,10 @@ const handleCandidateSelect = (selectedCandidate) => {
     resourceSampleData: null,
     resourceSetup: null
   });
+  
+
+
+
 
   const getClassifiedColumns = useCallback((classificationType) => {
     return sourceData.ddResourcePreviewRows?.filter(
@@ -103,6 +68,70 @@ const handleCandidateSelect = (selectedCandidate) => {
     const columnName = classifiedColumns[0].name;
     return rowData[columnName] || '';
   }, [getClassifiedColumns]);
+
+
+  const persistDataDictionaryEntry = async (newDictionaryEntry) => {
+    // Get the schema classifications from preview rows
+    const schemaClassifications = sourceData.ddResourcePreviewRows.reduce((acc, column) => {
+      if (column.schemaClassification?.value) {
+        acc[column.schemaClassification.value] = column.name;
+      }
+      return acc;
+    }, {});
+  
+    // Get all column names from the data dictionary schema
+    const allDictionaryColumns = sourceData.ddResourcePreviewRows.map(column => column.name);
+  
+    // Initialize mapped entry with empty strings for all columns
+    const mappedEntry = allDictionaryColumns.reduce((acc, columnName) => {
+      acc[columnName] = '';
+      return acc;
+    }, {});
+  
+    // Map classified values
+    Object.entries(schemaClassifications).forEach(([classification, dictionaryColumn]) => {
+      switch(classification) {
+        case 'physical_table_name':
+          mappedEntry[dictionaryColumn] = newDictionaryEntry.tableName || '';
+          break;
+        case 'physical_column_name':
+          mappedEntry[dictionaryColumn] = newDictionaryEntry.columnName || '';
+          break;
+        case 'logical_table_name':
+          mappedEntry[dictionaryColumn] = newDictionaryEntry.logicalTableName || '';
+          break;
+        case 'logical_column_name':
+          mappedEntry[dictionaryColumn] = newDictionaryEntry.logicalColumnName || '';
+          break;
+        case 'data_type':
+          mappedEntry[dictionaryColumn] = newDictionaryEntry.dataType || '';
+          break;
+          case 'nullable':
+            mappedEntry[dictionaryColumn] = newDictionaryEntry.nullable || '';
+            break;          
+        case 'column_description':
+          mappedEntry[dictionaryColumn] = newDictionaryEntry.columnDescription || '';
+          break;
+        case 'primary_key':
+          mappedEntry[dictionaryColumn] = newDictionaryEntry.primaryKey ? 'YES' : 'NO';
+          break;
+        case 'foreign_key':
+          mappedEntry[dictionaryColumn] = newDictionaryEntry.foreignKey ? 'YES' : 'NO';
+          break;
+      }
+    });
+
+    console.log("persistDataDictionaryEntry-> Mapped Entry:", mappedEntry);
+  
+    const currentDictData = await getData('ddResourceFullData');
+    await setData('ddResourceFullData', [...currentDictData, mappedEntry]);
+    
+    setSourceData(prev => ({
+      ...prev,
+      ddResourceFullData: [...prev.ddResourceFullData, mappedEntry]
+    }));
+  };
+  
 
   const calculateTableStats = useCallback((tableName) => {
     if (!tableName || !sourceData.ddResourceFullData) return null;
@@ -276,39 +305,10 @@ const handleCandidateSelect = (selectedCandidate) => {
     setMatchResults(results);
   }, [sourceData, getClassifiedColumns, selectedDictionaryTable, getColumnDataByClassification]);
 
-    const standardizedTableName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
+ const standardizedTableName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
 
-    const handleMatchChange = useCallback((rowId, newValue) => {
-      console.log('handleMatchChange -> called with rowId:', rowId, 'and newValue:', newValue);
-      const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
-      const columnNameField = columnNameColumns[0]?.name;
-      const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
-      const tableNameField = tableNameColumns[0]?.name;
+  
     
-      setMatchResults(prev => prev.map(row => {
-        if (row.id === rowId) {
-          const matchedDDRow = sourceData.ddResourceFullData.find(
-            ddRow => ddRow[columnNameField] === newValue.columnName &&
-                 ddRow[tableNameField] === standardizedTableName
-          );
-    
-          return {
-            ...row,
-            matchedColumn: newValue,
-            matched_column_name: newValue.columnName,
-            matched_table_name: newValue.tableName,
-            logicalTableName: getColumnDataByClassification('logical_table_name', matchedDDRow),
-            logicalColumnName: getColumnDataByClassification('logical_column_name', matchedDDRow),
-            columnDescription: getColumnDataByClassification('column_description', matchedDDRow),
-            dataType: getColumnDataByClassification('data_type', matchedDDRow),
-            primaryKey: getColumnDataByClassification('primary_key', matchedDDRow),
-            foreignKey: getColumnDataByClassification('foreign_key', matchedDDRow),
-            nullable: getColumnDataByClassification('nullable', matchedDDRow)
-          };
-        }
-        return row;
-      }));
-    }, [getClassifiedColumns, sourceData.ddResourceFullData, getColumnDataByClassification, standardizedTableName]);
     
     
 
@@ -357,6 +357,129 @@ const handleCandidateSelect = (selectedCandidate) => {
         .filter(stats => stats?.confidenceScore >= 60)
         .sort((a, b) => b.confidenceScore - a.confidenceScore);
     }, [sourceData, getClassifiedColumns, calculateTableStats]);
+
+
+  
+  const handleOpenCandidateDialog = (row) => {
+    console.log('Opening dialog with row:', row);
+    const matchResult = matchResults.find(m => m.source_column_name === row.sourceColumn);
+    
+    const candidates = matchResult?.candidateMatches?.map(match => ({
+      tableName: selectedDictionaryTable,
+      columnName: match.columnName,
+      score: match.score,
+      logicalTableName: getColumnDataByClassification('logical_table_name', match.ddRow),
+      logicalColumnName: getColumnDataByClassification('logical_column_name', match.ddRow),
+      dataType: getColumnDataByClassification('data_type', match.ddRow),
+      columnDescription: getColumnDataByClassification('column_description', match.ddRow)
+    }));
+  
+    setSelectedRow({
+      id: row.id,
+      sourceColumn: row.sourceColumn,
+      matchedColumn: matchResult,
+      candidateMatches: candidates,
+      resourceSchema: matchResult
+    });
+    console.log('Opening dialog with resourceSchema:', matchResult);
+    setOpenCandidateDialog(true);
+  };
+  
+  const handleMatchChange = useCallback((rowId, newValue, score) => {
+    console.log('!!handleMatchChange -> called with rowId:', rowId, 'newValue:', newValue, 'score:', score);
+    const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
+    const columnNameField = columnNameColumns[0]?.name;
+    const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
+    const tableNameField = tableNameColumns[0]?.name;
+  
+    setMatchResults(prev => prev.map(row => {
+      if (row.id === rowId) {
+        // Calculate similarity score for new mapping
+        console.log('!!!!handleMatchChange -> stringSimilarity -> row.source_column_name == newValue.columnName:', row.source_column_name,  newValue.columnName);
+        const newScore = newValue.columnName === 'No Map' ? 0 : 
+          stringSimilarity.compareTwoStrings(
+            row.source_column_name.toLowerCase(),
+            newValue.columnName.toLowerCase()
+          );
+  
+        const matchedDDRow = sourceData.ddResourceFullData.find(
+          ddRow => ddRow[columnNameField] === newValue.columnName && 
+                ddRow[tableNameField] === standardizedTableName
+        );
+  
+        return {
+          ...row,
+          matchedColumn: `${newValue.tableName}.${newValue.columnName}`,
+          matched_column_name: newValue.columnName,
+          matched_table_name: newValue.tableName,
+          column_similarity_score: newScore,
+          logicalTableName: getColumnDataByClassification('logical_table_name', matchedDDRow),
+          logicalColumnName: getColumnDataByClassification('logical_column_name', matchedDDRow),
+          columnDescription: getColumnDataByClassification('column_description', matchedDDRow),
+          dataType: getColumnDataByClassification('data_type', matchedDDRow),
+          primaryKey: getColumnDataByClassification('primary_key', matchedDDRow),
+          foreignKey: getColumnDataByClassification('foreign_key', matchedDDRow),
+          nullable: getColumnDataByClassification('nullable', matchedDDRow)
+        };
+      }
+      return row;
+    }));
+  }, [getClassifiedColumns, sourceData.ddResourceFullData, getColumnDataByClassification, standardizedTableName]);
+
+  const handleCandidateSelect = useCallback(async (selectedMapping) => {
+  console.log('!!!! -handleCandidateSelect -> called!');
+  console.log('handleCandidateSelect -> Received selectedMapping mapping data:', selectedMapping);
+  console.log('handleCandidateSelect -> Received selectedRow mapping data:', selectedRow);
+  if (selectedRow) {
+// 1. Update matchColumn with table.column format
+
+  // 2. Apply the score
+  const score = selectedMapping.score;
+
+  const newMapping = {
+    id: selectedMapping.id,
+    tableName: selectedMapping.tableName,
+    columnName: selectedMapping.columnName,
+    logicalTableName: selectedMapping.logicalTableName,
+    logicalColumnName: selectedMapping.logicalColumnName,
+    dataType: selectedMapping.dataType,
+    columnDescription: selectedMapping.columnDescription,
+    primaryKey: selectedMapping.primaryKey,
+    foreignKey: selectedMapping.foreignKey,
+    isPHI: selectedMapping.isPHI,
+    isPII: selectedMapping.isPII,
+    isNullable: selectedMapping.isNullable,
+    score: score
+  };
+
+  // 3. Add manual mapping to data dictionary if it's a manual mapping
+  if (selectedMapping.id.toString().startsWith('manual-')) {
+    const newDictionaryEntry = {
+      tableName: selectedMapping.tableName,
+      columnName: selectedMapping.columnName,
+      logicalTableName: selectedMapping.logicalTableName,
+      logicalColumnName: selectedMapping.logicalColumnName,
+      dataType: selectedMapping.dataType,
+      columnDescription: selectedMapping.columnDescription,
+      primaryKey: selectedMapping.primaryKey,
+      foreignKey: selectedMapping.foreignKey,
+      isPHI: selectedMapping.isPHI,
+      isPII: selectedMapping.isPII,
+      isNullable: selectedMapping.isNullable
+    };
+    
+      console.log('New dictionary entry:', newDictionaryEntry);
+      // Add to dictionary data
+      console.log('handleCandidateSelect -> Received selectedRow.id | formattedMatch data:', selectedRow.id, newMapping);
+      // Add new entry and update storage
+      await persistDataDictionaryEntry(newDictionaryEntry);
+    }
+    
+    handleMatchChange(selectedRow.id, newMapping);
+  }
+}, [selectedRow, handleMatchChange])
+
+
 
 
 

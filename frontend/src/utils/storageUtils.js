@@ -1,3 +1,4 @@
+// frontend\src\utils\storageUtils.js
 import { openDB } from 'idb';
 
 const DB_NAME = 'resourceWizardDB';
