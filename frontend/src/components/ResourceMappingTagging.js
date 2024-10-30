@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Typography, TextField, Autocomplete, Chip, Tooltip , IconButton} from '@mui/material';
-import { Dialog,   DialogTitle,   DialogContent,  Card,   CardContent,   Grid,   Button,   List,  ListItem,  ListItemText,  ListItemSecondaryAction} from '@mui/material';
+import { Card,   CardContent,   Grid,   Button } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import stringSimilarity from 'string-similarity';
 import { getData } from '../utils/storageUtils';
@@ -60,62 +60,14 @@ const ResourceMappingTagging = ({ savedState }) => {
     setSelectedRow({
       id: row.id,
       sourceColumn: row.sourceColumn,
-      matchedColumn: row.matchedColumn,
-      candidateMatches: candidates
+      matchedColumn: matchResult,
+      candidateMatches: candidates,
+      resourceSchema: matchResult
     });
+    console.log('Opening dialog with resourceSchema:', matchResult);
     setOpenCandidateDialog(true);
   };
   
-  
-  
-  
-  
-  
-  // const handleCandidateSelect = (candidate) => {
-  //   if (selectedRow) {
-  //     handleMatchChange(selectedRow.id, {
-  //       tableName: selectedDictionaryTable,
-  //       columnName: candidate.columnName
-  //     });
-  //   }
-  // };
-
-// Update handleCandidateSelect to accept both rowId and candidate
-// const handleCandidateSelect = (rowId, candidate) => {
-//   handleMatchChange(rowId, {
-//       tableName: selectedDictionaryTable,
-//       columnName: candidate.columnName,
-//   });
-// };
-
-// In the main component's handleCandidateSelect function
-// const handleCandidateSelect = (candidate) => {
-//   console.log('Selected handleCandidateSelect candidate:', candidate);  // Log the selected candidate for debugging
-//   if (selectedRow) {
-//     handleMatchChange(selectedRow.id, {
-//       tableName: candidate?.tableName || 'No Table',  // Check candidate and provide fallback
-//       columnName: candidate?.columnName || 'No Column',
-//     });
-//     setOpenCandidateDialog(false);
-//   } else {
-//     console.warn("Selected row is undefined in handleCandidateSelect.");
-//   }
-// };
-
-// const handleCandidateSelect = (candidate) => {
-//   console.log('handleCandidateSelect-> Selected candidate:', candidate);
-//   if (selectedRow) {
-//     handleMatchChange(selectedRow.id, {
-//       tableName: candidate.tableName,
-//       columnName: candidate.columnName,
-//       logicalTableName: candidate.logicalTableName,
-//       logicalColumnName: candidate.logicalColumnName,
-//       dataType: candidate.dataType,
-//       columnDescription: candidate.columnDescription,
-//       score: candidate.score
-//     });
-//   }
-// };
 
 const handleCandidateSelect = (selectedCandidate) => {
   console.log('Received selectedCandidate mapping data:', selectedCandidate);
@@ -291,10 +243,15 @@ const handleCandidateSelect = (selectedCandidate) => {
           .sort((a, b) => b.score - a.score);
 
         const bestMatch = allMatches[0];
-
+        // console.log('!!! -> sourceColumn', sourceColumn);
         return {
           id: index,
           source_column_name: sourceName,
+          sourceDataType: sourceColumn.dataType || 'STRING',
+          sourceColumnDescription: sourceColumn.columnDescription || '',
+          sourcePrimaryKey: Boolean(sourceColumn.primaryKey || 'false'),
+          sourceForeignKey:  Boolean(sourceColumn.foreignKey || 'false'),
+          sourceIsNullable:  Boolean(sourceColumn.nullable || 'false'),
           matched_table_name: selectedDictionaryTable,
           matched_column_name: bestMatch?.columnName || '',
           column_similarity_score: bestMatch?.score || 0,
@@ -305,9 +262,9 @@ const handleCandidateSelect = (selectedCandidate) => {
           logicalColumnName: getColumnDataByClassification('logical_column_name', bestMatch?.ddRow),
           columnDescription: getColumnDataByClassification('column_description', bestMatch?.ddRow),
           dataType: getColumnDataByClassification('data_type', bestMatch?.ddRow),
-          primaryKey: getColumnDataByClassification('primary_key', bestMatch?.ddRow),
-          foreignKey: getColumnDataByClassification('foreign_key', bestMatch?.ddRow),
-          nullable: getColumnDataByClassification('nullable', bestMatch?.ddRow),
+          primaryKey: Boolean(getColumnDataByClassification('primary_key', bestMatch?.ddRow)),
+          foreignKey: Boolean(getColumnDataByClassification('foreign_key', bestMatch?.ddRow)),
+          isNullable: Boolean(getColumnDataByClassification('nullable', bestMatch?.ddRow)),
           isPII: Boolean(sourceColumn.isPII),
           isPHI: Boolean(sourceColumn.isPHI),
           isDisabled: Boolean(sourceColumn.isDisabled),
@@ -676,12 +633,12 @@ const handleCandidateSelect = (selectedCandidate) => {
           open={openCandidateDialog}
           onClose={() => setOpenCandidateDialog(false)}
           sourceColumn={selectedRow?.sourceColumn}
-          tableName={selectedDictionaryTable}
           candidates={selectedRow?.candidateMatches || []}
-          matchedColumn={selectedRow?.matchedColumn}  
           currentMapping={selectedRow?.matchedColumn}
-          onSelect={handleCandidateSelect} 
+          resourceSchema={selectedRow?.resourceSchema}
+          onSelect={handleCandidateSelect}
         />
+
 
 
         </Box>

@@ -42,20 +42,24 @@ const ManualMappingForm = ({
   onClose, 
   onSubmit, 
   sourceColumn,
-  tableName,
-  logicalTableName
+  resourceSchema
 }) => {
+  console.log('sourceColumn from ManualMappingForm:', sourceColumn);
+  console.log('resourceSchema from ManualMappingForm:', resourceSchema);
+
+
   const [manualMapping, setManualMapping] = useState({
-    physicalTableName: tableName || '',
-    physicalColumnName: sourceColumn || '',
-    logicalTableName: logicalTableName || '',
+    physicalTableName: resourceSchema.matched_table_name || '',
+    physicalColumnName: resourceSchema.source_column_name || '',
+    logicalTableName: resourceSchema.logicalTableName || '',
     logicalColumnName: '',
-    dataType: '',
+    dataType: resourceSchema.sourceDataType || 'STRING',
     description: '',
-    primaryKey: false,
-    foreignKey: false,
-    isPHI: false,
-    isPII: false
+    primaryKey: resourceSchema.sourcePrimaryKey || false,
+    foreignKey: resourceSchema.sourceForeignKey || false,
+    isPHI: resourceSchema.sourcePHI || false,
+    isPII: resourceSchema.sourcePII || false,
+    isNullable: resourceSchema.sourceNullable || false
   });
 
   const handleChange = (field, value) => {
@@ -183,6 +187,16 @@ const ManualMappingForm = ({
                 }
                 label="PII Indicator"
               />
+<FormControlLabel
+                control={
+                  <Checkbox 
+                    checked={manualMapping.isPII}
+                    onChange={(e) => handleChange('isNullable', e.target.checked)}
+                    size="small"
+                  />
+                }
+                label="Allow Nulls"
+              />              
             </FormGroup>
           </Grid>
           <Grid item xs={12}>
@@ -218,25 +232,28 @@ const ResourceDataDictionaryColumnMappingCandidateDialog = ({
   sourceColumn,
   candidates = [],
   currentMapping = null,
+  resourceSchema = null,
   onSelect 
 }) => {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showManualForm, setShowManualForm] = useState(false);
-  console.log('candidates form ResourceMappingTagging:', candidates);
-  console.log('currentMapping form ResourceMappingTagging:', currentMapping);
+  console.log('candidates form ResourceDataDictionaryColumnMappingCandidateDialog:', candidates);
+  console.log('resourceSchema form ResourceDataDictionaryColumnMappingCandidateDialog:', resourceSchema);
 
+  console.log('currentMapping form ResourceDataDictionaryColumnMappingCandidateDialog:', currentMapping);
+  console.log('sourceColumn form ResourceDataDictionaryColumnMappingCandidateDialog:', sourceColumn);
 
   useEffect(() => {
     if (currentMapping) {
       const existingMapping = candidates.find(c => c.columnName === currentMapping.columnName && c.tableName === currentMapping.tableName);   
-      console.log('existingMapping:', existingMapping);
+      console.log('useEffect -> existingMapping:', existingMapping);
       setSelectedCandidate(existingMapping);
     }
   }, [currentMapping, candidates]);
 
 
   const handleManualSubmit = (formData) => {
-    console.log('Manual mapping submitted:', formData);
+    console.log('handleManualSubmit-> Manual mapping submitted:', formData);
     const newMapping = {
       tableName: formData.physicalTableName,
       columnName: formData.physicalColumnName,
@@ -549,6 +566,7 @@ const handleConfirmSelection = () => {
         onClose={() => setShowManualForm(false)}
         onSubmit={handleManualSubmit}
         sourceColumn={sourceColumn}
+        resourceSchema={resourceSchema}
       />
     </Dialog>
   );
