@@ -15,6 +15,7 @@ import LinkIcon from '@mui/icons-material/Link';
 import DisabledIcon from '@mui/icons-material/RemoveModerator';
 import PIIIcon from '@mui/icons-material/Security';
 import PHIIcon from '@mui/icons-material/HealthAndSafety';
+import { postSource } from '../services/sourceService';
 
 const ResourceSummary = ({ wizardState }) => {
   const [profilingOption, setProfilingOption] = useState('now');
@@ -36,10 +37,32 @@ const ResourceSummary = ({ wizardState }) => {
     });
 
 
-  //    
 
+
+
+
+  const handleSaveSource = async () => {
+    const resourceConfig = localStorage.getItem('resourceGeneralConfig');
+    const parsedConfig = JSON.parse(resourceConfig);
+  
+    const sourceData = {
+      name: parsedConfig.resourceInfo.name,
+      description: wizardState.resourceSetup.resourceDescription,
+      shortName: parsedConfig.resourceInfo.name.substring(0, 50),
+      hasPII: wizardState.resourceConfig.processedSchema?.some(col => col.isPII),
+      hasPHI: wizardState.resourceConfig.processedSchema?.some(col => col.isPHI),
+      userTags: wizardState.resourceSetup.resourceTags,
+      comments: wizardState.resourceSetup.resourceDescription
+    };
+  
+    const savedSource = await postSource(sourceData);
+    return savedSource;
+  };
+
+ 
 
   return (
+  
     <Box sx={{ p: 2 }}>
       
       <Grid container spacing={2}>
@@ -83,14 +106,14 @@ const ResourceSummary = ({ wizardState }) => {
                 <Stack spacing={1}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="text.secondary">Total Columns</Typography>
-                    <Chip size="small" label={resourceGeneralConfig.processedSchema?.length || 0} />
+                    <Chip size="small" label={resourceGeneralConfig?.processedSchema?.length || 0} />
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="text.secondary">PII Columns</Typography>
                     <Chip 
                       size="small" 
                       icon={<PIIIcon sx={{ fontSize: 16 }} />}
-                      label={resourceGeneralConfig.processedSchema?.filter(col => col.isPII).length || 0}
+                      label={resourceGeneralConfig?.processedSchema?.filter(col => col.isPII).length || 0}
                       color="warning"
                     />
                   </Box>
@@ -99,7 +122,7 @@ const ResourceSummary = ({ wizardState }) => {
                     <Chip 
                       size="small"
                       icon={<PHIIcon sx={{ fontSize: 16 }} />} 
-                      label={resourceGeneralConfig.processedSchema?.filter(col => col.isPHI).length || 0}
+                      label={resourceGeneralConfig?.processedSchema?.filter(col => col.isPHI).length || 0}
                       color="error"
                     />
                   </Box>
@@ -108,7 +131,7 @@ const ResourceSummary = ({ wizardState }) => {
                     <Chip 
                       size="small"
                       icon={<DisabledIcon sx={{ fontSize: 16 }} />} 
-                      label={resourceGeneralConfig.processedSchema?.filter(col => col.isDisabled).length || 0}
+                      label={resourceGeneralConfig?.processedSchema?.filter(col => col.isDisabled).length || 0}
                       color="info"
                     />
                   </Box>                  
@@ -210,7 +233,7 @@ const ResourceSummary = ({ wizardState }) => {
                     <Typography variant="body2" color="text.secondary">Disabled Columns</Typography>
                     <Chip 
                       size="small"
-                      icon={<DisabledIcon sx={{ fontSize: 16 }} />} 
+                      icon={<isDisabledIcon sx={{ fontSize: 16 }} />} 
                       label={ddResourceGeneralConfig.processedSchema?.filter(col => col.isDisabled).length || 0}
                       color="info"
                     />
