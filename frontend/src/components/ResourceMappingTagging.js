@@ -683,6 +683,15 @@ useEffect(() => {
 }, []);
 
 
+// useEffect(() => {
+//   if (selectedDictionaryTable) {
+//     const stats = calculateTableStats(selectedDictionaryTable);
+//     setTableStats(stats);
+//   }
+// }, [selectedDictionaryTable, calculateTableStats, matchResults]);
+
+
+
 
 
   // Add these component definitions before the main ResourceMappingTagging component
@@ -730,9 +739,17 @@ useEffect(() => {
             </Typography>
           </Grid>
           <Grid item xs={2}>
-            <Button variant="contained" onClick={onChangeTable} fullWidth>
-              Change Table
-            </Button>
+          <Button 
+          variant="contained" 
+          onClick={() => {
+            const tables = getAllTableStats();
+            setAvailableTables(tables);
+            setOpenTableDialog(true);
+          }}
+          fullWidth
+        >
+          Change Table
+        </Button>
           </Grid>
         </Grid>
       </CardContent>
@@ -778,7 +795,6 @@ useEffect(() => {
       field: 'matchedColumn',
       headerName: 'Data Dictionary Match',
       flex: 2,
-      height: 30,
       renderCell: (params) => (        
         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
           <Autocomplete          
@@ -796,13 +812,28 @@ useEffect(() => {
             }
             isOptionEqualToValue={(option, value) => option?.columnName === value?.columnName}
             renderInput={(params) => (
-              <TextField {...params} variant="outlined" size="small"  />
+              <TextField 
+                {...params} 
+                variant="outlined" 
+                size="small"
+                sx={{ 
+                  '& .MuiOutlinedInput-root': {
+                    height: 28,
+                    minHeight: 'unset',
+                    fontSize: '0.8rem',
+                    padding: '0px',
+                    '& .MuiAutocomplete-input': {
+                      padding: '4px 6px'
+                    }
+                  }
+                }}
+              />
             )}
           />
           <IconButton
             size="small"
             onClick={() => handleOpenCandidateDialog(params.row)}
-            sx={{ ml: 1 }}
+            sx={{ ml: -1, p: 0.5 }}
           >
             <SearchIcon fontSize="small" />
           </IconButton>
@@ -816,16 +847,22 @@ useEffect(() => {
       renderCell: (params) => (
         <Box sx={{        
           width: '100%',
+          height: 24,  // Set a smaller height to reduce vertical space
           bgcolor: params.value > 0.7 ? 'success.light' : params.value > 0.4 ? 'warning.light' : 'error.light',
-          p: 0,
+          p: '2px 4px', // Compact padding for a tighter fit
           borderRadius: 1,
-          fontSize: '0.75rem',
-          textAlign: 'center'
+          fontSize: '0.75rem',  // Smaller font for a compact look
+          textAlign: 'center',
+          lineHeight: 1.2, // Adjust line-height for vertical centering within the height
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
           {(params.value * 100).toFixed(0)}%
         </Box>
       )
     },
+    
     {
       field: 'tags',
       headerName: 'Tags',
@@ -847,15 +884,32 @@ useEffect(() => {
                 label={option}
                 size="small"
                 sx={{ 
-                  backgroundColor: getTagColor(option),
-                  height: '20px',
-                  '& .MuiChip-label': { fontSize: '0.75rem' }
+                  height: 15,
+                  fontSize: '0.6.5rem',
+                  px: 1,
+                  '& .MuiChip-label': { px: 0.75 }
                 }}
               />
             ))
           }
           renderInput={(params) => (
-            <TextField {...params} variant="outlined" size="small" placeholder="Add tags" />
+            <TextField 
+              {...params} 
+              variant="outlined" 
+              size="small" 
+              placeholder="Add tags"
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  height: 28,
+                  minHeight: 'unset',
+                  fontSize: '0.8rem',
+                  padding: '0px',
+                  '& .MuiAutocomplete-input': {
+                    padding: '4px 6px'
+                  }
+                }
+              }}
+            />
           )}
         />
       )
@@ -882,7 +936,8 @@ useEffect(() => {
     {
       field: 'dataType',
       headerName: 'Data Type',
-      flex: 1,
+      width: 100,
+      // flex: 1,
       editable: false
     },
     {
@@ -963,11 +1018,15 @@ useEffect(() => {
       onChangeTable={() => setOpenTableDialog(true)}
     />
     <ResourceDataDictionaryTableMappingCandidateDialog
-      open={openTableDialog}
-      onClose={() => setOpenTableDialog(false)}
+      open={openTableDialog}  // Verify this state is changing
+      onClose={() => {
+        console.log('Dialog closing');
+        setOpenTableDialog(false);
+      }}
       tables={availableTables}
       currentTable={selectedDictionaryTable}
       onSelect={(tableName) => {
+        console.log('Selected table:', tableName);
         setSelectedDictionaryTable(tableName);
         setOpenTableDialog(false);
         computeMatches();
@@ -996,11 +1055,12 @@ useEffect(() => {
           rows={rows}
           columns={columns}
           pageSize={15}
+          rowHeight={45}
           rowsPerPageOptions={[15, 30, 50]}
           disableSelectionOnClick
           density="compact"
           editMode="cell"
-          getRowHeight={() => 45}
+          getRowHeight={() => 35}
           processRowUpdate={(newRow, oldRow) => {
           handleCellChange({
               id: newRow.id,
