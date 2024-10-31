@@ -12,7 +12,9 @@ import StorageIcon from '@mui/icons-material/Storage';
 import SchemaIcon from '@mui/icons-material/Schema';
 import SecurityIcon from '@mui/icons-material/Security';
 import LinkIcon from '@mui/icons-material/Link';
-import RemoveModeratorIcon from '@mui/icons-material/RemoveModerator';
+import DisabledIcon from '@mui/icons-material/RemoveModerator';
+import PIIIcon from '@mui/icons-material/Security';
+import PHIIcon from '@mui/icons-material/HealthAndSafety';
 
 const ResourceSummary = ({ wizardState }) => {
   const [profilingOption, setProfilingOption] = useState('now');
@@ -87,7 +89,7 @@ const ResourceSummary = ({ wizardState }) => {
                     <Typography variant="body2" color="text.secondary">PII Columns</Typography>
                     <Chip 
                       size="small" 
-                      icon={<SecurityIcon sx={{ fontSize: 16 }} />}
+                      icon={<PIIIcon sx={{ fontSize: 16 }} />}
                       label={resourceGeneralConfig.processedSchema?.filter(col => col.isPII).length || 0}
                       color="warning"
                     />
@@ -96,7 +98,7 @@ const ResourceSummary = ({ wizardState }) => {
                     <Typography variant="body2" color="text.secondary">PHI Columns</Typography>
                     <Chip 
                       size="small"
-                      icon={<SecurityIcon sx={{ fontSize: 16 }} />} 
+                      icon={<PHIIcon sx={{ fontSize: 16 }} />} 
                       label={resourceGeneralConfig.processedSchema?.filter(col => col.isPHI).length || 0}
                       color="error"
                     />
@@ -105,7 +107,7 @@ const ResourceSummary = ({ wizardState }) => {
                     <Typography variant="body2" color="text.secondary">Disabled Columns</Typography>
                     <Chip 
                       size="small"
-                      icon={<RemoveModeratorIcon sx={{ fontSize: 16 }} />} 
+                      icon={<DisabledIcon sx={{ fontSize: 16 }} />} 
                       label={resourceGeneralConfig.processedSchema?.filter(col => col.isDisabled).length || 0}
                       color="info"
                     />
@@ -190,7 +192,7 @@ const ResourceSummary = ({ wizardState }) => {
                     <Typography variant="body2" color="text.secondary">PII Columns</Typography>
                     <Chip 
                       size="small" 
-                      icon={<SecurityIcon sx={{ fontSize: 16 }} />}
+                      icon={<PIIIcon sx={{ fontSize: 16 }} />}
                       label={ddResourceGeneralConfig.processedSchema?.filter(col => col.isPII).length || 0}
                       color="warning"
                     />
@@ -199,7 +201,7 @@ const ResourceSummary = ({ wizardState }) => {
                     <Typography variant="body2" color="text.secondary">PHI Columns</Typography>
                     <Chip 
                       size="small"
-                      icon={<SecurityIcon sx={{ fontSize: 16 }} />} 
+                      icon={<PHIIcon sx={{ fontSize: 16 }} />} 
                       label={ddResourceGeneralConfig.processedSchema?.filter(col => col.isPHI).length || 0}
                       color="error"
                     />
@@ -208,7 +210,7 @@ const ResourceSummary = ({ wizardState }) => {
                     <Typography variant="body2" color="text.secondary">Disabled Columns</Typography>
                     <Chip 
                       size="small"
-                      icon={<RemoveModeratorIcon sx={{ fontSize: 16 }} />} 
+                      icon={<DisabledIcon sx={{ fontSize: 16 }} />} 
                       label={ddResourceGeneralConfig.processedSchema?.filter(col => col.isDisabled).length || 0}
                       color="info"
                     />
