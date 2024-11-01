@@ -1,10 +1,10 @@
 const { Op } = require('sequelize');
-const Source = require('../models/DataStructureAttributeGroup');
+const dataDictionarySource = require('../models/DataStructureAttributeGroup');
 
 // Create a new source
 exports.create = async (req, res) => {
     try {
-        const source = await Source.create({
+        const source = await dataDictionarySource.create({
             ...req.body,
             cre_ts: new Date(),
             updt_ts: new Date()
@@ -23,10 +23,10 @@ exports.create = async (req, res) => {
 // Get all sources
 exports.getAll = async (req, res) => {
     try {
-        console.log('Executing SQL query:', Source.findAll().toString());
-        const sources = await Source.findAll({
+        console.log('Executing SQL query:', dataDictionarySource.findAll().toString());
+        const sources = await dataDictionarySource.findAll({
             where: {
-                dsstrc_attr_grp_src_typ_cd: 'Source'
+                dsstrc_attr_grp_src_typ_cd: 'Data Dictionary'
             }
         });
         console.log('7. SQL query result:', sources.toString());
@@ -40,9 +40,9 @@ exports.getAll = async (req, res) => {
 exports.getById = async (req, res) => {
     const { id } = req.params;
     try {
-        const source = await Source.findByPk(id);
+        const source = await dataDictionarySource.findByPk(id);
         if (!source) {
-            return res.status(404).json({ error: 'Source not found' });
+            return res.status(404).json({ error: 'dataDictionarySource not found' });
         }
         res.status(200).json(source);
     } catch (error) {
@@ -54,9 +54,9 @@ exports.getById = async (req, res) => {
 exports.update = async (req, res) => {
     const { id } = req.params;
     try {
-        const source = await Source.findByPk(id);
+        const source = await dataDictionarySource.findByPk(id);
         if (!source) {
-            return res.status(404).json({ error: 'Source not found' });
+            return res.status(404).json({ error: 'dataDictionarySource not found' });
         }
         await source.update(req.body);
         res.status(200).json(source);
@@ -69,9 +69,9 @@ exports.update = async (req, res) => {
 exports.delete = async (req, res) => {
     const { id } = req.params;
     try {
-        const source = await Source.findByPk(id);
+        const source = await dataDictionarySource.findByPk(id);
         if (!source) {
-            return res.status(404).json({ error: 'Source not found' });
+            return res.status(404).json({ error: 'dataDictionarySource not found' });
         }
         await source.destroy();
         res.status(204).send();

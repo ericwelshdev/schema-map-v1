@@ -23,7 +23,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
       ingestionConfig: {},
       uploadStatus: null,
       error: null,
-      resourceType: savedState?.resourceSetup?.resourceSetup?.resourceType
+      resourceType: savedState?.resourceSetup?.resourceType
     };
   });
 
@@ -81,7 +81,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
 
   
   const renderIngestionSetup = () => {
-    const resourceType = savedState?.resourceSetup?.resourceSetup?.resourceType;
+    const resourceType = savedState?.resourceSetup?.resourceType;
     // console.log("resourceType", resourceType);
     // console.log("savedState:", savedState);
 
@@ -100,7 +100,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
   const handleApplyChanges = useCallback(async (updatedConfig) => {
     try {
       
-      const resourceType = savedState?.resourceSetup?.resourceSetup?.resourceType;
+      const resourceType = savedState?.resourceSetup?.resourceType;
       // console.log("resourceType", resourceType);
       // if (!resourceType) {
       //   throw new Error('Resource type not specified');

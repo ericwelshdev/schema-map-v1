@@ -7,22 +7,29 @@ class DataStructureAttribute extends Model {}
 DataStructureAttribute.init({
     ds_id: {
         type: DataTypes.INTEGER,
-        primaryKey: true,
         allowNull: false
     },    
     dsstrc_attr_id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        // autoIncrement: true
+        autoIncrement: true
     },
     dsstrc_attr_grp_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: {
-            model: DataStructureAttributeGroup, // Model to reference
-            key: 'dsstrc_attr_grp_id'
-        }
     },
+    stdiz_abrvd_attr_grp_nm: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    dsstrc_attr_nm: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },   
+    dsstrc_alt_attr_nm: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },       
     dsstrc_attr_desc: {
         type: DataTypes.STRING,
         allowNull: true
@@ -59,7 +66,7 @@ DataStructureAttribute.init({
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },
-    enbld_ind: {
+    disabld_ind: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
     },

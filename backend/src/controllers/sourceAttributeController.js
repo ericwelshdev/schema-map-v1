@@ -1,7 +1,7 @@
 const { Op } = require('sequelize');
 const Source = require('../models/DataStructureAttribute');
 
-// Create a new source
+// Create a new source attributes
 exports.create = async (req, res) => {
     try {
         const source = await Source.create(req.body);
@@ -11,8 +11,30 @@ exports.create = async (req, res) => {
     }
 };
 
+// Create a new source attributes in bulk
+exports.bulkCreate = async (req, res) => {
+    try {
+        console.log('Received data for bulk create:', req.body);
+        
+        // Ensure we have an array of attributes to create
+        if (!Array.isArray(req.body)) {
+            throw new Error('Expected an array of attributes');
+        }
+
+        const sources = await Source.bulkCreate(req.body, {
+            returning: true
+        });
+        
+        res.status(201).json(sources);
+    } catch (error) {
+        console.error('Bulk create error:', error);
+        res.status(400).json({ error: error.message });
+    }
+};
+
+
   
-// Get all sources
+// Get all sources attributes
 exports.getAll = async (req, res) => {
     try {
         console.log('Executing SQL query:', Source.findAll().toString());
@@ -28,7 +50,7 @@ exports.getAll = async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 };
-// Get source by ID
+// Get source attributes by ID
 exports.getById = async (req, res) => {
     const { id } = req.params;
     try {
@@ -42,7 +64,7 @@ exports.getById = async (req, res) => {
     }
 };
 
-// Update a source
+// Update a source attributes
 exports.update = async (req, res) => {
     const { id } = req.params;
     try {
@@ -57,7 +79,7 @@ exports.update = async (req, res) => {
     }
 };
 
-// Delete a source
+// Delete a source attributes
 exports.delete = async (req, res) => {
     const { id } = req.params;
     try {

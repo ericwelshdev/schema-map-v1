@@ -27,7 +27,7 @@ const StyledCard = styled(Card)(({ theme }) => ({
 
 const ResourceDataDictionaryTypeSelection = ({ savedState, onStateChange, existingSourceNames }) => {
   const [ddResourceSetup, setddResourceSetup] = useState(() => {
-    const saved = localStorage.getItem("ddResourceSetup");
+    const saved = localStorage.getItem("wizardStateEssential.ddResourceSetup");
     return saved
       ? JSON.parse(saved)
       : savedState.ddResourceSetup || {
@@ -41,6 +41,9 @@ const ResourceDataDictionaryTypeSelection = ({ savedState, onStateChange, existi
         };
   });
 
+  useEffect(() => {
+    localStorage.setItem('wizardStateEssential', JSON.stringify(ddResourceSetup));
+  }, [ddResourceSetup]);
   const [errors, setErrors] = useState({});
   const [sourceTags] = useState([
     "target",
@@ -69,7 +72,7 @@ const ResourceDataDictionaryTypeSelection = ({ savedState, onStateChange, existi
   };
 
   useEffect(() => {
-    onStateChange({ ddResourceSetup, isValid: validateForm() });
+    onStateChange({ ...ddResourceSetup, isValid: validateForm() });
   }, [onStateChange, ddResourceSetup, validateForm]);
 
   const handleInputChange = (field, value) => {

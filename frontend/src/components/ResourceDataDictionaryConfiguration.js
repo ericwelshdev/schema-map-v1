@@ -25,7 +25,7 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
     ingestionConfig: {},
     uploadStatus: null,
     error: null,
-    resourceType: savedState?.dataDictionarySetup?.ddResourceSetup?.resourceType
+    resourceType: savedState?.ddResourceSetup?.resourceType
       };
     });
 
@@ -89,7 +89,7 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
 
 
   const renderIngestionSetup = () => {
-    const resourceType = savedState?.dataDictionarySetup?.ddResourceSetup?.resourceType;
+    const resourceType = savedState?.ddResourceSetup?.resourceType;
     // console.log("resourceType", resourceType);
     // console.log("savedState:", ddResourceConfig);
 
@@ -107,7 +107,7 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
 
   const handleApplyChanges = useCallback(async (updatedConfig) => {
     try {
-      const resourceType = savedState?.dataDictionarySetup?.ddResourceSetup?.resourceType;
+      const resourceType = savedState?.ddResourceSetup?.resourceType;
     
       const updatedIngestionConfig = {
         ...ddResourceConfig.ingestion,

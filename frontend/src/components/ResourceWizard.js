@@ -26,7 +26,8 @@ const ResourceWizard = () => {
           collection: 'None',
           resourceTags: ['source'],
           resourceDescription: '',
-          resourceType: 'file'
+          resourceType: 'file',
+          isValid: false
         },
         resourceConfig: {
           expandedAccordion: 'ingestionSetup',
@@ -42,15 +43,16 @@ const ResourceWizard = () => {
           uploadStatus: null,
           error: null
         },
-        dataDictionarySetup: {
+        ddResourceSetup: {
           resourceName: '',
           standardizedSourceName: '',
           collection: 'None',
           resourceTags: ['datadictionary'],
           resourceDescription: '',
-          resourceType: 'dd_new'
+          resourceType: 'dd_new',
+          isValid: false
         },
-        dataDictionaryConfig: {
+        ddResourceConfig: {
           expandedAccordion: 'ingestionSetup',
           activeTab: 0,
           sourceInfo: null,
@@ -74,7 +76,7 @@ const ResourceWizard = () => {
     
       const essentialState = {
         resourceSetup: wizardState.resourceSetup,
-        dataDictionarySetup: wizardState.dataDictionarySetup,
+        ddResourceSetup: wizardState.ddResourceSetup,
         currentStep: wizardState.currentStep
       };
       localStorage.setItem('wizardStateEssential', JSON.stringify(essentialState));
@@ -217,6 +219,16 @@ const ResourceWizard = () => {
       };
     });
   }, []);
+
+  // const updateWizardState = useCallback((step, newState) => {
+  //   setWizardState(prevState => ({
+  //     ...prevState,
+  //     [step]: {
+  //       ...newState,
+  //       isValid: newState.isValid
+  //     }
+  //   }));
+  // }, []);  
   
   // Remove or conditionally render console.log
   const DEBUG = false;
@@ -243,7 +255,7 @@ const ResourceWizard = () => {
         );
       case 1:
         const resourceSetupConfigState = {
-          ...wizardState.resourceSetup.resourceSetup,
+          ...wizardState.resourceSetup,
           config: wizardState.resourceConfig
         };
         return (
@@ -255,13 +267,13 @@ const ResourceWizard = () => {
       case 2:
         return (
           <ResourceDataDictionaryTypeSelection
-            savedState={wizardState.dataDictionarySetup}
-            onStateChange={(newState) => updateWizardState('dataDictionarySetup', newState)}
+            savedState={wizardState.ddResourceSetup}
+            onStateChange={(newState) => updateWizardState('ddResourceSetup', newState)}
           />
         );
       case 3:
         const ddResourceSetupConfigState = {
-          ...wizardState.dataDictionarySetup.resourceSetup,
+          ...wizardState.resourceSetup,
           config: wizardState.resourceConfig
         };
         return (

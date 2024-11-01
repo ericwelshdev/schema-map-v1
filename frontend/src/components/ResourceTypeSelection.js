@@ -27,10 +27,11 @@ const StyledCard = styled(Card)(({ theme }) => ({
 
 const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames }) => {
   const [resourceSetup, setResourceSetup] = useState(() => {
-    const saved = localStorage.getItem('resourceTypeSetup');
+    const saved = localStorage.getItem('wizardStateEssential.resourceSetup');
     return saved ? JSON.parse(saved) : savedState.resourceSetup || {
       resourceName: '',
       standardizedSourceName: '',
+      resourceVersionText: '',
       collection: 'None',
       resourceTags: ['source'],
       resourceDescription: '',
@@ -39,7 +40,7 @@ const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames 
   });
 
   useEffect(() => {
-    localStorage.setItem('resourceTypeSetup', JSON.stringify(resourceSetup));
+    localStorage.setItem('wizardStateEssential', JSON.stringify(resourceSetup));
   }, [resourceSetup]);
   const [errors, setErrors] = useState({});
   const [sourceTags] = useState([
@@ -68,7 +69,7 @@ const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames 
   };
 
   useEffect(() => {
-    onStateChange({ resourceSetup, isValid: validateForm() });
+    onStateChange({ ...resourceSetup, isValid: validateForm() });
   }, [onStateChange, resourceSetup, validateForm]);
 
   const handleInputChange = (field, value) => {

@@ -6,7 +6,9 @@ const { connectDB, sequelize } = require('../config/db');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/userRoutes');
 const projectRoutes = require('./routes/projectRoutes');
-const sourceRoutes = require('./routes/sourceRoutes');
+const sourceRoutes = require('./routes/resourceRoutes');
+const sourceAttributeRoutes = require('./routes/resourceAttributeRoutes');
+const dataDictionarySourceRoutes = require('./routes/dataDictionarySourceRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const logger = require('./utils/logger');
 const morgan = require('morgan');
@@ -73,6 +75,20 @@ app.use('/api/sources', (req, res, next) => {
   next();
 }, sourceRoutes);
 
+app.use('/api/source-attributes', (req, res, next) => {
+  console.log('2. Request reaching /api/source-attributes in app.js');
+  next();
+}, sourceAttributeRoutes);
+
+app.use('/api/source-attributes/bulk', (req, res, next) => {
+  console.log('2. Request reaching /api/source-attributes/bulk in app.js');
+  next();
+}, sourceAttributeRoutes);
+
+app.use('/api/ddsources', (req, res, next) => {
+  console.log('2. Request reaching /api/ddsources in app.js');
+  next();
+}, sourceRoutes);
 
 app.use('*', (req, res) => {
   console.log('Unmatched route:', req.originalUrl);
@@ -105,9 +121,9 @@ const models = [
   // User,
   // UserRole,
 
-  DataStructureAttributeGroupInstanceProfile,
-  DataAccessMechanism,
-  DataAccessMechanismCharacteristic
+  // DataStructureAttributeGroupInstanceProfile,
+  // DataAccessMechanism,
+  // DataAccessMechanismCharacteristic
 
 ];
 

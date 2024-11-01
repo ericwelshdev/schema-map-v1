@@ -6,16 +6,16 @@ class DataStructureAttributeGroup extends Model {}
 DataStructureAttributeGroup.init({
     ds_id: {
         type: DataTypes.INTEGER,
-        primaryKey: true,
         allowNull: false
     },
     stdiz_abrvd_attr_grp_nm: {
-        type: DataTypes.STRING,
-        primaryKey: true,
+        type: DataTypes.STRING,        
         allowNull: false
     },
     dsstrc_attr_grp_id: {
         type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
         allowNull: true
     },
     dsstrc_attr_grp_nm: {

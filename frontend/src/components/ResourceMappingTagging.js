@@ -36,7 +36,8 @@ const getTagColor = (tag) => {
 
 
 const ResourceMappingTagging = ({ savedState, onDataChange }) => {
-  const standardizedName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
+  console.log("savedState:", savedState);
+  const standardizedName = String(savedState?.resourceSetup?.standardizedSourceName || '');
   const [selectedDictionaryTable, setSelectedDictionaryTable] = useState(standardizedName);
   const [tableStats, setTableStats] = useState(null);
   const [matchResults, setMatchResults] = useState([]);
@@ -329,7 +330,7 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
           .filter(match => match.score > 0.3)
           .sort((a, b) => b.score - a.score);
   
-        console.log(`Matches for ${sourceName}:`, allMatches);
+        // console.log(`Matches for ${sourceName}:`, allMatches);
   
         const bestMatch = allMatches[0];
         return {
@@ -365,7 +366,7 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
     setMatchResults(results);
   }, [sourceData, getClassifiedColumns, selectedDictionaryTable, getColumnDataByClassification]);
   
- const standardizedTableName = String(savedState?.resourceSetup?.resourceSetup?.standardizedSourceName || '');
+ const standardizedTableName = String(savedState?.resourceSetup?.standardizedSourceName || '');
 
 
     useEffect(() => {
