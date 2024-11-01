@@ -348,7 +348,8 @@ const handleUndoClick = useCallback((id) => {
       />
         );
       }
-    },
+    }
+    ,
     {
       field: 'isPrimaryKey',
       headerName: 'PK',
