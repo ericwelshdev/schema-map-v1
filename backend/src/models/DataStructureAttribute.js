@@ -54,6 +54,10 @@ DataStructureAttribute.init({
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },
+    fk_ind: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },    
     encrypt_ind: {
         type: DataTypes.BOOLEAN,
         defaultValue: false

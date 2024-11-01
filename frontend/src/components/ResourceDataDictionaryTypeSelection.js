@@ -27,19 +27,34 @@ const StyledCard = styled(Card)(({ theme }) => ({
 
 const ResourceDataDictionaryTypeSelection = ({ savedState, onStateChange, existingSourceNames }) => {
   const [ddResourceSetup, setddResourceSetup] = useState(() => {
-    const saved = localStorage.getItem("wizardStateEssential.ddResourceSetup");
-    return saved
-      ? JSON.parse(saved)
-      : savedState.ddResourceSetup || {
-          resourceName: "",
-          standardizedSourceName: "",
-          resourceVersionText: "",
-          collection: "None",
-          resourceTags: ["datadictionary"],
-          resourceDescription: "",
-          resourceType: "dd_new",
-        };
-  });
+    return savedState || {
+      resourceName: '',
+      standardizedSourceName: '',
+      resourceVersionText: '',
+      collection: 'None',
+      resourceTags: ['datadictionary'],
+      resourceDescription: '',
+      resourceType: 'dd_new'
+    };
+  }); 
+
+// const ResourceDataDictionaryTypeSelection = ({ savedState, onStateChange, existingSourceNames }) => {
+//   const [ddResourceSetup, setddResourceSetup] = useState(() => {
+//     const saved = localStorage.getItem("wizardStateEssential.ddResourceSetup");
+//     return saved
+//       ? JSON.parse(saved)
+//       : savedState.ddResourceSetup || {
+//           resourceName: "",
+//           standardizedSourceName: "",
+//           resourceVersionText: "",
+//           collection: "None",
+//           resourceTags: ["datadictionary"],
+//           resourceDescription: "",
+//           resourceType: "dd_new",
+//         };
+//   });
+
+ 
 
   useEffect(() => {
     localStorage.setItem('wizardStateEssential', JSON.stringify(ddResourceSetup));

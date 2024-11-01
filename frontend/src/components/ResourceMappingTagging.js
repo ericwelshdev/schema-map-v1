@@ -3,7 +3,9 @@ import { Box, Typography, TextField, Autocomplete, Chip, Tooltip , IconButton} f
 import { Card,   CardContent,   Grid,   Button } from '@mui/material';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import stringSimilarity from 'string-similarity';
-import { initDB, getData, setData } from '../utils/storageUtils';
+import {getData, setData } from '../utils/storageUtils';
+import PIIIcon from '@mui/icons-material/Security';
+import PHIIcon from '@mui/icons-material/HealthAndSafety';
 import LockPersonIcon from '@mui/icons-material/LockPerson';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import BlockIcon from '@mui/icons-material/Block';
@@ -62,7 +64,12 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
     ddResourceMapping: null
   });
   
-
+  useEffect(() => {
+    if (matchResults.length > 0) {
+      setData('ddResourceMappingRows', matchResults);
+    }
+  }, [matchResults]);
+  
 
 
 
@@ -80,72 +87,78 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
   }, [getClassifiedColumns]);
 
 
-  const persistDataDictionaryEntry = async (newDictionaryEntry) => {
-    // Get all columns and their classifications from preview rows
-    const columnMappings = sourceData.ddResourcePreviewRows.reduce((acc, column) => {
-      if (column.schemaClassification?.value) {
-        // Multiple columns can have the same classification
-        if (!acc[column.schemaClassification.value]) {
-          acc[column.schemaClassification.value] = [];
+  const persistDataDictionaryEntry = useCallback(async (newDictionaryEntry) => {
+    try {
+      const columnMappings = sourceData.ddResourcePreviewRows.reduce((acc, column) => {
+        const classification = column.schemaClassification?.value;
+        if (classification) {
+          acc[classification] = acc[classification] || [];
+          acc[classification].push(column.name);
         }
-        acc[column.schemaClassification.value].push(column.name);
-      }
-      return acc;
-    }, {});
+        return acc;
+      }, {});
   
-    // Initialize all dictionary columns with empty strings
-    const allDictionaryColumns = sourceData.ddResourcePreviewRows.map(column => column.name);
-    const mappedEntry = allDictionaryColumns.reduce((acc, columnName) => {
-      acc[columnName] = '';
-      return acc;
-    }, {});
+      const allDictionaryColumns = sourceData.ddResourcePreviewRows.map(column => column.name);
+      const mappedEntry = allDictionaryColumns.reduce((acc, columnName) => {
+        acc[columnName] = '';
+        return acc;
+      }, {});
   
-    // Map values based on classifications
-    Object.entries(columnMappings).forEach(([classification, columnNames]) => {
-      // For each column with this classification, set the appropriate value
-      columnNames.forEach(columnName => {
-        let value = '';
-        switch(classification) {
-          case 'physical_table_name':
-            value = newDictionaryEntry.tableName;
-            break;
-          case 'physical_column_name':
-            value = newDictionaryEntry.columnName;
-            break;
-          case 'logical_table_name':
-            value = newDictionaryEntry.logicalTableName;
-            break;
-          case 'logical_column_name':
-            value = newDictionaryEntry.logicalColumnName;
-            break;
-          case 'data_type':
-            value = newDictionaryEntry.dataType;
-            break;
-          case 'column_description':
-            value = newDictionaryEntry.columnDescription;
-            break;
-          case 'primary_key':
-            value = newDictionaryEntry.primaryKey ? 'YES' : 'NO';
-            break;
-          case 'foreign_key':
-            value = newDictionaryEntry.foreignKey ? 'YES' : 'NO';
-            break;
-          case 'nullable':
-            value = newDictionaryEntry.isNullable ? 'NULL' : 'NOT NULL';
-            break;
-        }
-        mappedEntry[columnName] = value || '';
+      Object.entries(columnMappings).forEach(([classification, columnNames]) => {
+        columnNames.forEach(columnName => {
+          let value = '';
+          switch(classification) {
+            case 'physical_table_name':
+              value = newDictionaryEntry.tableName;
+              break;
+            case 'physical_column_name':
+              value = newDictionaryEntry.columnName;
+              break;
+            case 'logical_table_name':
+              value = newDictionaryEntry.logicalTableName;
+              break;
+            case 'logical_column_name':
+              value = newDictionaryEntry.logicalColumnName;
+              break;
+            case 'data_type':
+              value = newDictionaryEntry.dataType;
+              break;
+            case 'column_description':
+              value = newDictionaryEntry.columnDescription;
+              break;
+            case 'primary_key':
+              value = newDictionaryEntry.primaryKey ? 'YES' : 'NO';
+              break;
+            case 'foreign_key':
+              value = newDictionaryEntry.foreignKey ? 'YES' : 'NO';
+              break;
+            case 'nullable':
+              value = newDictionaryEntry.isNullable ? 'NULL' : 'NOT NULL';
+              break;
+            default:
+              value = '';
+          }
+          mappedEntry[columnName] = value || '';
+        });
       });
-    });
   
-    const currentDictData = await getData('ddResourceFullData');
-    await setData('ddResourceFullData', [...currentDictData, mappedEntry]);
-    
-    setSourceData(prev => ({
-      ...prev,
-      ddResourceFullData: [...prev.ddResourceFullData, mappedEntry]
-    }));
-  };
+      const currentDictData = await getData('ddResourceFullData') || [];
+      const updatedData = [...currentDictData, mappedEntry];
+      
+      await setData('ddResourceFullData', updatedData);
+      
+      setSourceData(prev => ({
+        ...prev,
+        ddResourceFullData: updatedData
+      }));
+  
+      return mappedEntry;
+    } catch (error) {
+      console.error('Error persisting dictionary entry:', error);
+      throw error;
+    }
+  }, [sourceData, setSourceData]);
+  
   
   
 
@@ -780,8 +793,8 @@ useEffect(() => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Typography variant="body2">{params.value}</Typography>
           <Box sx={{ display: 'flex', gap: 0.5, ml: 1 }}>
-            {params.row.isPII && <LockPersonIcon sx={{ fontSize: 16 }} color="primary" />}
-            {params.row.isPHI && <LocalHospitalIcon sx={{ fontSize: 16 }} color="primary" />}
+            {params.row.isPII && <PIIIcon sx={{ fontSize: 16 }} color="primary" />}
+            {params.row.isPHI && <PHIIcon sx={{ fontSize: 16 }} color="primary" />}
             {params.row.isDisabled && <BlockIcon sx={{ fontSize: 16 }} color="error" />}
             {params.row.alternativeName && (
               <Tooltip title={`Alternative Name: ${params.row.alternativeName}`}>

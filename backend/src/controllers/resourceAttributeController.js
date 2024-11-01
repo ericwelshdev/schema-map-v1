@@ -14,9 +14,9 @@ exports.create = async (req, res) => {
 // Create a new resource attributes in bulk
 exports.bulkCreate = async (req, res) => {
     try {
-        console.log('Received data for bulk create:', req.body);
+        // console.log('Received data for bulk create:', req.body);
         
-        // Ensure we have an array of attributes to create
+        // ensure we have an array of attributes to create
         if (!Array.isArray(req.body)) {
             throw new Error('Expected an array of attributes');
         }

@@ -27,8 +27,7 @@ const StyledCard = styled(Card)(({ theme }) => ({
 
 const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames }) => {
   const [resourceSetup, setResourceSetup] = useState(() => {
-    const saved = localStorage.getItem('wizardStateEssential.resourceSetup');
-    return saved ? JSON.parse(saved) : savedState.resourceSetup || {
+    return savedState || {
       resourceName: '',
       standardizedSourceName: '',
       resourceVersionText: '',
@@ -38,6 +37,21 @@ const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames 
       resourceType: 'file'
     };
   });
+  
+// const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames }) => {
+//   const [resourceSetup, setResourceSetup] = useState(() => {
+//     const saved = localStorage.getItem('wizardStateEssential.resourceSetup');
+//     return saved ? JSON.parse(saved) : savedState.resourceSetup || {
+//       resourceName: '',
+//       standardizedSourceName: '',
+//       resourceVersionText: '',
+//       collection: 'None',
+//       resourceTags: ['source'],
+//       resourceDescription: '',
+//       resourceType: 'file'
+//     };
+//   });
+ 
 
   useEffect(() => {
     localStorage.setItem('wizardStateEssential', JSON.stringify(resourceSetup));

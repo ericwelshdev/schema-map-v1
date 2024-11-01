@@ -12,7 +12,8 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import StorageIcon from '@mui/icons-material/Storage';
 import SchemaIcon from '@mui/icons-material/Schema';
-import SecurityIcon from '@mui/icons-material/Security';
+import PIIIcon from '@mui/icons-material/Security';
+import PHIIcon from '@mui/icons-material/HealthAndSafety';
 import LinkIcon from '@mui/icons-material/Link';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
@@ -125,7 +126,7 @@ const ResourceSummary = ({ wizardState }) => {
       console.log('Saved resource ID:', sourceId);
 
 
-      console.log('General resourceInfo Data:', generalConfigData.resourceInfo);
+      console.log('General resourceInfo Data:', resourceGeneralConfig.resourceInfo);
 
       // 2. Save Resource Profile Configuration
       const profileData = {
@@ -184,11 +185,13 @@ const ResourceSummary = ({ wizardState }) => {
         physcl_data_typ_nm: column.type || 'string',
         mand_ind: column?.isNullable || false,
         pk_ind: column?.isPrimaryKey || false,
+        fk_ind: column?.isForeignKey || false,
         encrypt_ind: false,
         pii_ind: column.isPII || false,
         phi_ind: column.isPHI || false,
         disabld_ind: column.isDisabled,
-        user_tag_cmplx: JSON.stringify(column?.tags || []),
+        user_tag_cmplx: JSON.stringify(column?.user_tag_cmplx || []),
+        ai_tag_cmplx: JSON.stringify(column?.ai_tag_cmplx || []),
         usr_cmt_txt: column.comment || '',
         oprtnl_stat_cd: 'Active'
       }));
@@ -262,10 +265,16 @@ const ResourceSummary = ({ wizardState }) => {
 
       }
 
+
+      // Step 4 Create Associations betwen Resource and Data Dictionary
       // Step 4: Create Mappings if needed
       setSaveProgress(prev => ({ ...prev, activeStep: 3 }));
       if (hasDDMapping) {
         // Add mapping save logic
+
+
+
+
       }
 
       // Step 5: Setup Profiling
@@ -372,7 +381,7 @@ const ResourceSummary = ({ wizardState }) => {
                   <Typography variant="body2" color="text.secondary">PII Columns</Typography>
                   <Chip 
                     size="small" 
-                    icon={<SecurityIcon sx={{ fontSize: 16 }} />}
+                    icon={<PIIIcon sx={{ fontSize: 16 }} />}
                     label={wizardState?.resourceConfig?.processedSchema?.filter(col => col?.isPII)?.length ?? 0}
                     color="warning"
                   />
@@ -381,7 +390,7 @@ const ResourceSummary = ({ wizardState }) => {
                   <Typography variant="body2" color="text.secondary">PHI Columns</Typography>
                   <Chip 
                     size="small"
-                    icon={<SecurityIcon sx={{ fontSize: 16 }} />} 
+                    icon={<PHIIcon sx={{ fontSize: 16 }} />} 
                     label={wizardState?.resourceConfig?.processedSchema?.filter(col => col?.isPHI)?.length ?? 0}
                     color="error"
                   />

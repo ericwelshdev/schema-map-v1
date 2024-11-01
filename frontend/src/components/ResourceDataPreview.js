@@ -13,6 +13,8 @@ import UndoIcon from '@mui/icons-material/Undo';
 import WarningIcon from '@mui/icons-material/Warning';
 import KeyIcon from '@mui/icons-material/Key';
 import LinkIcon from '@mui/icons-material/Link';
+import PIIIcon from '@mui/icons-material/Security';
+import PHIIcon from '@mui/icons-material/HealthAndSafety';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import { SquareChartGanttIcon, TablePropertiesIcon, Grid3X3Icon, LetterTextIcon } from "lucide-react";
 import { debounce } from 'lodash';
@@ -44,7 +46,8 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
           isPHI: false,
           isPrimaryKey: false,
           isForeignKey: false,
-          tags: [],
+          user_tag_cmplx: [],
+          ai_tag_cmplx: [],
           isEditing: false,
           isChanged: false,
           isDisabled: false,
@@ -155,7 +158,7 @@ const handleTagChange = useCallback((id, newTags) => {
       : row
   ));
 }, [rows, persistRows]);
-  
+
   
 const handleTagDelete = useCallback((id, tagToDelete, tagType) => {
   const row = rows.find(r => r.id === id);
@@ -304,52 +307,52 @@ const handleUndoClick = useCallback((id) => {
         
         return (
           <Autocomplete
-        multiple
-        freeSolo
-        size="small"
-        options={tagDictionary}
-        value={currentTags}
-        onChange={(_, newValue) => {
+          multiple
+          freeSolo
+          size="small"
+          options={tagDictionary}
+          value={currentTags}
+          onChange={(_, newValue) => {
           const uniqueValues = Array.from(new Set(newValue));
-          handleTagChange(params.id, uniqueValues);
-        }}
+            handleTagChange(params.id, uniqueValues);
+          }}
         onBlur={(event) => {
           const inputValue = event.target.value.trim();
           if (inputValue && !currentTags.includes(inputValue)) {
             handleTagChange(params.id, [...currentTags, inputValue]);
           }
-        }}
-        renderTags={(value, getTagProps) =>
-          value.map((option, index) => {
-            const { key, ...chipProps } = getTagProps({ index });
-            return (
-              <Chip
-                key={key}
-                {...chipProps}
-                label={option}
+          }}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => {
+              const { key, ...chipProps } = getTagProps({ index });
+              return (
+                <Chip
+                  key={key}
+                  {...chipProps}
+                  label={option}
                 onDelete={() => handleTagDelete(params.id, option, 'user')}
-                size="small"
-                sx={{ backgroundColor: 'lightblue' }}
-              />
-            );
-          })
-        }
-        renderInput={(params) => (
-          <TextField 
-            {...params} 
-            variant="outlined" 
-            size="small"
+                  size="small"
+                  sx={{ backgroundColor: 'lightblue' }}
+                />
+              );
+            })
+          }
+          renderInput={(params) => (
+            <TextField 
+              {...params} 
+              variant="outlined" 
+              size="small"
             InputProps={{
               ...params.InputProps,
               value: '' // Ensures input is cleared after each submission
             }}
-          />
-        )}
-      />
+            />
+          )}
+        />
         );
       }
     }
-    ,
+,
     {
       field: 'isPrimaryKey',
       headerName: 'PK',
@@ -382,7 +385,7 @@ const handleUndoClick = useCallback((id) => {
       width: 50,
       renderCell: (params) => (
         <GridActionsCellItem
-          icon={<LockPersonIcon color={params.row.isPII ? "primary" : "disabled"} />}
+          icon={<PIIIcon  color={params.row.isPII ? "primary" : "disabled"} />}
           label="Toggle PII"
           onClick={() => !params.row.isDisabled && handleCellChange({ id: params.id, field: 'isPII', value: !params.row.isPII })}
           disabled={params.row.isDisabled}
@@ -395,7 +398,7 @@ const handleUndoClick = useCallback((id) => {
       width: 50,
       renderCell: (params) => (
         <GridActionsCellItem
-          icon={<LocalHospitalIcon color={params.row.isPHI ? "primary" : "disabled"} />}
+          icon={<PHIIcon color={params.row.isPHI ? "primary" : "disabled"} />}
           label="Toggle PHI"
           onClick={() => !params.row.isDisabled && handleCellChange({ id: params.id, field: 'isPHI', value: !params.row.isPHI })}
           disabled={params.row.isDisabled}
@@ -538,8 +541,8 @@ const handleUndoClick = useCallback((id) => {
               renderHeader: (params) => (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   {params.colDef.headerName}
-                  {schemaCol.isPHI && <LocalHospitalIcon color="primary" sx={{ fontSize: 16 }} />}
-                  {schemaCol.isPII && <LockPersonIcon color="primary" sx={{ fontSize: 16 }} />}
+                  {schemaCol.isPHI && <PHIIcon color="primary" sx={{ fontSize: 16 }} />}
+                  {schemaCol.isPII && <PIIIcon color="primary" sx={{ fontSize: 16 }} />}
                   {schemaCol.isDisabled && <VisibilityOffOutlinedIcon color="primary" sx={{ fontSize: 16 }} />}
                 </Box>
               ),
