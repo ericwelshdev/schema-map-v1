@@ -82,6 +82,10 @@ DataStructureAttribute.init({
         type: DataTypes.STRING, // type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true
     },
+    meta_tag_cmplx: {
+        type: DataTypes.STRING, // type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true
+    },
     usr_cmt_txt: {
         type: DataTypes.STRING,
         allowNull: true

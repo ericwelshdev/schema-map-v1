@@ -4,36 +4,40 @@ const { sequelize } = require('../../config/db');
 class DataStructureAttributeGroupAssociation extends Model {}
 
 DataStructureAttributeGroupAssociation.init({
+    
+    dsstrc_attr_grp_assc_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
     ds_id: {
         type: DataTypes.INTEGER,
-        primaryKey: true
+    },
+    dsstrc_attr_grp_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false
     },
     stdiz_abrvd_attr_grp_nm: {
         type: DataTypes.STRING,
         allowNull: true
     },
-    dsstrc_attr_grp_id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true
-    },
     assct_ds_id: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    assct_stdiz_abrvd_attr_grp_nm: {
         type: DataTypes.STRING,
         allowNull: true
     },
     assct_dsstrc_attr_grp_id: {
         type: DataTypes.INTEGER,
-        primaryKey: true
+    },
+    assct_stdiz_abrvd_attr_grp_nm: {
+        type: DataTypes.STRING,
+        allowNull: true
     },
     techncl_rule_nm: {
         type: DataTypes.STRING,
         allowNull: true
     },
     dsstrc_attr_grp_assc_typ_cd: {
-        type: DataTypes.ENUM('Source -> Target', 'Data Dictionary -> Target', 'Data Dictionary -> Source'),
+        type: DataTypes.ENUM('Source -> Target', 'Target -> Data Dictionary', 'Source -> Data Dictionary'),
         allowNull: true
     },
     ai_tag_cmplx: {

@@ -344,10 +344,12 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
           .sort((a, b) => b.score - a.score);
   
         // console.log(`Matches for ${sourceName}:`, allMatches);
+        const standardizedTableName = String(savedState?.resourceSetup?.standardizedSourceName || '');        
   
         const bestMatch = allMatches[0];
         return {
           id: index,
+          source_table_name: standardizedTableName,
           source_column_name: sourceName,
           sourceDataType: sourceColumn.dataType || 'STRING',
           sourceColumnDescription: sourceColumn.columnDescription || '',

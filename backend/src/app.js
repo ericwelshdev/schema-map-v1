@@ -8,6 +8,8 @@ const userRoutes = require('./routes/userRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
 const resourceAttributeRoutes = require('./routes/resourceAttributeRoutes');
+const resourceGroupAssociationRoutes = require('./routes/resourceGroupAssociationRoutes');
+const resourceAttributeAssociationRoutes = require('./routes/resourceAttributeAssociationRoutes');
 const resourceProfileRoutes = require('./routes/resourceProfileRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const logger = require('./utils/logger');
@@ -79,6 +81,21 @@ app.use('/api/resource-attributes', (req, res, next) => {
   console.log('2. Request reaching /api/resource-attributes in app.js');
   next();
 }, resourceAttributeRoutes);
+
+app.use('/api/resource-associations', (req, res, next) => {
+  console.log('2. Request reaching /api/resource-associations in app.js');
+  next();
+}, resourceGroupAssociationRoutes);
+
+app.use('/api/resource-attribute-associations', (req, res, next) => {
+  console.log('2. Request reaching /api/resource-attribute-associations in app.js');
+  next();
+}, resourceAttributeAssociationRoutes);
+
+app.use('/api/resource-attribute-associations/bulk', (req, res, next) => {
+  console.log('2. Request reaching /api/resource-attribute-associations/bulk in app.js');
+  next();
+}, resourceAttributeAssociationRoutes);
 
 app.use('/api/resource-attributes/bulk', (req, res, next) => {
   console.log('2. Request reaching /api/resource-attributes/bulk in app.js');

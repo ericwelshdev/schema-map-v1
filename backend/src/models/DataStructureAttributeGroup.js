@@ -8,15 +8,15 @@ DataStructureAttributeGroup.init({
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    stdiz_abrvd_attr_grp_nm: {
-        type: DataTypes.STRING,        
-        allowNull: false
-    },
     dsstrc_attr_grp_id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true,
-        allowNull: true
+        allowNull: false
+    },
+    stdiz_abrvd_attr_grp_nm: {
+        type: DataTypes.STRING,        
+        allowNull: false
     },
     dsstrc_attr_grp_nm: {
         type: DataTypes.STRING,

@@ -45,7 +45,7 @@ export const postResourceProfile = async (data) => {
 
 try {
     const response = await axios.post(`${API_URL}/resource-profiles`, formattedData);
-    console.log('response.data', response.data);
+    // console.log('response.data', response.data);
     const { ds_attr_grp_instc_prof_id } = response.data;
 
     return {

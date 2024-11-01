@@ -39,7 +39,7 @@ export const postSourceAttribute = async (sourceAttrbute) => {
 
 
     const response = await axios.post(`${API_URL}/resource-attributes`, data);
-    console.log('response.data', response.data);
+    // console.log('response.data', response.data);
     const { dsstrc_attr_grp_id } = response.data;
 
     return {
@@ -86,6 +86,7 @@ export const postBulkSourceAttribute = async (sourceAttributes) => {
       disabld_ind: attr.disabld_ind,
       user_tag_cmplx: attr.user_tag_cmplx,
       ai_tag_cmplx: attr.ai_tag_cmplx,
+      meta_tag_cmplx: attr.meta_tag_cmplx,
       usr_cmt_txt: attr.usr_cmt_txt,
       oprtnl_stat_cd: attr.oprtnl_stat_cd,
       cre_by_nm: 'System',
@@ -95,7 +96,8 @@ export const postBulkSourceAttribute = async (sourceAttributes) => {
     }));
 //     console.log('postBulkSourceAttribute Sending column data:', formattedData); // to verify the array
     const response = await axios.post(`${API_URL}/resource-attributes/bulk`, formattedData);
-    return response.data;
+    console.log('response.data', response.data);
+    return response.data;    
   } catch (error) {
     throw new Error(error.response?.data?.message || error.message);
   }
