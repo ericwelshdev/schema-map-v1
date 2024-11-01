@@ -6,9 +6,9 @@ const { connectDB, sequelize } = require('../config/db');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/userRoutes');
 const projectRoutes = require('./routes/projectRoutes');
-const sourceRoutes = require('./routes/resourceRoutes');
-const sourceAttributeRoutes = require('./routes/resourceAttributeRoutes');
-const dataDictionarySourceRoutes = require('./routes/dataDictionarySourceRoutes');
+const resourceRoutes = require('./routes/resourceRoutes');
+const resourceAttributeRoutes = require('./routes/resourceAttributeRoutes');
+const resourceProfileRoutes = require('./routes/resourceProfileRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const logger = require('./utils/logger');
 const morgan = require('morgan');
@@ -70,25 +70,25 @@ app.use('/api/projects', (req, res, next) => {
   next();
 }, projectRoutes);
 
-app.use('/api/sources', (req, res, next) => {
-  console.log('2. Request reaching /api/sources in app.js');
+app.use('/api/resources', (req, res, next) => {
+  console.log('2. Request reaching /api/resources in app.js');
   next();
-}, sourceRoutes);
+}, resourceRoutes);
 
-app.use('/api/source-attributes', (req, res, next) => {
-  console.log('2. Request reaching /api/source-attributes in app.js');
+app.use('/api/resource-attributes', (req, res, next) => {
+  console.log('2. Request reaching /api/resource-attributes in app.js');
   next();
-}, sourceAttributeRoutes);
+}, resourceAttributeRoutes);
 
-app.use('/api/source-attributes/bulk', (req, res, next) => {
-  console.log('2. Request reaching /api/source-attributes/bulk in app.js');
+app.use('/api/resource-attributes/bulk', (req, res, next) => {
+  console.log('2. Request reaching /api/resource-attributes/bulk in app.js');
   next();
-}, sourceAttributeRoutes);
+}, resourceAttributeRoutes);
 
-app.use('/api/ddsources', (req, res, next) => {
-  console.log('2. Request reaching /api/ddsources in app.js');
+app.use('/api/resource-profiles', (req, res, next) => {
+  console.log('2. Request reaching /api/resource-profiles in app.js');
   next();
-}, sourceRoutes);
+}, resourceProfileRoutes);
 
 app.use('*', (req, res) => {
   console.log('Unmatched route:', req.originalUrl);

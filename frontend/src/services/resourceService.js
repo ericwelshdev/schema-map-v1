@@ -3,7 +3,7 @@ import axios from 'axios';
 const API_URL = 'http://localhost:5000/api';
 
 export const getSources = async () => {
-  const response = await axios.get(`${API_URL}/sources`);
+  const response = await axios.get(`${API_URL}/resources`);
   return response.data;
 };
 
@@ -30,7 +30,7 @@ export const postSource = async (sourceData) => {
 
 
 try {
-    const response = await axios.post(`${API_URL}/sources`, formattedData);
+    const response = await axios.post(`${API_URL}/resources`, formattedData);
     console.log('response.data', response.data);
     const { dsstrc_attr_grp_id } = response.data;
 
@@ -47,10 +47,10 @@ try {
 };
 
 export const putSource = async (id, sourceData) => {
-  const response = await axios.put(`${API_URL}/sources/${id}`, sourceData);
+  const response = await axios.put(`${API_URL}/resources/${id}`, sourceData);
   return response.data;
 };
 
 export const deleteSource = async (id) => {
-  await axios.delete(`${API_URL}/sources/${id}`);
+  await axios.delete(`${API_URL}/resources/${id}`);
 };

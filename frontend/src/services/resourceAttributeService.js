@@ -3,7 +3,7 @@ import axios from 'axios';
 const API_URL = 'http://localhost:5000/api';
 
 export const getSourceAttribute = async () => {
-  const response = await axios.get(`${API_URL}/source-attributes`);
+  const response = await axios.get(`${API_URL}/resource-attributes`);
   return response.data;
 };
 
@@ -36,7 +36,7 @@ export const postSourceAttribute = async (sourceAttrbute) => {
 
 
 
-    const response = await axios.post(`${API_URL}/source-attributes`, data);
+    const response = await axios.post(`${API_URL}/resource-attributes`, data);
     console.log('response.data', response.data);
     const { dsstrc_attr_grp_id } = response.data;
 
@@ -53,12 +53,12 @@ export const postSourceAttribute = async (sourceAttrbute) => {
 };
 
 export const putSourceAttribute = async (id, sourceData) => {
-  const response = await axios.put(`${API_URL}/source-attributes/${id}`, sourceData);
+  const response = await axios.put(`${API_URL}/resource-attributes/${id}`, sourceData);
   return response.data;
 };
 
 export const deleteSourceAttribute = async (id) => {
-  await axios.delete(`${API_URL}/sourceAttributes/${id}`);
+  await axios.delete(`${API_URL}/resource-attributes/${id}`);
 };
 
 

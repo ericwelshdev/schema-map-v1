@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Box, Tabs, Tab, Typography, TextField, Button } from '@mui/material';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Box, Tabs, Tab, Typography, TextField, Button , Chip, Autocomplete  } from '@mui/material';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
@@ -11,6 +11,8 @@ import LockPersonIcon from '@mui/icons-material/LockPerson';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import UndoIcon from '@mui/icons-material/Undo';
 import WarningIcon from '@mui/icons-material/Warning';
+import KeyIcon from '@mui/icons-material/Key';
+import LinkIcon from '@mui/icons-material/Link';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import { SquareChartGanttIcon, TablePropertiesIcon, Grid3X3Icon, LetterTextIcon } from "lucide-react";
 import { debounce } from 'lodash';
@@ -40,6 +42,9 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
           comment: '',
           isPII: false,
           isPHI: false,
+          isPrimaryKey: false,
+          isForeignKey: false,
+          tags: [],
           isEditing: false,
           isChanged: false,
           isDisabled: false,
@@ -97,101 +102,131 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
       localStorage.setItem('previewTabValue', newValue);
     };
 
-    const persistRows = async (updatedRows) => {
+    const persistRows = useCallback(async (updatedRows) => {
       setRows(updatedRows);
-      console.log('persistRows: setData ->resourcePreviewRows', updatedRows);
-  
       await setData('resourcePreviewRows', updatedRows);
-      
       onDataChange?.({
         processedSchema: updatedRows,
         sampleData,
         resourceInfo
       });
-      console.log('Saved Updated rows:', updatedRows);
-    };
+    }, [onDataChange, sampleData, resourceInfo]);
 
-  const handleEditClick = (id) => {
-    persistRows(rows.map(row => row.id === id ? { ...row, isEditing: true, isUnsaved: true } : row));
-  };
+    const handleEditClick = useCallback((id) => {
+      persistRows(rows.map(row => row.id === id ? { ...row, isEditing: true, isUnsaved: true } : row));
+    }, [persistRows, rows]);
 
-  const handleSaveClick = (id) => {
-    // console.log('Saving row with id:', id);
-    persistRows(rows.map(row => {
-      // console.log('Row id:', row.id,  'Original state:', row.originalState, "Current state:", row);
-      if (row.id === id) {
-        const currentState = {
+
+
+
+
+
+const [tagDictionary, setTagDictionary] = useState([]);
+
+const handleCellChange = useCallback((params) => {
+  persistRows(rows.map(row => {
+    if (row.id === params.id) {
+      const newValue = params.value !== undefined ? params.value : row[params.field];
+      return {
+        ...row,
+        [params.field]: newValue,
+        isEditing: true,
+        isUnsaved: true,
+        isChanged: true
+      };
+    }
+    return row;
+  }));
+}, [persistRows, rows]);
+
+
+// Update tag handling
+const handleTagChange = useCallback((id, newTags) => {
+  setTagDictionary(prevDict => [...new Set([...prevDict, ...newTags])]);
+  persistRows(rows.map(row => 
+    row.id === id 
+      ? {
           ...row,
-          isEditing: false,
-          isUnsaved: false
-        };
-        return {
-          ...currentState,
-          isChanged: true,
-          originalState: { ...currentState }
-        };
-      }
-      
-      return row;
-    }));
-  };
-  
-
-  const handleCancelClick = (id) => {
-    persistRows(rows.map(row => {
-      if (row.id === id) {
-        return { ...row.originalState, id: row.id, isEditing: false, isChanged: false, isUnsaved: false };
-      }
-      return row;
-    }));
-  };
-
-  const handleDisableClick = (id) => {
-    persistRows(rows.map(row => {
-      if (row.id === id) {
-        const newDisabledState = !row.isDisabled;
-        const isChanged = newDisabledState !== row.originalState.isDisabled;
-        return { ...row, isDisabled: newDisabledState, isChanged, isUnsaved: true, isEditing: true };
-      }
-      return row;
-    }));
-  };
-
-  const handleUndoClick = (id) => {
-    persistRows(rows.map(row => {
-      if (row.id === id) {
-        // Restore from originalState while maintaining row structure
-        return {
-          ...row.originalState,
-          id: row.id,
-          isEditing: false,
-          isChanged: false,
-          isUnsaved: false
-        };
-      }
-      return row;
-    }));
-  };
-
-  const handleCellChange = (params) => {
-    // console.log('Cell change:', params.field, params.value); // Keep this for debugging
-    
-    persistRows(rows.map(row => {
-      if (row.id === params.id) {
-        // Ensure we capture the actual value from the cell edit
-        const newValue = params.value !== undefined ? params.value : row[params.field];
-        
-        return {
-          ...row,
-          [params.field]: newValue,
+          user_tag_cmplx: JSON.stringify(newTags),
           isEditing: true,
           isUnsaved: true,
           isChanged: true
-        };
-      }
-      return row;
-    }));
-  };
+        }
+      : row
+  ));
+}, [rows, persistRows]);
+  
+  
+const handleTagDelete = useCallback((id, tagToDelete, tagType) => {
+  const row = rows.find(r => r.id === id);
+  const currentTags = JSON.parse(row[`${tagType}_tag_cmplx`] || '[]');
+  const newTags = currentTags.filter(tag => tag !== tagToDelete);
+  handleCellChange({
+    id,
+    field: `${tagType}_tag_cmplx`,
+    value: JSON.stringify(newTags)
+  });
+}, [rows, handleCellChange]);
+
+
+const handleSaveClick = useCallback((id) => {
+  persistRows(rows.map(row => {
+    if (row.id === id) {
+      const currentState = {
+        ...row,
+        isEditing: false,
+        isUnsaved: false
+      };
+      return {
+        ...currentState,
+        isChanged: true,
+        originalState: { ...currentState }
+      };
+    }
+    return row;
+  }));
+}, [persistRows, rows]);
+  
+
+const handleCancelClick = useCallback((id) => {
+  persistRows(rows.map(row => {
+    if (row.id === id) {
+      return { ...row.originalState, id: row.id, isEditing: false, isChanged: false, isUnsaved: false };
+    }
+    return row;
+  }));
+}, [persistRows, rows]);
+
+const handleDisableClick = useCallback((id) => {
+  persistRows(rows.map(row => {
+    if (row.id === id) {
+      const newDisabledState = !row.isDisabled;
+      const isChanged = newDisabledState !== row.originalState.isDisabled;
+      return { ...row, isDisabled: newDisabledState, isChanged, isUnsaved: true, isEditing: true };
+    }
+    return row;
+  }));
+}, [persistRows, rows]);
+
+
+const handleUndoClick = useCallback((id) => {
+  persistRows(rows.map(row => {
+    if (row.id === id) {
+      return {
+        ...row.originalState,
+        id: row.id,
+        isEditing: false,
+        isChanged: false,
+        isUnsaved: false
+      };
+    }
+    return row;
+  }));
+}, [persistRows, rows]);
+
+
+
+
   
 
   const handleSaveAll = () => {
@@ -217,7 +252,9 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
     </Box>
   );
 
-  const schemaColumns = [
+  const memoizedColumns = useMemo(() => [
+
+
     {
       field: 'status',
       headerName: '',
@@ -239,14 +276,14 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
     {
       field: 'alternativeName',
       headerName: 'Alternative Name',
-      flex: 1,
+      width:150,
       editable: true,
       cellClassName: (params) => params.row.isDisabled ? 'disabled-cell' : '',
     },
     {
       field: 'type',
       headerName: 'Data Type',
-      flex: 1,
+      width:100,
       editable: true,
       cellClassName: (params) => params.row.isDisabled ? 'disabled-cell' : '',
     },
@@ -259,9 +296,89 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
       cellClassName: (params) => params.row.isDisabled ? 'disabled-cell' : '',
     },
     {
+      field: 'tags',
+      headerName: 'Tags',
+      flex: 1,
+      renderCell: (params) => {
+        const currentTags = JSON.parse(params.row.user_tag_cmplx || '[]');
+        
+        return (
+          <Autocomplete
+        multiple
+        freeSolo
+        size="small"
+        options={tagDictionary}
+        value={currentTags}
+        onChange={(_, newValue) => {
+          const uniqueValues = Array.from(new Set(newValue));
+          handleTagChange(params.id, uniqueValues);
+        }}
+        onBlur={(event) => {
+          const inputValue = event.target.value.trim();
+          if (inputValue && !currentTags.includes(inputValue)) {
+            handleTagChange(params.id, [...currentTags, inputValue]);
+          }
+        }}
+        renderTags={(value, getTagProps) =>
+          value.map((option, index) => {
+            const { key, ...chipProps } = getTagProps({ index });
+            return (
+              <Chip
+                key={key}
+                {...chipProps}
+                label={option}
+                onDelete={() => handleTagDelete(params.id, option, 'user')}
+                size="small"
+                sx={{ backgroundColor: 'lightblue' }}
+              />
+            );
+          })
+        }
+        renderInput={(params) => (
+          <TextField 
+            {...params} 
+            variant="outlined" 
+            size="small"
+            InputProps={{
+              ...params.InputProps,
+              value: '' // Ensures input is cleared after each submission
+            }}
+          />
+        )}
+      />
+        );
+      }
+    },
+    {
+      field: 'isPrimaryKey',
+      headerName: 'PK',
+      width: 50,
+      renderCell: (params) => (
+        <GridActionsCellItem
+          icon={<KeyIcon color={params.row.pk_ind ? "primary" : "disabled"} />}
+          label="Toggle Primary Key"
+          onClick={() => !params.row.isDisabled && handleCellChange({ id: params.id, field: 'pk_ind', value: !params.row.pk_ind })}
+          disabled={params.row.isDisabled}
+        />
+      )
+    },
+    {
+      field: 'isForeignKey',
+      headerName: 'FK',
+      width: 50,
+      renderCell: (params) => (
+        <GridActionsCellItem
+          icon={<LinkIcon color={params.row.fk_ind ? "primary" : "disabled"} />}
+          label="Toggle Foreign Key"
+          onClick={() => !params.row.isDisabled && handleCellChange({ id: params.id, field: 'fk_ind', value: !params.row.fk_ind })}
+          disabled={params.row.isDisabled}
+        />
+      )
+    },
+    {
       field: 'isPII',
       headerName: 'PII',
-      width: 100,
+      width: 50,
       renderCell: (params) => (
         <GridActionsCellItem
           icon={<LockPersonIcon color={params.row.isPII ? "primary" : "disabled"} />}
@@ -274,7 +391,7 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
     {
       field: 'isPHI',
       headerName: 'PHI',
-      width: 100,
+      width: 50,
       renderCell: (params) => (
         <GridActionsCellItem
           icon={<LocalHospitalIcon color={params.row.isPHI ? "primary" : "disabled"} />}
@@ -284,6 +401,7 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
         />
       )
     },
+   
     {
       field: 'actions',
       type: 'actions',
@@ -332,7 +450,21 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
         ];
       },
     },
-  ];
+  ], [
+    handleCancelClick,
+    handleCellChange,
+    handleDisableClick,
+    handleEditClick,
+    handleSaveClick,
+    handleTagChange,
+    handleTagDelete,
+    handleUndoClick,
+    rows,
+    tagDictionary
+  ]);
+  
+
+
   const renderSchema = () => (
     schema && schema.length > 0 ? (
       <Box sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
@@ -343,7 +475,7 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
         <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
         <DataGrid
           rows={rows}
-          columns={schemaColumns}          
+          columns={memoizedColumns}        
           autoPageSize
           rowsPerPageOptions={[10, 25, 50]}
           pageSizeOptions={[10, 100, { value: 1000, label: '1,000' }]}

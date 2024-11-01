@@ -1,7 +1,7 @@
 // frontend/src/components/pages/Sources.js
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { getSources, deleteSource } from '../services/sourceService';
+import { getSources, deleteSource } from '../services/resourceService';
 import { 
   Typography, Box, Breadcrumbs, Link, ToggleButtonGroup, ToggleButton,
   Card, CardContent, CardActions, IconButton, Grid, Divider, Dialog, DialogTitle,
@@ -36,7 +36,7 @@ const Sources = () => {
       const data = await getSources();
       setSources(data);
     } catch (error) {
-      console.error('Error fetching sources:', error);
+      console.error('Error fetching resources:', error);
     }
   };
 

@@ -1,30 +1,33 @@
 const express = require('express');
 const router = express.Router();
-const sourceController = require('../controllers/sourceController');
+const resourceController = require('../controllers/resourceController');
 
 router.use((req, res, next) => {
-    console.log('3. Request entered sourceRoutes.js');
+    console.log('3. Request entered reourceRoutes');
     next();
   });
 
   
-// Create a new Source
-router.post('/', sourceController.create);
+// Create a new resource
+router.post('/', resourceController.create);
 
-// Get all Source
+// bulk inserts for all rows 
+router.post('/bulk', resourceController.bulkCreate);
+
+// Get all resourceProfileController
 router.get('/', (req, res, next) => {
-    console.log('4. GET request received in sourceRoutes');
+    console.log('4. GET request received in resourceRoutes');
     next();
-  }, sourceController.getAll);
+  }, resourceController.getAll);
   
 
-// Get a Source by id
-router.get('/:id', sourceController.getById);
+// Get a resource by id
+router.get('/:id', resourceController.getById);
 
-// Update a Source by id
-router.put('/:id', sourceController.update);
+// Update a resource by id
+router.put('/:id', resourceController.update);
 
-// Delete a Source by id
-router.delete('/:id', sourceController.delete);
+// Delete a resource by id
+router.delete('/:id', resourceController.delete);
 
 module.exports = router;

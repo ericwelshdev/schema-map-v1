@@ -339,6 +339,13 @@ const inferXMLSchema = (sample) => {
   }));
 };
 
+// Calculate file checksum
+const calculateFileChecksum = async (file) => {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
 
 
 export const processFile = async (file, settings = {}, isInitialIngestion = true, progressCallback = () => {}) => {
@@ -387,13 +394,18 @@ export const processFile = async (file, settings = {}, isInitialIngestion = true
       resourceInfo: {
         name: file.name,
         type: file.type,
-        size: file.size,
+        size: file.size ?? 0,
+        numCols : schemaResult.schema.length ?? 0,
+        sampleNumRows: schemaResult.sampleData?.length ?? 0,
+        fullNumRows: schemaResult?.fullData?.length ?? schemaResult.sampleData?.length ?? 0,
+        processedDate: new Date().toLocaleString(),
         lastModified: new Date(file.lastModified).toLocaleString(),
+        createdDate: new Date().toLocaleString(),
+        checksum: await calculateFileChecksum(file) ,
+        sourceLocation: URL.createObjectURL(file),
         file: file,
         hasHeader: hasHeader
       },
-      numCols : schemaResult.schema.length,
-      numRows: schemaResult.sampleData.length,
       fullData: schemaResult.fullData,
       sampleData: schemaResult.sampleData,
       rawData: schemaResult.rawData,

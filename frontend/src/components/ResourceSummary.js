@@ -19,13 +19,15 @@ import ErrorIcon from '@mui/icons-material/Error';
 import { getData } from '../utils/storageUtils';
 import { postSource } from '../services/resourceService';
 import { postBulkSourceAttribute } from '../services/resourceAttributeService';
-import { postDDSource } from '../services/ddSourceService';
+import { postResourceProfile } from '../services/resourceProfileService';
 
 const ResourceSummary = ({ wizardState }) => {
   const [profilingOption, setProfilingOption] = useState('now');
   const [generalConfigData, setGeneralConfig] = useState({});
   const [resourceGeneralConfig, setResourceGeneralConfig] = useState({});
+  const [resourceSchemaConfig, setResourceSchmeaConfig] = useState({});
   const [ddResourceGeneralConfig, setDDResourceGeneralConfig] = useState({});
+  const [ddResourceSchemaConfig, setDDResourceSchemaConfig] = useState({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [saveProgress, setSaveProgress] = useState({
     activeStep: 0,
@@ -45,28 +47,47 @@ const ResourceSummary = ({ wizardState }) => {
     const loadConfigs = async () => {
       try {
 
-        const wizardStateEssential = await localStorage.getItem('wizardStateEssential');
+        const wizardStateEssential = await localStorage.getItem('wizardStateEssential') || {};
         const generalConfigData = typeof wizardStateEssential === 'string' 
-          ? JSON.parse(wizardStateEssential) 
-          : wizardStateEssential;  
+        ? JSON.parse(wizardStateEssential) 
+        : wizardStateEssential;
 
-        const resourceGeneralConfig = await getData('resourcePreviewRows') || {};
+        const rawResourceGeneralConfig = await localStorage.getItem('resourceGeneralConfig') || {};
+        const resourceGeneralConfig = typeof rawResourceGeneralConfig === 'string' 
+        ? JSON.parse(rawResourceGeneralConfig) 
+        : rawResourceGeneralConfig;
+
         console.log('Resource General Config:', resourceGeneralConfig);
 
-        const ddResourceGeneralConfig = await getData('ddResourcePreviewRows') || {};
-        console.log('DD Resource General Config:', ddResourceGeneralConfig);        
+        const rawDDResourceGeneralConfig = await localStorage.getItem('ddResourceGeneralConfig') || {};
+        const ddResourceGeneralConfig = typeof rawDDResourceGeneralConfig === 'string' 
+        ? JSON.parse(rawDDResourceGeneralConfig) 
+        : rawDDResourceGeneralConfig;
+        
+        console.log('DDResource General Config:', ddResourceGeneralConfig);
+
+        const resourceSchmeaConfig = await getData('resourcePreviewRows') || {};
+        console.log('Resource Schema Config:', resourceSchmeaConfig);
+
+        const ddResourceSchemaConfig = await getData('ddResourcePreviewRows') || {};
+        console.log('DD Resource Schema Config:', ddResourceGeneralConfig);        
 
 
         console.log('Parsed General Config:', generalConfigData);
         
         setGeneralConfig(generalConfigData);        
+        setResourceSchmeaConfig(resourceSchmeaConfig);
+        setDDResourceSchemaConfig(ddResourceSchemaConfig);
         setResourceGeneralConfig(resourceGeneralConfig);
-        setDDResourceGeneralConfig(ddResourceGeneralConfig);
+        setDDResourceGeneralConfig(ddResourceGeneralConfig);        
       } catch (error) {
         console.log('Config loading fallback activated');
         setGeneralConfig({});
+        setResourceSchmeaConfig({});
+        setDDResourceSchemaConfig({});
         setResourceGeneralConfig({});
         setDDResourceGeneralConfig({});
+
       }
     };
     
@@ -79,6 +100,9 @@ const ResourceSummary = ({ wizardState }) => {
     try {
       setIsProcessing(true);
       setSaveProgress(prev => ({ ...prev, activeStep: 0 }));
+
+
+      // 1. Save Resource Configuration
       console.log('General Config Data:', generalConfigData.resourceSetup);
       // Log the source data being sent
       const sourceData = {
@@ -98,15 +122,57 @@ const ResourceSummary = ({ wizardState }) => {
       const savedSource = await postSource(sourceData);
 
       const sourceId = savedSource?.dsstrc_attr_grp_id;
-      console.log('Saved Source ID:', sourceId);
+      console.log('Saved resource ID:', sourceId);
+
+
+      console.log('General resourceInfo Data:', generalConfigData.resourceInfo);
+
+      // 2. Save Resource Profile Configuration
+      const profileData = {
+        dsstrc_attr_grp_id: sourceId,
+        stdiz_abrvd_attr_grp_nm: resourceGeneralConfig?.resourceInfo?.name,
+        ds_instc_data_cntnt_typ_cd: resourceGeneralConfig?.resourceType,
+        ds_instc_data_cntnt_nm: resourceGeneralConfig?.resourceInfo?.type,
+        ds_instc_data_cntnt_min_dt: null,
+        ds_instc_data_cntnt_max_dt: null,
+        par_ds_instc_id: null,
+        ds_instc_physcl_nm: resourceGeneralConfig?.resourceInfo?.name,
+        ds_instc_loc_txt: resourceGeneralConfig?.resourceInfo?.sourceLocation,
+        ds_instc_arrival_dt: resourceGeneralConfig?.resourceInfo?.lastModified,
+        ds_instc_publd_dt: resourceGeneralConfig?.resourceInfo?.lastModified,
+        ds_instc_row_cnt: resourceGeneralConfig?.fullNumRows,
+        ds_instc_col_cnt: resourceGeneralConfig?.numCols,
+        ds_instc_size_nbr: resourceGeneralConfig?.resourceInfo?.size,
+        ds_instc_comprsn_ind: null,
+        ds_instc_file_cnt: 1,
+        ds_instc_ingstn_prop_cmplx: JSON.stringify(resourceGeneralConfig?.ingestionSettings),
+        ds_instc_chksum_id: resourceGeneralConfig?.resourceInfo?.checksum,
+        ds_instc_part_ind: false,
+        ds_instc_late_arrival_ind: false,
+        ds_instc_resupply_ind: false,
+        pii_ind: wizardState?.resourceConfig?.processedSchema?.some(col => col?.isPII) || false,
+        phi_ind: wizardState?.resourceConfig?.processedSchema?.some(col => col?.isPHI) || false,
+        ai_tag_cmplx: null,
+        user_tag_cmplx: JSON.stringify(generalConfigData?.resourceSetup?.resourceTags || []),
+        usr_cmt_txt: generalConfigData?.resourceSetup?.resourceDescription,
+        oprtnl_stat_cd: 'Active'
+      };
+
+      console.log('Sending resource Profile data:', profileData);
+      const savedProfileData = await postResourceProfile(profileData);
+
+      const resourceProfileId = savedProfileData?.ds_attr_grp_instc_prof_id;
+      console.log('Saved resource Profile ID:', resourceProfileId);
+
       
+      // 3. Save Resource Schema
       // Continue with rest of the save process
       setSaveProgress(prev => ({ ...prev, activeStep: 1 }));
       // Add schema processing logic
-      console.log('Resource General Config Data:', resourceGeneralConfig);
+      console.log('Resource General Config Data:', resourceSchemaConfig);
       // Log the source data being sent
 
-      const columnData = resourceGeneralConfig?.map((column) => ({
+      const columnData = resourceSchemaConfig?.map((column) => ({
         ds_id: 0,
         dsstrc_attr_grp_id: sourceId,
         stdiz_abrvd_attr_grp_nm: generalConfigData?.resourceSetup?.standardizedSourceName,
@@ -127,10 +193,10 @@ const ResourceSummary = ({ wizardState }) => {
         oprtnl_stat_cd: 'Active'
       }));
       
-      console.log('Sending column data:', resourceGeneralConfig);
-      console.log('Sending source attribute data:', columnData);
+      // console.log('Sending column data:', resourceSchemaConfig);
+      console.log('Sending resource attribute data:', columnData);
       const savedSourceAttributeData = await postBulkSourceAttribute({ attributes: columnData }); 
-      console.log('Recevied saved attribute data:', savedSourceAttributeData);
+      console.log('Recevied saved resource attribute data:', savedSourceAttributeData);
 
 
       // Step 3: Save Data Dictionary if needed
@@ -140,7 +206,7 @@ const ResourceSummary = ({ wizardState }) => {
 
         setSaveProgress(prev => ({ ...prev, activeStep: 0 }));
         console.log('General Config Data:', generalConfigData.ddResourceSetup);
-        // Log the source data being sent
+        // Log the resource data being sent
         const ddSourceData = {
           stdiz_abrvd_attr_grp_nm: generalConfigData?.ddResourceSetup?.standardizedSourceName,
           dsstrc_attr_grp_nm: generalConfigData?.ddResourceSetup?.resourceName,
@@ -154,23 +220,23 @@ const ResourceSummary = ({ wizardState }) => {
           oprtnl_stat_cd: 'Active'
         };
   
-        console.log('Sending Data Dictionary source data:', ddSourceData);
+        console.log('Sending Data Dictionary resource data:', ddSourceData);
         const savedDDSource = await postSource(ddSourceData);
   
         const ddSourceId = savedDDSource?.dsstrc_attr_grp_id;
-        console.log('Saved Data Dictionary Source ID:', ddSourceId);
+        console.log('Saved Data Dictionary resource ID:', ddSourceId);
 
 
 
       // Continue with rest of the save process
       setSaveProgress(prev => ({ ...prev, activeStep: 1 }));
       // Add schema processing logic
-      console.log('Data Dictionary Resource General Config Data:', ddResourceGeneralConfig);
-      // Log the source data being sent
+      console.log('Data Dictionary Resource General Config Data:', ddResourceSchemaConfig);
+      // Log the resource data being sent
 
-      const ddColumnData = ddResourceGeneralConfig?.map((column) => ({
+      const ddColumnData = ddResourceSchemaConfig?.map((column) => ({
         ds_id: 0,
-        dsstrc_attr_grp_id: sourceId,
+        dsstrc_attr_grp_id: ddSourceId,
         stdiz_abrvd_attr_grp_nm: generalConfigData?.ddResourceSetup?.standardizedSourceName,
         dsstrc_attr_nm: column.name,
         dsstrc_alt_attr_nm: column.alternativeName,
@@ -189,7 +255,7 @@ const ResourceSummary = ({ wizardState }) => {
         oprtnl_stat_cd: 'Active'
       }));
       
-      console.log('Sending column data:', ddResourceGeneralConfig);
+      // console.log('Sending column data:', ddResourceSchemaConfig);
       console.log('Sending Data Dictionary attribute data:', ddColumnData);
       const savedDDSourceAttributeData = await postBulkSourceAttribute({ attributes: ddColumnData }); 
       console.log('Recevied Data Dictionary saved attribute data:', savedDDSourceAttributeData);
