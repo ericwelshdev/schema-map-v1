@@ -2,12 +2,12 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:5000/api';
 
-export const getSourceGroupAssociations = async () => {
+export const getResourceGroupAssociations = async () => {
   const response = await axios.get(`${API_URL}/resource-associations`);
   return response.data;
 };
 
-export const postSourceGroupAssociation = async (sourceData) => {
+export const postResourceGroupAssociation = async (sourceData) => {
   const formattedData = {
     ds_id: 0, 
     dsstrc_attr_grp_assc_id: null,
@@ -46,12 +46,12 @@ try {
   }
 };
 
-export const putSourceGroupAssociation = async (id, sourceData) => {
+export const putResourceGroupAssociation = async (id, sourceData) => {
   const response = await axios.put(`${API_URL}/resource-associations/${id}`, sourceData);
   return response.data;
 };
 
-export const deleteSourceGroupAssociation = async (id) => {
+export const deleteResourceGroupAssociation = async (id) => {
   await axios.delete(`${API_URL}/resource-associations/${id}`);
 };
 

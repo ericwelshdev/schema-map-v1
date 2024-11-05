@@ -98,12 +98,19 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
         return acc;
       }, {});
   
-      const allDictionaryColumns = sourceData.ddResourcePreviewRows.map(column => column.name);
-      const mappedEntry = allDictionaryColumns.reduce((acc, columnName) => {
-        acc[columnName] = '';
-        return acc;
-      }, {});
+      // Create base entry with operational columns
+      const mappedEntry = {
+        mapping_state: newDictionaryEntry.sourceType === 'manual' ? 'manual' : newDictionaryEntry.mappingState || 'unaltered',
+        source_type: newDictionaryEntry.sourceType || 'source'
+      };
   
+      // Add dictionary columns
+      const allDictionaryColumns = sourceData.ddResourcePreviewRows.map(column => column.name);
+      allDictionaryColumns.forEach(columnName => {
+        mappedEntry[columnName] = '';
+      });
+  
+      // Map values based on classifications
       Object.entries(columnMappings).forEach(([classification, columnNames]) => {
         columnNames.forEach(columnName => {
           let value = '';
@@ -373,7 +380,9 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
           isPHI: Boolean(sourceColumn.isPHI),
           isDisabled: Boolean(sourceColumn.isDisabled),
           alternativeName: sourceColumn.alternativeName || '',
-          tags: Array.isArray(sourceColumn.tags) ? sourceColumn.tags : []
+          tags: Array.isArray(sourceColumn.tags) ? sourceColumn.tags : [],
+          mappingState: 'unaltered', // Initial state
+          sourceType: 'source'  // Default source type
         };
       });
   
@@ -469,6 +478,9 @@ const persistRows = useCallback(async (updatedRows) => {
     console.log('Opening dialog with resourceSchema:', matchResult);
     setOpenCandidateDialog(true);
   };
+
+
+  
   const handleMatchChange = useCallback((rowId, newValue, score) => {
     console.log('!!handleMatchChange -> called with rowId:', rowId, 'newValue:', newValue, 'score:', score);
     const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
@@ -483,7 +495,7 @@ const persistRows = useCallback(async (updatedRows) => {
           stringSimilarity.compareTwoStrings(
             row.source_column_name.toLowerCase(),
             newValue.columnName.toLowerCase()
-          );
+        );
   
         const matchedDDRow = sourceData.ddResourceFullData.find(
           ddRow => ddRow[columnNameField] === newValue.columnName &&
@@ -555,7 +567,10 @@ const persistRows = useCallback(async (updatedRows) => {
       foreignKey: selectedMapping.foreignKey,
       isPHI: selectedMapping.isPHI,
       isPII: selectedMapping.isPII,
-      isNullable: selectedMapping.isNullable
+      isNullable: selectedMapping.isNullable,
+      mappingState: 'manual',
+      sourceType: 'manual',
+      score: 1.0
     };
     
       console.log('New dictionary entry:', newDictionaryEntry);
@@ -713,7 +728,7 @@ useEffect(() => {
   // Add these component definitions before the main ResourceMappingTagging component
   const TableStatsCard = ({ stats, onChangeTable }) => (
     <Card sx={{ mb: 1 }}>
-      <CardContent>
+      <CardContent sx={{pb:2}} >
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={2.5}>
             <Typography variant="subtitle2" color="textSecondary">Current Table</Typography>
@@ -1004,6 +1019,7 @@ useEffect(() => {
     matchResults.map((match, index) => ({
       id: index,
       sourceColumn: match.source_column_name,
+      mappingState: match.mappingState || 'unaltered',
       alternativeName: match.alternative_name || '',
       matchedColumn: {
         tableName: match.matched_table_name,
@@ -1066,7 +1082,7 @@ useEffect(() => {
           Cancel All
         </Button>
       </Box>
-      <Box sx={{ height: 550, width: '100%', overflow: 'auto' }}>
+      <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
         <DataGrid
           rows={rows}
           columns={columns}

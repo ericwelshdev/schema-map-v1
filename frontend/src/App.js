@@ -32,43 +32,54 @@ import { WorkspaceProvider } from './contexts/WorkspaceContext';
     mode: userConfig.theme,
   },
 });
-
-function App() {
-  return (
-    <Provider store={store}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <SnackbarProvider maxSnack={3}>
-          <ErrorBoundary>
-            <ViewProvider>
-              <WorkspaceProvider>
-                <Router>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-                    <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                      <Sidebar />
-                      <Box component="main" sx={{ flexGrow: 1, p: 3, overflow: 'auto' }}>
-                        <Routes>
-                          <Route path="/login" element={<Login />} />
-                          <Route path="/register" element={<Register />} />
-                          <Route path="/dashboard" element={<Dashboard />} />
-                          <Route path="/workspace" element={<Workspace />} />
-                          <Route path="/projects" element={<Projects />} />
-                          <Route path="/sources" element={<Sources />} />
-                          <Route path="/source/:id" element={<SourceDetail />} />
-                          <Route path="/sources/new" element={<NewSource />} />
-                          <Route path="/targets" element={<Targets />} />
-                          <Route path="/admin" element={<Admin />} />
-                        </Routes>
+  function App() {
+    return (
+      <Provider store={store}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <SnackbarProvider maxSnack={3}>
+            <ErrorBoundary>
+              <ViewProvider>
+                <WorkspaceProvider>
+                  <Router>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+                      <Header />
+                      <Box sx={{ display: 'flex', flex: 1, pt: 6 }}>
+                        <Sidebar />
+                        <Box component="main" sx={{ 
+                          flexGrow: 1, 
+                          p: 3, 
+                          mt:-5,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          overflow: 'auto'
+                        }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Routes>
+                              <Route path="/login" element={<Login />} />
+                              <Route path="/register" element={<Register />} />
+                              <Route path="/dashboard" element={<Dashboard />} />
+                              <Route path="/workspace" element={<Workspace />} />
+                              <Route path="/projects" element={<Projects />} />
+                              <Route path="/sources" element={<Sources />} />
+                              <Route path="/source/:id" element={<SourceDetail />} />
+                              <Route path="/sources/new" element={<NewSource />} />
+                              <Route path="/targets" element={<Targets />} />
+                              <Route path="/admin" element={<Admin />} />
+                            </Routes>
+                          </Box>
+                        </Box>
                       </Box>
+                      <Footer />
                     </Box>
-                    <Footer />
-                  </Box>
-                </Router>
-              </WorkspaceProvider>
-            </ViewProvider>
-          </ErrorBoundary>
-        </SnackbarProvider>
-      </ThemeProvider>
-    </Provider>
-  );
-}export default App;
+                  </Router>
+                </WorkspaceProvider>
+              </ViewProvider>
+            </ErrorBoundary>
+          </SnackbarProvider>
+        </ThemeProvider>
+      </Provider>
+    );
+  }
+
+export default App;

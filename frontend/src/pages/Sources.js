@@ -1,7 +1,7 @@
 // frontend/src/components/pages/Sources.js
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { getSources, deleteSource } from '../services/resourceService';
+import { getResources, deleteResource } from '../services/resourceService';
 import { 
   Typography, Box, Breadcrumbs, Link, ToggleButtonGroup, ToggleButton,
   Card, CardContent, CardActions, IconButton, Grid, Divider, Dialog, DialogTitle,
@@ -33,7 +33,7 @@ const Sources = () => {
 
   const fetchSources = async () => {
     try {
-      const data = await getSources();
+      const data = await getResources();
       setSources(data);
     } catch (error) {
       console.error('Error fetching resources:', error);
@@ -63,7 +63,7 @@ const Sources = () => {
 
   const handleDeleteConfirm = async () => {
     try {
-      await deleteSource(selectedSource.ds_id);
+      await deleteResource(selectedSource.ds_id);
       setDeleteDialogOpen(false);
       fetchSources();
     } catch (error) {

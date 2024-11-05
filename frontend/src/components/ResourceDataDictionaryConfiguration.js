@@ -70,16 +70,39 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
     [handleConfigChange]
   );
 
-
+  
   const handleDataChange = (resourceData) => {
+    if (!resourceData?.schema) {
+      return;
+    }
+  
+    const enhancedSchema = resourceData.schema.map((col, index) => ({
+      ...col,
+      id: index,
+      mapping_state: 'unaltered',
+      source_type: 'source',
+      order: index + 1,
+      isChanged: false,
+      isUnsaved: false
+    }));
+  
+    const enhancedFullData = resourceData.fullData.map(row => ({
+      ...row,
+      mapping_state: 'unaltered',
+      source_type: 'source',
+      isChanged: false,
+      isUnsaved: false
+    }));
+  
     handleConfigChange({
-      processedSchema: resourceData.processedSchema,
+      processedSchema: enhancedSchema,
       schema: resourceData.schema,
-      fullData: resourceData.fullData,
+      fullData: enhancedFullData,
       sampleData: resourceData.sampleData,
       resourceInfo: resourceData.resourceInfo
     });
   };
+
 
   // useEffect(() => {
   //   if (savedState && JSON.stringify(savedState) !== JSON.stringify(ddResourceConfig)) {
@@ -168,7 +191,7 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
 
   return (
     <Box sx={{ '& > *': { mb: '1px', height: '100%' } }}>
-      {ddResourceConfig.uploadStatus && (
+      {/* {ddResourceConfig.uploadStatus && (
         <Alert severity={ddResourceConfig.uploadStatus.type} sx={{ mb: 2 }}>
           {ddResourceConfig.uploadStatus.message}
         </Alert>
@@ -178,7 +201,7 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
         <Alert severity="error" sx={{ mb: 2 }}>
           {ddResourceConfig.error}
         </Alert>
-      )}
+      )} */}
 
       <Accordion
         disableGutters={true}

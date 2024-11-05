@@ -2,12 +2,12 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:5000/api';
 
-export const getSourceAttributeAssociations = async () => {
+export const getResourceAttributeAssociations = async () => {
   const response = await axios.get(`${API_URL}/resource-attribute-associations`);
   return response.data;
 };
 
-export const postSourceAttributeAssociation = async (sourceData) => {
+export const postResourceAttributeAssociation = async (sourceData) => {
   const formattedData = {
     dsstrc_attr_assc_id: null,
     dsstrc_attr_grp_assc_id: sourceData.dsstrc_attr_grp_assc_id,
@@ -51,17 +51,17 @@ try {
   }
 };
 
-export const putSourceAttributeAssociation = async (id, sourceData) => {
+export const putResourceAttributeAssociation = async (id, sourceData) => {
   const response = await axios.put(`${API_URL}/resource-attribute-associations/${id}`, sourceData);
   return response.data;
 };
 
-export const deleteSourceAttributeAssociation = async (id) => {
+export const deleteResourceAttributeAssociation = async (id) => {
   await axios.delete(`${API_URL}/resource-attribute-associations/${id}`);
 };
 
 // Bulk create source attributes
-export const postBulkSourceAttributeAssociation = async (sourceAttributes) => {
+export const postBulkResourceAttributeAssociation = async (sourceAttributes) => {
   // console.log('postBulkSourceAttributeAssociation Input column data:', sourceAttributes);
   try {
     const sourceData = sourceAttributes.attributes.map(attr => ({

@@ -2,15 +2,15 @@
   import { Box, Card, CardContent, Typography, LinearProgress, Alert} from '@mui/material';
   import { Upload } from 'lucide-react';
   import { processFile } from '../utils/fileUtils';
-  import AlertComponent from './AlertComponent';
+  import { useView } from '../contexts/ViewContext';
 
   const ResourceFileIngestionSetup = ({ onConfigChange = {} }) => {
+    const { setFooterAlert } = useView();
     const [progress, setProgress] = useState(0);
     const [loading, setLoading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const fileTypes = [".txt", ".csv", ".xls", ".xlsx", ".json", ".xml", ".parquet", ".snappy", ".hive"];
-
     const handleDragEnter = (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -56,10 +56,19 @@
       try {
         const result = await processFile(file, ingestionSettings, true, updateProgress);
         setUploadStatus(result.uploadStatus);
+        setFooterAlert({
+          type: 'success',
+          message: 'File processed successfully'
+        });
         onConfigChange(result);
         console.log('handleFileUpload-> Result:', result);
       } catch (error) {
         setUploadStatus({ type: 'error', message: error.message });
+
+        setFooterAlert({
+          type: 'error',
+          message: error.message
+        });
         onConfigChange({
           uploadStatus: { type: 'error', message: error.message }
         });

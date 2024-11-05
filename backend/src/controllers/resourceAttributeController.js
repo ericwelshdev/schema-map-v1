@@ -1,95 +1,160 @@
 const { Op } = require('sequelize');
-const Source = require('../models/DataStructureAttribute');
+const SourceData = require('../models/DataStructureAttribute');
 
-// Create a new resource attributes
+// Create a new resource attribute
 exports.create = async (req, res) => {
     try {
-        const resource = await Source.create(req.body);
+        const resource = await SourceData.create({
+            ...req.body,
+            cre_ts: new Date(),
+            updt_ts: new Date()
+        });
         res.status(201).json(resource);
     } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
-};
-
-// Create a new resource attributes in bulk
-exports.bulkCreate = async (req, res) => {
-    try {
-        // console.log('Received data for bulk create:', req.body);
-        
-        // ensure we have an array of attributes to create
-        if (!Array.isArray(req.body)) {
-            throw new Error('Expected an array of attributes');
-        }
-
-        const resources = await Source.bulkCreate(req.body, {
-            returning: true
-        });
-        
-        res.status(201).json(resources);
-    } catch (error) {
-        console.error('Bulk create error:', error);
-        res.status(400).json({ error: error.message });
-    }
-};
-
-
-  
-// Get all resources attributes
-exports.getAll = async (req, res) => {
-    try {
-        console.log('Executing SQL query:', Source.findAll().toString());
-        const resources = await Source.findAll({
-            where: {
-                dsstrc_attr_grp_src_typ_cd: 'Source'
+        console.error('Create error:', error);
+        res.status(400).json({
+            error: {
+                name: error.name,
+                message: error.message,
+                details: error.errors?.map(e => ({
+                    field: e.path,
+                    type: e.type,
+                    message: e.message,
+                    value: e.value
+                })),
+                sql: error.parent?.sql,
+                code: error.parent?.code
             }
         });
-        console.log('7. SQL query result:', resources.toString());
-        res.status(200).json(resources);
-    } catch (error) {
-        console.error('Error fetching resources:', error);
-        res.status(400).json({ error: error.message });
     }
 };
-// Get resource attributes by ID
-exports.getById = async (req, res) => {
-    const { id } = req.params;
+
+
+exports.bulkCreate = async (req, res) => {
     try {
-        const resource = await Source.findByPk(id);
+        console.log('Received request body:', req.body);
+        if (!req.body || !Array.isArray(req.body)) {
+            throw new Error('Invalid request format - expected array of attributes');
+        }
+        const resources = await SourceData.bulkCreate(req.body);
+        res.status(201).json(resources);
+    } catch (error) {
+        const errorResponse = {
+            error: {
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
+                errors: error.errors?.map(e => ({
+                    field: e.path,
+                    type: e.type,
+                    message: e.message,
+                    value: e.value
+                })),
+                sql: error.parent?.sql,
+                code: error.parent?.code
+            }
+        };
+        console.log('Error details:', errorResponse);
+        res.status(400).json(errorResponse);
+    }
+};
+
+
+
+// Fetch all resource attributes
+exports.getAll = async (req, res) => {
+    try {
+        const resources = await SourceData.findAll();
+        res.status(200).json(resources);
+    } catch (error) {
+        console.error('Fetch all error:', error);
+        res.status(400).json({
+            error: {
+                name: error.name,
+                message: error.message,
+                details: error.errors?.map(e => ({
+                    field: e.path,
+                    type: e.type,
+                    message: e.message
+                }))
+            }
+        });
+    }
+};
+
+// Fetch a specific resource attribute by ID
+exports.getById = async (req, res) => {
+    try {
+        const resource = await SourceData.findByPk(req.params.id);
         if (!resource) {
-            return res.status(404).json({ error: 'Source not found' });
+            return res.status(404).json({ error: { message: 'Resource not found' } });
         }
         res.status(200).json(resource);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error('Fetch by ID error:', error);
+        res.status(400).json({
+            error: {
+                name: error.name,
+                message: error.message,
+                details: error.errors?.map(e => ({
+                    field: e.path,
+                    type: e.type,
+                    message: e.message
+                }))
+            }
+        });
     }
 };
 
-// Update a resource attributes
+// Update an existing resource attribute
 exports.update = async (req, res) => {
-    const { id } = req.params;
     try {
-        const resource = await Source.findByPk(id);
+        const resource = await SourceData.findByPk(req.params.id);
         if (!resource) {
-            return res.status(404).json({ error: 'Source not found' });
+            return res.status(404).json({ error: { message: 'Resource not found' } });
         }
         await resource.update(req.body);
         res.status(200).json(resource);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error('Update error:', error);
+        res.status(400).json({
+            error: {
+                name: error.name,
+                message: error.message,
+                details: error.errors?.map(e => ({
+                    field: e.path,
+                    type: e.type,
+                    message: e.message,
+                    value: e.value
+                })),
+                sql: error.parent?.sql,
+                code: error.parent?.code
+            }
+        });
     }
 };
 
-// Delete a resource attributes
+// Delete a resource attribute by ID
 exports.delete = async (req, res) => {
-    const { id } = req.params;
     try {
-        const resource = await Source.findByPk(id);
+        const resource = await SourceData.findByPk(req.params.id);
         if (!resource) {
-            return res.status(404).json({ error: 'Source not found' });
+            return res.status(404).json({ error: { message: 'Resource not found' } });
         }
         await resource.destroy();
         res.status(204).send();
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error('Delete error:', error);
+        res.status(400).json({
+            error: {
+                name: error.name,
+                message: error.message,
+                details: error.errors?.map(e => ({
+                    field: e.path,
+                    type: e.type,
+                    message: e.message
+                }))
+            }
+        });
     }
 };

@@ -16,7 +16,20 @@ exports.create = async (req, res) => {
         res.status(201).json(resource);
     } catch (error) {
         console.error('Create error:', error);
-        res.status(400).json({ message: error.message });
+        res.status(400).json({
+            error: {
+                message: error.message,
+                name: error.name,
+                details: error.errors?.map(e => ({
+                    field: e.path,
+                    type: e.type,
+                    message: e.message,
+                    value: e.value
+                })),
+                sql: error.parent?.sql,
+                code: error.parent?.code
+            }
+        });
     }
 };
 
@@ -27,7 +40,20 @@ exports.bulkCreate = async (req, res) => {
         res.status(201).json(resources);
     } catch (error) {
         console.error('Bulk create error:', error);
-        res.status(400).json({ message: error.message });
+        res.status(400).json({
+            error: {
+                message: error.message,
+                name: error.name,
+                details: error.errors?.map(e => ({
+                    field: e.path,
+                    type: e.type,
+                    message: e.message,
+                    value: e.value
+                })),
+                sql: error.parent?.sql,
+                code: error.parent?.code
+            }
+        });
     }
 };
 
@@ -45,8 +71,21 @@ exports.getAll = async (req, res) => {
         console.log('7. SQL query result:', resources.toString());
         res.status(200).json(sources);
     } catch (error) {
-        console.error('Error fetching resource Group Profile:', error);
-        res.status(400).json({ error: error.message });
+        console.error('Get error:', error);
+        res.status(400).json({
+            error: {
+                message: error.message,
+                name: error.name,
+                details: error.errors?.map(e => ({
+                    field: e.path,
+                    type: e.type,
+                    message: e.message,
+                    value: e.value
+                })),
+                sql: error.parent?.sql,
+                code: error.parent?.code
+            }
+        });
     }
 };
 // Get resourceGroupProfile by ID
@@ -59,7 +98,21 @@ exports.getById = async (req, res) => {
         }
         res.status(200).json(resource);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error('Get By ID error:', error);
+        res.status(400).json({
+            error: {
+                message: error.message,
+                name: error.name,
+                details: error.errors?.map(e => ({
+                    field: e.path,
+                    type: e.type,
+                    message: e.message,
+                    value: e.value
+                })),
+                sql: error.parent?.sql,
+                code: error.parent?.code
+            }
+        });
     }
 };
 
@@ -74,7 +127,21 @@ exports.update = async (req, res) => {
         await resource.update(req.body);
         res.status(200).json(resource);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error('Update error:', error);
+        res.status(400).json({
+            error: {
+                message: error.message,
+                name: error.name,
+                details: error.errors?.map(e => ({
+                    field: e.path,
+                    type: e.type,
+                    message: e.message,
+                    value: e.value
+                })),
+                sql: error.parent?.sql,
+                code: error.parent?.code
+            }
+        });
     }
 };
 
@@ -89,6 +156,20 @@ exports.delete = async (req, res) => {
         await resource.destroy();
         res.status(204).send();
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error('Delete error:', error);
+        res.status(400).json({
+            error: {
+                message: error.message,
+                name: error.name,
+                details: error.errors?.map(e => ({
+                    field: e.path,
+                    type: e.type,
+                    message: e.message,
+                    value: e.value
+                })),
+                sql: error.parent?.sql,
+                code: error.parent?.code
+            }
+        });
     }
 };

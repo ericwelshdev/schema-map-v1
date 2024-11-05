@@ -38,6 +38,10 @@ DataStructureAttribute.init({
         type: DataTypes.STRING,
         allowNull: false
     },
+    stdiz_abrvd_alt_attr_nm: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },    
     dsstrc_attr_seq_nbr: {
         type: DataTypes.INTEGER,
         allowNull: true

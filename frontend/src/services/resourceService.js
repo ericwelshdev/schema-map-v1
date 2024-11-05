@@ -2,12 +2,12 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:5000/api';
 
-export const getSources = async () => {
+export const getResources = async () => {
   const response = await axios.get(`${API_URL}/resources`);
   return response.data;
 };
 
-export const postSource = async (sourceData) => {
+export const postResource = async (sourceData) => {
   const formattedData = {
     ds_id: 0, 
     dsstrc_attr_grp_id: null,
@@ -46,11 +46,11 @@ try {
   }
 };
 
-export const putSource = async (id, sourceData) => {
+export const putResource = async (id, sourceData) => {
   const response = await axios.put(`${API_URL}/resources/${id}`, sourceData);
   return response.data;
 };
 
-export const deleteSource = async (id) => {
+export const deleteResource = async (id) => {
   await axios.delete(`${API_URL}/resources/${id}`);
 };

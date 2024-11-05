@@ -121,7 +121,7 @@ import { initDB,  getData, setData } from '../utils/storageUtils';
 
 
 
-
+const coreTags = ['PII', 'Sensitive', 'Confidential', 'Business', 'Required'];
 
 
 const [tagDictionary, setTagDictionary] = useState([]);
@@ -302,57 +302,51 @@ const handleUndoClick = useCallback((id) => {
       field: 'tags',
       headerName: 'Tags',
       flex: 1,
-      renderCell: (params) => {
-        const currentTags = JSON.parse(params.row.user_tag_cmplx || '[]');
-        
-        return (
-          <Autocomplete
-          multiple
-          freeSolo
-          size="small"
-          options={tagDictionary}
-          value={currentTags}
-          onChange={(_, newValue) => {
-          const uniqueValues = Array.from(new Set(newValue));
-            handleTagChange(params.id, uniqueValues);
-          }}
-        onBlur={(event) => {
-          const inputValue = event.target.value.trim();
-          if (inputValue && !currentTags.includes(inputValue)) {
-            handleTagChange(params.id, [...currentTags, inputValue]);
-          }
-          }}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => {
-              const { key, ...chipProps } = getTagProps({ index });
-              return (
-                <Chip
-                  key={key}
-                  {...chipProps}
-                  label={option}
-                onDelete={() => handleTagDelete(params.id, option, 'user')}
-                  size="small"
-                  sx={{ backgroundColor: 'lightblue' }}
-                />
-              );
-            })
-          }
-          renderInput={(params) => (
-            <TextField 
+      renderCell: (params) => (
+        <Autocomplete
+        multiple
+        options={coreTags}
+        freeSolo
+        renderTags={(value, getTagProps) =>
+          value.map((option, index) => {
+            const { key, ...tagProps } = getTagProps({ index });
+            return (
+              <Chip variant="outlined" label={option} key={key} {...tagProps}
+                size="small"
+                sx={{ 
+                  height: 25,
+                  fontSize: '0.6.5rem',
+                  color: 'primary.main',
+                  px: 1,
+                  '& .MuiChip-label': { px: 0.75 }
+                }}
+              />
+            );
+          })
+        }
+        renderInput={(params) => (
+          <TextField 
               {...params} 
               variant="outlined" 
-              size="small"
-            InputProps={{
-              ...params.InputProps,
-              value: '' // Ensures input is cleared after each submission
-            }}
+              size="small" 
+              placeholder="Add tags"
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  height: 35,
+                  minHeight: 'unset',
+                  fontSize: '0.8rem',
+                  padding: '0px',
+                  '& .MuiAutocomplete-input': {
+                    padding: '4px 6px'
+                  }
+                }
+              }}
             />
-          )}
-        />
-        );
-      }
-    }
-,
+        )}
+      />
+      )
+    },
+
     {
       field: 'isPrimaryKey',
       headerName: 'PK',

@@ -302,42 +302,30 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
       headerName: 'Schema Classification',
       flex: 1,
       renderCell: (params) => (
-        params.value ? (
-          <Chip
-          size={'small'}
-            label={params.value.label}
-            variant="outlined"
-            sx={{
-              backgroundColor: 'lightblue',
-              maxWidth: '100%',
-              fontSize:12
-            }}
-          />
-        ) : (
         <Autocomplete
           size="small"
-            options={schemaClassificationOptions.flatMap(group => group.options)}
-            groupBy={(option) => option.value.includes('physical') ? 'Mandatory' : 'Optional'}
-            getOptionLabel={(option) => option.label}
-            renderGroup={(params) => (
-              <li key={params.key}>
-                <GroupHeader>{params.group}</GroupHeader>
-                <GroupItems>{params.children}</GroupItems>
-              </li>
-            )}
-            value={params.value}
-            onChange={(event, newValue) => {
-              handleCellChange({
-            id: params.id,
-            field: 'schemaClassification',
-            value: newValue
-              });
-            }}
+          options={schemaClassificationOptions.flatMap(group => group.options)}
+          groupBy={(option) => option.value.includes('physical') ? 'Mandatory' : 'Optional'}
+          getOptionLabel={(option) => option.label}
+          value={params.value || null}
+          onChange={(event, newValue) => {
+            handleCellChange({
+              id: params.id,
+              field: 'schemaClassification',
+              value: newValue
+            });
+          }}
+          renderGroup={(params) => (
+            <li key={params.key}>
+              <GroupHeader>{params.group}</GroupHeader>
+              <GroupItems>{params.children}</GroupItems>
+            </li>
+          )}
           renderInput={(params) => (
             <TextField 
               {...params} 
               variant="outlined"
-                placeholder="No Classification"
+              placeholder="No Classification"
               sx={{ 
                 '& .MuiInputBase-root': {
                   height: 30
@@ -345,10 +333,10 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
               }}
             />
           )}
+          isOptionEqualToValue={(option, value) => option.value === value.value}
         />
-        )
       )
-    }
+    }    
     ,    
     {
       field: 'actions',

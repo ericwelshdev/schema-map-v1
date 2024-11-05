@@ -169,7 +169,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
 
   return (
     <Box sx={{ '& > *': { mb: '1px', height: '100%' } }}>
-      {resourceConfig.uploadStatus && (
+      {/* {resourceConfig.uploadStatus && (
         <Alert severity={resourceConfig.uploadStatus.type} sx={{ mb: 2 }}>
           {resourceConfig.uploadStatus.message}
         </Alert>
@@ -179,7 +179,7 @@ const ResourceConfiguration = ({ savedState, onStateChange }) => {
         <Alert severity="error" sx={{ mb: 2 }}>
           {resourceConfig.error}
         </Alert>
-      )}
+      )} */}
 
       <Accordion
         disableGutters={true}

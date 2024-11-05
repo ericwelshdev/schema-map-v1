@@ -25,6 +25,7 @@ import {
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import AdsClickIcon from '@mui/icons-material/AdsClick';
 import { userConfig } from '../../config/userConfig';
+import { BookKeyIcon } from 'lucide-react'
 
 
 const drawerWidth = 240;
@@ -122,8 +123,8 @@ const Sidebar = () => {
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Workspace', icon: <WorkIcon />, path: '/workspace' },
     { text: 'Projects', icon: <AccountTreeIcon />, path: '/projects' },
-    { text: 'Sources', icon: <AdsClickIcon />, path: '/sources' },
-    { text: 'Targets', icon: <StorageIcon />, path: '/targets' },
+    { text: 'Sources', icon: <BookKeyIcon />, path: '/sources' },
+    { text: 'Targets', icon: <AdsClickIcon />, path: '/targets' },
     { text: 'Admin', icon: <AdminIcon />, path: '/admin' },
   ];
 
@@ -183,7 +184,7 @@ const Sidebar = () => {
         onClick={togglePin}
         sx={{
           position: 'absolute',
-          bottom: 8,
+          bottom: 20,
           right: 8,
           transform: pinState === 'open' ? 'rotate(45deg)' : pinState === 'closed' ? 'rotate(90deg)' : 'none',
         }}

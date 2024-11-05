@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback  } from "react";
 import {
   Radio,
   RadioGroup,
@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { FileText, Database, Globe } from "lucide-react";
+import { useView } from './../contexts/ViewContext';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
@@ -26,6 +27,8 @@ const StyledCard = styled(Card)(({ theme }) => ({
 }));
 
 const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames }) => {
+  const { setFooterAlert } = useView();
+  
   const [resourceSetup, setResourceSetup] = useState(() => {
     return savedState || {
       resourceName: '',
@@ -38,19 +41,7 @@ const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames 
     };
   });
   
-// const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames }) => {
-//   const [resourceSetup, setResourceSetup] = useState(() => {
-//     const saved = localStorage.getItem('wizardStateEssential.resourceSetup');
-//     return saved ? JSON.parse(saved) : savedState.resourceSetup || {
-//       resourceName: '',
-//       standardizedSourceName: '',
-//       resourceVersionText: '',
-//       collection: 'None',
-//       resourceTags: ['source'],
-//       resourceDescription: '',
-//       resourceType: 'file'
-//     };
-//   });
+
  
 
   useEffect(() => {
@@ -65,7 +56,7 @@ const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames 
   ]);
 
   // Form validation
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors = {};
     if (!resourceSetup.resourceName) {
       newErrors.resourceName = "Resource name is required";
@@ -80,7 +71,8 @@ const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames 
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [resourceSetup.resourceName, resourceSetup.resourceType, existingSourceNames]);
+  
 
   useEffect(() => {
     onStateChange({ ...resourceSetup, isValid: validateForm() });
@@ -91,6 +83,10 @@ const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames 
       ...prevState,
       [field]: value,
     }));
+    setFooterAlert({
+      type: errors[field] ? 'error' : 'info',
+      message: errors[field] || `Updated ${field}`
+    });
   };
 
   return (
@@ -202,7 +198,7 @@ const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames 
                 variant="outlined"
                 value={resourceSetup.resourceVersionText}
                 onChange={(e) =>
-                  handleInputChange("versionText", e.target.value)
+                  handleInputChange("resourceVersionText", e.target.value)
                 }
                 placeholder="Enter version number"
               />

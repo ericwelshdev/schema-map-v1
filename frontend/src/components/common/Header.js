@@ -20,7 +20,14 @@ const Header = ({ toggleDarkMode, toggleSidebar }) => {
 
   return (
     <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-      <Toolbar>
+      <Toolbar
+        sx={{
+          minHeight: '48px !important',
+          '@media (min-width: 600px)': {
+            minHeight: '48px !important',
+          },
+        }}
+      >
         <IconButton
           color="inherit"
           aria-label="open drawer"

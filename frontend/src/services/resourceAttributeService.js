@@ -2,12 +2,12 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:5000/api';
 
-export const getSourceAttribute = async () => {
+export const getResourceAttribute = async () => {
   const response = await axios.get(`${API_URL}/resource-attributes`);
   return response.data;
 };
 
-export const postSourceAttribute = async (sourceAttrbute) => {
+export const postResourceAttribute = async (sourceAttrbute) => {
   try {
     const data = {
       ds_id: 0, 
@@ -49,31 +49,40 @@ export const postSourceAttribute = async (sourceAttrbute) => {
     
   } catch (error) {
     // Extract the detailed error message from the AxiosError
-    const errorMessage = error.response?.data?.message || error.message;
-    throw new Error(errorMessage);
+    const errorDetails = error.response?.data?.error;
+    const errorMessage = `${errorDetails?.name}: ${errorDetails?.message}`;
+    const detailedErrors = errorDetails?.details?.map(d => 
+      `${d.field}: ${d.type} - ${d.message}`
+    ).join('\n');
+    
+    throw new Error(`${errorMessage}\n${detailedErrors}`);
   }
 };
 
-export const putSourceAttribute = async (id, sourceData) => {
+export const putResourceAttribute = async (id, sourceData) => {
   const response = await axios.put(`${API_URL}/resource-attributes/${id}`, sourceData);
   return response.data;
 };
 
-export const deleteSourceAttribute = async (id) => {
+export const deleteResourceAttribute = async (id) => {
   await axios.delete(`${API_URL}/resource-attributes/${id}`);
 };
 
 // Bulk create source attributes
-export const postBulkSourceAttribute = async (sourceAttributes) => {
+
+
+export const postBulkResourceAttribute = async (sourceAttributes) => {
   // console.log('postBulkSourceAttribute Input column data:', sourceAttributes);
   try {
     const formattedData = sourceAttributes.attributes.map(attr => ({
       ds_id: 0,
       dsstrc_attr_id: null,
+      dsstrc_attr_nm: attr?.dsstrc_attr_nm,
       dsstrc_attr_grp_id: attr.dsstrc_attr_grp_id,
       stdiz_abrvd_attr_grp_nm: attr.stdiz_abrvd_attr_grp_nm,
       abrvd_attr_nm: attr.abrvd_attr_nm,
       stdiz_abrvd_attr_nm: attr.stdiz_abrvd_attr_nm,
+      stdiz_abrvd_alt_attr_nm: attr?.stdiz_abrvd_alt_attr_nm,
       dsstrc_attr_desc: attr.dsstrc_attr_desc,
       dsstrc_attr_seq_nbr: attr.dsstrc_attr_seq_nbr,
       physcl_data_typ_nm: attr.physcl_data_typ_nm,
@@ -94,11 +103,33 @@ export const postBulkSourceAttribute = async (sourceAttributes) => {
       updt_by_nm: 'System',
       updt_ts: new Date().toISOString()
     }));
-//     console.log('postBulkSourceAttribute Sending column data:', formattedData); // to verify the array
+    console.log('postBulkSourceAttribute Sending column data:', formattedData); // to verify the array
     const response = await axios.post(`${API_URL}/resource-attributes/bulk`, formattedData);
     console.log('response.data', response.data);
     return response.data;    
+
   } catch (error) {
-    throw new Error(error.response?.data?.message || error.message);
-  }
+    console.log('Received error response:', error.response?.data);
+    const errorDetails = error.response?.data?.error;
+    const enhancedError = new Error();
+    enhancedError.name = errorDetails?.name;
+    enhancedError.message = errorDetails?.message;
+    enhancedError.details = errorDetails?.errors;
+    enhancedError.sql = errorDetails?.sql;
+    enhancedError.code = errorDetails?.code;
+    throw enhancedError;
+}
 };
+
+//   } catch (error) {
+//     console.error('Error in postBulkSourceAttribute:', error);
+//     // throw new Error(error.response?.data?.message || error.message);
+//     const errorDetails = error.response?.data?.error;
+//     const errorMessage = `${errorDetails?.name}: ${errorDetails?.message}`;
+//     const detailedErrors = errorDetails?.details?.map(d => 
+//       `${d.field}: ${d.type} - ${d.message}`
+//     ).join('\n');
+    
+//     throw new Error(`${errorMessage}\n${detailedErrors}`);
+//   }
+// };
