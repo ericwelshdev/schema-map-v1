@@ -25,7 +25,7 @@ import {
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import AdsClickIcon from '@mui/icons-material/AdsClick';
 import { userConfig } from '../../config/userConfig';
-import { BookKeyIcon } from 'lucide-react'
+import { BookKeyIcon, BookAIcon } from 'lucide-react'
 
 
 const drawerWidth = 240;
@@ -125,6 +125,7 @@ const Sidebar = () => {
     { text: 'Projects', icon: <AccountTreeIcon />, path: '/projects' },
     { text: 'Sources', icon: <BookKeyIcon />, path: '/sources' },
     { text: 'Targets', icon: <AdsClickIcon />, path: '/targets' },
+    { text: 'Data Dictionaries', icon: <BookAIcon />, path: '/sources' },
     { text: 'Admin', icon: <AdminIcon />, path: '/admin' },
   ];
 

@@ -10,12 +10,14 @@ export const getResourceAttribute = async () => {
 export const postResourceAttribute = async (sourceAttrbute) => {
   try {
     const data = {
-      ds_id: 0, 
+      ds_id: 0,
       dsstrc_attr_id: null,
+      dsstrc_attr_nm: sourceAttrbute?.dsstrc_attr_nm,
       dsstrc_attr_grp_id: sourceAttrbute.dsstrc_attr_grp_id,
       stdiz_abrvd_attr_grp_nm: sourceAttrbute.stdiz_abrvd_attr_grp_nm,
       abrvd_attr_nm: sourceAttrbute.abrvd_attr_nm,
       stdiz_abrvd_attr_nm: sourceAttrbute.stdiz_abrvd_attr_nm,
+      stdiz_abrvd_alt_attr_nm: sourceAttrbute?.stdiz_abrvd_alt_attr_nm,
       dsstrc_attr_desc: sourceAttrbute.dsstrc_attr_desc,
       dsstrc_attr_seq_nbr: sourceAttrbute.dsstrc_attr_seq_nbr,
       physcl_data_typ_nm: sourceAttrbute.physcl_data_typ_nm,
@@ -28,6 +30,7 @@ export const postResourceAttribute = async (sourceAttrbute) => {
       disabld_ind: sourceAttrbute.disabld_ind,
       user_tag_cmplx: sourceAttrbute.user_tag_cmplx,
       ai_tag_cmplx: sourceAttrbute.ai_tag_cmplx,
+      meta_tag_cmplx: sourceAttrbute.meta_tag_cmplx,
       usr_cmt_txt: sourceAttrbute.usr_cmt_txt,
       oprtnl_stat_cd: sourceAttrbute.oprtnl_stat_cd,
       cre_by_nm: 'System',
@@ -59,8 +62,8 @@ export const postResourceAttribute = async (sourceAttrbute) => {
   }
 };
 
-export const putResourceAttribute = async (id, sourceData) => {
-  const response = await axios.put(`${API_URL}/resource-attributes/${id}`, sourceData);
+export const putResourceAttribute = async (id, sourceAttrbute) => {
+  const response = await axios.put(`${API_URL}/resource-attributes/${id}`, sourceAttrbute);
   return response.data;
 };
 
@@ -103,7 +106,7 @@ export const postBulkResourceAttribute = async (sourceAttributes) => {
       updt_by_nm: 'System',
       updt_ts: new Date().toISOString()
     }));
-    console.log('postBulkSourceAttribute Sending column data:', formattedData); // to verify the array
+//     console.log('postBulkSourceAttribute Sending column data:', formattedData); // to verify the array
     const response = await axios.post(`${API_URL}/resource-attributes/bulk`, formattedData);
     console.log('response.data', response.data);
     return response.data;    
@@ -120,16 +123,3 @@ export const postBulkResourceAttribute = async (sourceAttributes) => {
     throw enhancedError;
 }
 };
-
-//   } catch (error) {
-//     console.error('Error in postBulkSourceAttribute:', error);
-//     // throw new Error(error.response?.data?.message || error.message);
-//     const errorDetails = error.response?.data?.error;
-//     const errorMessage = `${errorDetails?.name}: ${errorDetails?.message}`;
-//     const detailedErrors = errorDetails?.details?.map(d => 
-//       `${d.field}: ${d.type} - ${d.message}`
-//     ).join('\n');
-    
-//     throw new Error(`${errorMessage}\n${detailedErrors}`);
-//   }
-// };

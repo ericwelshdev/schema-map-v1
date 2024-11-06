@@ -8,7 +8,24 @@ export const trainModel = async (sourceData) => {
     return response.data;
 };
 
-export const getMappingSuggestions = async (sourceColumns) => {
-    const response = await axios.post(`${API_URL}/ai/suggest-mappings`, sourceColumns);
-    return response.data;
+export const getMappingSuggestions = async (sourceColumns, targetColumns) => {
+    const response = await axios.post(`${API_URL}/ai/suggest-mappings`, {
+        source_columns: sourceColumns,
+        target_columns: targetColumns
+    });
+    
+    return response.data.mapping_suggestions;
+};
+
+// frontend/src/services/aiMappingService.js
+export const submitFeedbackBatch = async (feedbackBatch) => {
+    try {
+        const response = await axios.post(`${API_URL}/ai/feedback/batch`, {
+            feedback: feedbackBatch
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error submitting feedback batch:', error);
+        throw error;
+    }
 };

@@ -113,35 +113,60 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
       // Map values based on classifications
       Object.entries(columnMappings).forEach(([classification, columnNames]) => {
         columnNames.forEach(columnName => {
+          console.log('classification:', classification, 'columnNames:', columnNames);
           let value = '';
           switch(classification) {
-            case 'physical_table_name':
+            case 'stdiz_abrvd_attr_grp_nm':
               value = newDictionaryEntry.tableName;
               break;
-            case 'physical_column_name':
+            case 'stdiz_abrvd_attr_nm':
               value = newDictionaryEntry.columnName;
               break;
-            case 'logical_table_name':
+            case 'dsstrc_attr_grp_nm':
               value = newDictionaryEntry.logicalTableName;
-              break;
-            case 'logical_column_name':
+             break;              
+            case 'dsstrc_attr_nm':
               value = newDictionaryEntry.logicalColumnName;
               break;
-            case 'data_type':
+            case 'dsstrc_attr_grp_desc':
+              value = newDictionaryEntry.tableDescription;
+              break;
+            case 'physcl_data_typ_nm':
               value = newDictionaryEntry.dataType;
               break;
-            case 'column_description':
+            case 'dsstrc_attr_desc':
               value = newDictionaryEntry.columnDescription;
               break;
-            case 'primary_key':
-              value = newDictionaryEntry.primaryKey ? 'YES' : 'NO';
+            case 'len_nbr':
+              value = newDictionaryEntry.columnLength;
+                break;
+            case 'scale_nbr':
+              value = newDictionaryEntry.columnScale;
+                break;
+            case 'mand_ind':
+              value = newDictionaryEntry.isNullable ? 'YES' : 'NO';
+                break;                      
+            case 'pk_ind':
+              value = newDictionaryEntry.isPrimaryKey ? 'YES' : 'NO';
               break;
-            case 'foreign_key':
-              value = newDictionaryEntry.foreignKey ? 'YES' : 'NO';
+            case 'fk_ind':
+              value = newDictionaryEntry.isForeignKey ? 'YES' : 'NO';
               break;
-            case 'nullable':
-              value = newDictionaryEntry.isNullable ? 'NULL' : 'NOT NULL';
+            case 'phi_ind':
+              value = newDictionaryEntry.isPHI ? 'YES' : 'NO';
+                break;
+            case 'pii_ind':
+              value = newDictionaryEntry.isPII ? 'YES' : 'NO';
+                break;              
+            case 'encrypt_ind':
+              value = newDictionaryEntry.isEncryptioned ? 'YES' : 'NO';
               break;
+            case 'stdiz_abrvd_alt_attr_nm':
+              value = newDictionaryEntry.alternativeName;
+              break;
+            case 'stdiz_abrvd_alt_attr_grp_nm':
+              value = newDictionaryEntry.comment;
+              break;            
             default:
               value = '';
           }
@@ -167,8 +192,6 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
   }, [sourceData, setSourceData]);
   
   
-  
-
   const calculateTableStats = useCallback((tableName) => {
 
   // Stats being calculated:
@@ -182,10 +205,12 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
 
     if (!tableName || !sourceData.ddResourceFullData) return null;
   
-    const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
-    const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
+    const tableNameColumns = getClassifiedColumns('stdiz_abrvd_attr_grp_nm') || [];
+    const columnNameColumns = getClassifiedColumns('stdiz_abrvd_attr_nm') || [];
     const tableNameField = tableNameColumns[0]?.name;
     const columnNameField = columnNameColumns[0]?.name;
+
+ 
   
   // Get all rows for this table
     const tableRows = sourceData.ddResourceFullData?.filter(row => 
@@ -195,18 +220,19 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
   
   // Count primary and foreign keys
   const pkCount = tableRows.filter(row => 
-    getColumnDataByClassification('primary_key', row) === 'YES'
+    getColumnDataByClassification('pk_ind', row) === 'YES'
   ).length;
 
   const fkCount = tableRows.filter(row => 
-    getColumnDataByClassification('foreign_key', row) === 'YES'
+    getColumnDataByClassification('fk_id', row) === 'YES'
   ).length;
 
   const nullableCount = tableRows.filter(row => 
-    getColumnDataByClassification('nullable', row) === 'NULL'
+    getColumnDataByClassification('mand_ind', row) === 'NULL'
   ).length;
 
     const tableColumns = tableRows.map(row => row[columnNameField]);
+    console.log('!!sourceData.tableColumns:', tableColumns);
     
     const sourceColumns = sourceData.resourcePreviewRows.filter(col => !col.isDisabled);
     const disabledColumns = sourceData.resourcePreviewRows.filter(col => col.isDisabled);
@@ -219,10 +245,14 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
     let totalMappedScore = 0;
     let mappedCount = 0;
     let highQualityMatches = 0;
+
+    // console.log('->>>> tableColumns', tableColumns)
   
     // Calculate match quality
     sourceColumns.forEach(sourceCol => {
-      const scores = tableColumns.map(targetCol => 
+    //  console.log('->>>> sourceCol', sourceCol)
+
+      const scores = tableColumns.map(targetCol =>         
         stringSimilarity.compareTwoStrings(sourceCol.name.toLowerCase(), targetCol.toLowerCase())
       );
       const bestScore = Math.max(...scores);
@@ -285,8 +315,8 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
   // Rest of the component code with matchResults usage...
 
   const getDictionaryColumns = useCallback(() => {
-    const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
-    const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
+    const tableNameColumns = getClassifiedColumns('stdiz_abrvd_attr_grp_nm') || [];
+    const columnNameColumns = getClassifiedColumns('stdiz_abrvd_attr_nm') || [];
     
     if (!sourceData.ddResourceFullData || !tableNameColumns.length || !columnNameColumns.length) {
       return [];
@@ -300,9 +330,9 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
       .map(entry => ({
         columnName: entry[columnNameField],
         tableName: entry[tableNameField],
-        logicalName: getColumnDataByClassification('logical_column_name', entry),
-        dataType: getColumnDataByClassification('data_type', entry),
-        description: getColumnDataByClassification('column_description', entry),
+        logicalName: getColumnDataByClassification('dsstrc_attr_nm', entry),
+        // dataType: getColumnDataByClassification('physcl_data_typ_nm', entry),
+        description: getColumnDataByClassification('dsstrc_attr_desc', entry),
         ddRow: entry
       }))
       .filter(col => col.columnName);
@@ -321,8 +351,8 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
       selectedTable: selectedDictionaryTable
     });
   
-    const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
-    const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
+    const tableNameColumns = getClassifiedColumns('stdiz_abrvd_attr_grp_nm') || [];
+    const columnNameColumns = getClassifiedColumns('stdiz_abrvd_attr_nm') || [];
     const tableNameField = tableNameColumns[0]?.name;
     const columnNameField = columnNameColumns[0]?.name;
   
@@ -363,23 +393,29 @@ const [unsavedChanges, setUnsavedChanges] = useState(false);
           sourcePrimaryKey: Boolean(sourceColumn.primaryKey || 'false'),
           sourceForeignKey:  Boolean(sourceColumn.foreignKey || 'false'),
           sourceIsNullable:  Boolean(sourceColumn.nullable || 'false'),
+          sourceAlternativeColumnName: sourceColumn.alternativeName || '',
           matched_table_name: selectedDictionaryTable,
           matched_column_name: bestMatch?.columnName || '',
           column_similarity_score: bestMatch?.score || 0,
           mappingStatus: bestMatch?.score > 0.3 ? 'mapped' : 'unmapped',
           hasMultipleCandidates: allMatches.length > 1,
           candidateMatches: allMatches,
-          logicalTableName: getColumnDataByClassification('logical_table_name', bestMatch?.ddRow),
-          logicalColumnName: getColumnDataByClassification('logical_column_name', bestMatch?.ddRow),
-          columnDescription: getColumnDataByClassification('column_description', bestMatch?.ddRow),
-          dataType: getColumnDataByClassification('data_type', bestMatch?.ddRow),
-          primaryKey: Boolean(getColumnDataByClassification('primary_key', bestMatch?.ddRow)),
-          foreignKey: Boolean(getColumnDataByClassification('foreign_key', bestMatch?.ddRow)),
-          isNullable: Boolean(getColumnDataByClassification('nullable', bestMatch?.ddRow)),
-          isPII: Boolean(sourceColumn.isPII),
-          isPHI: Boolean(sourceColumn.isPHI),
+          logicalTableName: getColumnDataByClassification('dsstrc_attr_grp_nm', bestMatch?.ddRow),
+          logicalColumnName: getColumnDataByClassification('dsstrc_attr_nm', bestMatch?.ddRow),
+          columnDescription: getColumnDataByClassification('dsstrc_attr_desc', bestMatch?.ddRow),
+          columnAlternativeName: getColumnDataByClassification('stdiz_abrvd_alt_attr_nm', bestMatch?.ddRow) || '',
+          dataType: getColumnDataByClassification('physcl_data_typ_nm', bestMatch?.ddRow),
+          columnLength: getColumnDataByClassification('len_nbr'),
+          columnPrecision: getColumnDataByClassification('prec_nbr'),
+          columnScale: getColumnDataByClassification('scale_nbr'),
+          isNullable: Boolean(getColumnDataByClassification('mand_ind', bestMatch?.ddRow)),
+          primaryKey: Boolean(getColumnDataByClassification('pk_ind', bestMatch?.ddRow)),
+          foreignKey: Boolean(getColumnDataByClassification('fk_ind', bestMatch?.ddRow)),
+          isPII: Boolean(getColumnDataByClassification('pii_ind', bestMatch?.ddRow)),
+          isPHI: Boolean(getColumnDataByClassification('phi_ind', bestMatch?.ddRow)),
+          isEncrypted: Boolean(getColumnDataByClassification('encrypt_ind', bestMatch?.ddRow)),
           isDisabled: Boolean(sourceColumn.isDisabled),
-          alternativeName: sourceColumn.alternativeName || '',
+          
           tags: Array.isArray(sourceColumn.tags) ? sourceColumn.tags : [],
           mappingState: 'unaltered', // Initial state
           sourceType: 'source'  // Default source type
@@ -425,7 +461,7 @@ const persistRows = useCallback(async (updatedRows) => {
 
     // Add this new function with the existing ones
     const getAllTableStats = useCallback(() => {
-      const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
+      const tableNameColumns = getClassifiedColumns('stdiz_abrvd_attr_grp_nm') || [];
       const columnNameField = tableNameColumns[0]?.name;
       
       if (!columnNameField || !sourceData.ddResourceFullData) {
@@ -462,10 +498,10 @@ const persistRows = useCallback(async (updatedRows) => {
       tableName: selectedDictionaryTable,
       columnName: match.columnName,
       score: match.score,
-      logicalTableName: getColumnDataByClassification('logical_table_name', match.ddRow),
-      logicalColumnName: getColumnDataByClassification('logical_column_name', match.ddRow),
-      dataType: getColumnDataByClassification('data_type', match.ddRow),
-      columnDescription: getColumnDataByClassification('column_description', match.ddRow)
+      logicalTableName: getColumnDataByClassification('dsstrc_attr_grp_nm', match.ddRow),
+      logicalColumnName: getColumnDataByClassification('dsstrc_attr_nm', match.ddRow),
+      dataType: getColumnDataByClassification('physcl_data_typ_nm', match.ddRow),
+      columnDescription: getColumnDataByClassification('dsstrc_attr_desc', match.ddRow)
     }));
   
     setSelectedRow({
@@ -483,9 +519,9 @@ const persistRows = useCallback(async (updatedRows) => {
   
   const handleMatchChange = useCallback((rowId, newValue, score) => {
     console.log('!!handleMatchChange -> called with rowId:', rowId, 'newValue:', newValue, 'score:', score);
-    const columnNameColumns = getClassifiedColumns('physical_column_name') || [];
+    const columnNameColumns = getClassifiedColumns('stdiz_abrvd_attr_nm') || [];
     const columnNameField = columnNameColumns[0]?.name;
-    const tableNameColumns = getClassifiedColumns('physical_table_name') || [];
+    const tableNameColumns = getClassifiedColumns('stdiz_abrvd_attr_nm') || [];
     const tableNameField = tableNameColumns[0]?.name;
   
     const updatedRows = matchResults.map(row => {
@@ -508,13 +544,13 @@ const persistRows = useCallback(async (updatedRows) => {
           matched_column_name: newValue.columnName,
           matched_table_name: newValue.tableName,
           column_similarity_score: newScore,
-          logicalTableName: getColumnDataByClassification('logical_table_name', matchedDDRow),
-          logicalColumnName: getColumnDataByClassification('logical_column_name', matchedDDRow),
-          columnDescription: getColumnDataByClassification('column_description', matchedDDRow),
-          dataType: getColumnDataByClassification('data_type', matchedDDRow),
-          primaryKey: getColumnDataByClassification('primary_key', matchedDDRow),
-          foreignKey: getColumnDataByClassification('foreign_key', matchedDDRow),
-          nullable: getColumnDataByClassification('nullable', matchedDDRow),
+          logicalTableName: getColumnDataByClassification('dsstrc_attr_grp_nm', matchedDDRow),
+          logicalColumnName: getColumnDataByClassification('dsstrc_attr_nm', matchedDDRow),
+          columnDescription: getColumnDataByClassification('dsstrc_attr_desc', matchedDDRow),
+          dataType: getColumnDataByClassification('physcl_data_typ_nm', matchedDDRow),
+          primaryKey: getColumnDataByClassification('pk_ind', matchedDDRow),
+          foreignKey: getColumnDataByClassification('fk_ind', matchedDDRow),
+          nullable: getColumnDataByClassification('mand_ind', matchedDDRow),
           isEditing: true,
           isUnsaved: true,
           isChanged: true,

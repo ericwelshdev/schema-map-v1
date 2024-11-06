@@ -7,52 +7,48 @@ class PreprocessingService:
     def __init__(self):
         self.scaler = StandardScaler()
 
-    def process(self, data):
-        processed_data = {
-            "text_features": self._process_text_features(data),
-            "numeric_features": self._process_numeric_features(data),
-            "metadata_features": self._process_metadata(data)
+    def process_training_batch(self, data):
+        processed_sources = []
+        for source in data:
+            processed_source = {
+                'source_id': source['sourceMetadata']['id'],
+                'text_features': self._process_text_features(source),
+                'numeric_features': self._process_numeric_features(source),
+                'metadata_features': self._process_metadata_features(source),
+                'profiling_features': self._process_profiling_features(source),
+                'mapping_labels': self._process_mapping_labels(source)
+            }
+            processed_sources.append(processed_source)
+        
+        return {
+            'processed_data': processed_sources,
+            'feature_stats': self._calculate_feature_statistics(processed_sources)
         }
-        return processed_data
 
-    def _process_text_features(self, data):
-        # Process column names, descriptions, and comments
-        text_features = []
-        for column in data["columns"]:
-            features = {
-                "name": self._normalize_text(column["name"]),
-                "description": self._normalize_text(column.get("description", "")),
-                "comments": self._normalize_text(column.get("comments", ""))
-            }
-            text_features.append(features)
-        return text_features
+    def _process_text_features(self, source):
+        columns = source['sourceMetadata']['columns']
+        return {
+            'names': [self._normalize_text(col['name']) for col in columns],
+            'descriptions': [self._normalize_text(col.get('description', '')) for col in columns],
+            'tags': [col.get('tags', []) for col in columns]
+        }
 
-    def _process_numeric_features(self, data):
-        # Process profiling metrics
-        numeric_features = []
-        for column in data["columns"]:
-            if "profiling_metrics" in column:
-                metrics = column["profiling_metrics"]
-                features = {
-                    "null_percentage": metrics.get("null_percentage", 0),
-                    "unique_percentage": metrics.get("unique_percentage", 0),
-                    "numeric_percentage": metrics.get("numeric_percentage", 0)
-                }
-                numeric_features.append(features)
-        return self.scaler.fit_transform(numeric_features)
+    def _process_numeric_features(self, source):
+        profiling = source['profilingMetrics']
+        return {
+            'null_ratios': [col.get('nullRatio', 0) for col in profiling],
+            'unique_ratios': [col.get('uniqueRatio', 0) for col in profiling],
+            'value_distributions': [col.get('distribution', {}) for col in profiling]
+        }
 
-    def _process_metadata(self, data):
-        # Process metadata like PII, PHI flags
-        metadata_features = []
-        for column in data["columns"]:
-            features = {
-                "is_pii": column.get("isPII", False),
-                "is_phi": column.get("isPHI", False),
-                "is_pk": column.get("isPK", False),
-                "is_fk": column.get("isFK", False)
-            }
-            metadata_features.append(features)
-        return metadata_features
+    def _process_metadata_features(self, source):
+        columns = source['sourceMetadata']['columns']
+        return {
+            'pii_flags': [int(col['isPII']) for col in columns],
+            'phi_flags': [int(col['isPHI']) for col in columns],
+            'pk_flags': [int(col['isPK']) for col in columns],
+            'fk_flags': [int(col['isFK']) for col in columns]
+        }
 
     def _normalize_text(self, text):
         if not text:

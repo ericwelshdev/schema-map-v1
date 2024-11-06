@@ -238,20 +238,27 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
     { 
       group: 'Mandatory',
       options: [
-        { value: 'physical_table_name', label: 'Physical Table Name' },
-        { value: 'physical_column_name', label: 'Physical Column Name' }
+        { value: 'stdiz_abrvd_attr_grp_nm', label: 'Physical Table Name' },
+        { value: 'stdiz_abrvd_attr_nm', label: 'Physical Column Name' }
       ]
     },
     {
       group: 'Optional',
       options: [
-        { value: 'logical_table_name', label: 'Logical Table Name' },
-        { value: 'logical_column_name', label: 'Logical Column Name' },
-        { value: 'column_description', label: 'Column Description' },
-        { value: 'data_type', label: 'Data Type' },
-        { value: 'primary_key', label: 'Primary Key' },
-        { value: 'foreign_key', label: 'Foreign Key' },
-        { value: 'nullable', label: 'Nullable' }
+        { value: 'dsstrc_attr_grp_nm', label: 'Logical Table Name' },
+        { value: 'dsstrc_attr_grp_desc', label: 'Logical Table Description' },
+        { value: 'dsstrc_attr_nm', label: 'Logical Column Name' },
+        { value: 'dsstrc_attr_desc', label: 'Column Description' },
+        { value: 'physcl_data_typ_nm', label: 'Data Type' },
+        { value: 'len_nbr', label: 'Length' },
+        { value: 'prscn_nbr', label: 'Precision' },
+        { value: 'scale_nbr', label: 'Scale' },
+        { value: 'mand_ind', label: 'Nullable Indicator' },
+        { value: 'pk_ind', label: 'Primary Key' },
+        { value: 'fk_ind', label: 'Foreign Key' },
+        { value: 'phi_ind', label: 'PHI Indicator' },
+        { value: 'pii_ind', label: 'Foreign Indicator' },
+        { value: 'encrypt_ind', label: 'Encryption Indicator' }
       ]
     }
   ];
@@ -305,7 +312,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
         <Autocomplete
           size="small"
           options={schemaClassificationOptions.flatMap(group => group.options)}
-          groupBy={(option) => option.value.includes('physical') ? 'Mandatory' : 'Optional'}
+          groupBy={(option) => option.label.includes('Physical') ? 'Mandatory' : 'Optional'}
           getOptionLabel={(option) => option.label}
           value={params.value || null}
           onChange={(event, newValue) => {
@@ -328,7 +335,8 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
               placeholder="No Classification"
               sx={{ 
                 '& .MuiInputBase-root': {
-                  height: 30
+                  height: 25,
+                  fontSize: 12,
                 }
               }}
             />

@@ -22,6 +22,7 @@ import { postBulkResourceAttribute } from '../services/resourceAttributeService'
 import { postResourceProfile } from '../services/resourceProfileService';
 import { postResourceGroupAssociation } from '../services/resourceGroupAssociationService';
 import { postBulkResourceAttributeAssociation } from '../services/resourceAttributeAssociationService';
+import { mapDictionaryData } from '../services/dictionaryMappingService';
 
 const ResourceSummary = ({ wizardState }) => {
   const [profilingOption, setProfilingOption] = useState('now');
@@ -31,6 +32,7 @@ const ResourceSummary = ({ wizardState }) => {
   const [ddResourceGeneralConfig, setDDResourceGeneralConfig] = useState({});
   const [ddResourceSchemaConfig, setDDResourceSchemaConfig] = useState({});
   const [ddResourceSchemaMappingConfig, setDDResourceSchemaMappingConfig] = useState({});
+  const [ddResourceFullDataConfig, setDDResourceFullDataConfig] = useState({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [saveProgress, setSaveProgress] = useState({
     activeStep: 0,
@@ -78,6 +80,9 @@ const ResourceSummary = ({ wizardState }) => {
         
         const ddResourceSchemaMappingConfig = await getData('ddResourceMappingRows') || {};
         console.log('DD Resource Schema Mapping Config:', ddResourceSchemaMappingConfig); 
+
+        const ddResourceFullDataConfig = await getData('ddResourceMappingRows') || {};
+        console.log('DD Resource Full Data Config:', ddResourceFullDataConfig);         
         
 
         console.log('Parsed General Config:', generalConfigData);
@@ -87,7 +92,8 @@ const ResourceSummary = ({ wizardState }) => {
         setDDResourceSchemaConfig(ddResourceSchemaConfig);
         setResourceGeneralConfig(resourceGeneralConfig);
         setDDResourceGeneralConfig(ddResourceGeneralConfig); 
-        setDDResourceSchemaMappingConfig(ddResourceSchemaMappingConfig)       
+        setDDResourceSchemaMappingConfig(ddResourceSchemaMappingConfig)
+        setDDResourceFullDataConfig(ddResourceFullDataConfig)   
       } catch (error) {
         console.log('Config loading fallback activated');
         setGeneralConfig({});
@@ -96,6 +102,7 @@ const ResourceSummary = ({ wizardState }) => {
         setResourceGeneralConfig({});
         setDDResourceGeneralConfig({});
         setDDResourceSchemaMappingConfig({});
+        setDDResourceFullDataConfig({});
 
       }
     };
@@ -273,6 +280,8 @@ const ResourceSummary = ({ wizardState }) => {
       console.log('Data Dictionary Resource General Config Data:', ddResourceSchemaConfig);
       // Log the resource data being sent
 
+      
+
       const ddColumnData = ddResourceSchemaConfig?.map((column) => ({
         ds_id: 0,
         abrvd_attr_nm: column.name || null,
@@ -294,10 +303,21 @@ const ResourceSummary = ({ wizardState }) => {
         disabld_ind: column.isDisabled,
         ai_tag_cmplx: JSON.stringify(column?.ai_tag_cmplx || []),
         user_tag_cmplx: JSON.stringify(column?.tags || []),
-        meta_tag_cmplx: JSON.stringify(column?.schemaClassification || []),
+        meta_tag_cmplx: JSON.stringify({
+          ...(column?.schemaClassification?.value && {
+              schemaClassification: {
+                  label: column.schemaClassification.label,
+                  value: column.schemaClassification.value
+              }
+          }),
+          ...(column.column_similarity_score && {
+              column_similarity_score: column.column_similarity_score
+          })
+      }) || JSON.stringify([]),
         usr_cmt_txt: column.comment || null,
         oprtnl_stat_cd: 'Active'
-      }));
+    }));
+    
       
       // console.log('Sending column data:', ddResourceSchemaConfig);
       console.log('Sending Data Dictionary attribute data:', ddColumnData);
@@ -317,11 +337,13 @@ const ResourceSummary = ({ wizardState }) => {
 
       
 
+      console.log('-- !! Step 6.ddResourceGeneralConfig :', ddResourceGeneralConfig); 
 
+      
 
       // 2. Save Resource Profile Configuration
       const ddResourceProfileData = {
-        dsstrc_attr_grp_id: savedDDResource.idsstrc_attr_grp_idd,
+        dsstrc_attr_grp_id: savedDDResource.dsstrc_attr_grp_id,
         stdiz_abrvd_attr_grp_nm: savedDDResource.stdiz_abrvd_attr_grp_nm,
         ds_instc_data_cntnt_typ_cd: ddResourceGeneralConfig?.resourceType,
         ds_instc_data_cntnt_nm: ddResourceGeneralConfig?.resourceInfo?.type,
@@ -332,8 +354,8 @@ const ResourceSummary = ({ wizardState }) => {
         ds_instc_loc_txt: ddResourceGeneralConfig?.resourceInfo?.sourceLocation,
         ds_instc_arrival_dt: ddResourceGeneralConfig?.resourceInfo?.lastModified,
         ds_instc_publd_dt: ddResourceGeneralConfig?.resourceInfo?.lastModified,
-        ds_instc_row_cnt: ddResourceGeneralConfig?.fullNumRows,
-        ds_instc_col_cnt: ddResourceGeneralConfig?.numCols,
+        ds_instc_row_cnt: ddResourceGeneralConfig?.resourceInfo?.fullNumRows,
+        ds_instc_col_cnt: ddResourceGeneralConfig?.resourceInfo?.numCols,
         ds_instc_size_nbr: ddResourceGeneralConfig?.resourceInfo?.size,
         ds_instc_comprsn_ind: null,
         ds_instc_file_cnt: 1,
@@ -350,7 +372,7 @@ const ResourceSummary = ({ wizardState }) => {
         oprtnl_stat_cd: 'Active'
       };
 
-      // console.log('Sending resource Profile data:', resourceProfileData);
+      console.log('Sending Data Dictionary Resource Profile data:', ddResourceProfileData);
       const savedDDResourceProfileData = await postResourceProfile(ddResourceProfileData);
 
       const savedResourceProfile = {
@@ -405,51 +427,174 @@ const ResourceSummary = ({ wizardState }) => {
     };  
     console.log('--> Step 7. Resource Association Prior Saved Info :', savedResourceGroupAssc);
 
+
+    // 1. Save Data Dictionary Group Resource Configuration
+      // console.log('General Config Data:', generalConfigData.resourceSetup);
+      // Log the source data being sent
+      const ddTableValueData = {
+        ds_id: 0,
+        dsstrc_attr_grp_id: savedDDResource.dsstrc_attr_grp_id,
+        stdiz_abrvd_attr_grp_nm: ddResourceSchemaMappingConfig[0].matched_table_name,
+        dsstrc_attr_grp_nm: ddResourceSchemaMappingConfig[0].logicalTableName,
+        dsstrc_attr_grp_desc: ddResourceSchemaMappingConfig[0].tableDescription || '',
+        dsstrc_attr_grp_src_typ_cd: 'Data Dictionary MetaData',
+        pii_ind: ddResourceSchemaMappingConfig.some(col => col.isPII),
+        phi_ind: ddResourceSchemaMappingConfig.some(col => col.isPHI),
+        ai_tag_cmplx: JSON.stringify(ddResourceSchemaMappingConfig[0]?.table_ai_tags || []),
+        user_tag_cmplx: JSON.stringify(ddResourceSchemaMappingConfig[0]?.table_tags || []),
+        usr_cmt_txt: ddResourceSchemaMappingConfig[0]?.tableComment || '',
+        oprtnl_stat_cd: 'Active'
+    };
+
+      // console.log('Sending source data:', resourceData);
+      const savedDDSourceMappedGroup = await postResource(ddTableValueData);
+
+      const savedDDSourceMappedGroupResponse = {
+        dsstrc_attr_grp_id: savedDDSourceMappedGroup.dsstrc_attr_grp_id,
+        stdiz_abrvd_attr_grp_nm: savedDDSourceMappedGroup.stdiz_abrvd_attr_grp_nm,
+        isSaved: true
+      };      
+      console.log('-- Step 8. Data Dictionary Resource Mapped Group Prior Saved Info :', savedDDSourceMappedGroupResponse); 
+
+
+
+      // Add schema processing logic
+      console.log('Data Dictionary Resource Mapped Data:', ddResourceSchemaMappingConfig);
+      // Log the resource data being sent
+
+      const ddColumnValueData = ddResourceSchemaMappingConfig?.filter(column => column.mappingStatus === "mapped").map((column) => ({
+        ds_id: 0,
+        abrvd_attr_nm: column.matched_column_name || null,
+        dsstrc_attr_grp_id: savedDDSourceMappedGroup.dsstrc_attr_grp_id,
+        stdiz_abrvd_attr_grp_nm: savedDDSourceMappedGroup.stdiz_abrvd_attr_grp_nm,
+        dsstrc_attr_nm: column.logicalColumnName || column.columnName,
+        dsstrc_alt_attr_nm: column.columnAlternativeName || null,
+        stdiz_abrvd_attr_nm: column.matched_column_name,
+        stdiz_abrvd_alt_attr_nm: column?.columnAlternativeName || null,
+        dsstrc_attr_desc: column.columnDescription || null,
+        dsstrc_attr_seq_nbr: column.id,
+        physcl_data_typ_nm: column.dataType || 'string',
+        mand_ind: column?.isNullable || false,
+        pk_ind: column?.isPrimaryKey || false,
+        fk_ind: column?.isForeignKey || false,
+        encrypt_ind: column?.isEncrypted || false,
+        pii_ind: column.isPII || false,
+        phi_ind: column.isPHI || false,
+        disabld_ind: column.isDisabled || false,
+        ai_tag_cmplx: JSON.stringify(column?.ai_tag_cmplx || []),
+        user_tag_cmplx: JSON.stringify(column?.tags || []),
+        meta_tag_cmplx: JSON.stringify({
+          ...(column?.schemaClassification?.value && {
+              schemaClassification: {
+                  label: column.schemaClassification.label,
+                  value: column.schemaClassification.value
+              }
+          }),
+          ...(column.column_similarity_score && {
+              column_similarity_score: column.column_similarity_score
+          })
+      }) || JSON.stringify([]),
+        usr_cmt_txt: column.comment || null,
+        oprtnl_stat_cd: 'Active'
+      }));
+      
+      // console.log('Sending Data Dictionary attribute data:', ddColumnValueData);
+      const savedDDSourceMappedAttribute = await postBulkResourceAttribute({ attributes: ddColumnValueData }); 
+      console.log('Recevied Data Dictionary Resource Mapped Attribute saved data:', savedDDSourceMappedAttribute);
+
+      
+      const savedDDSourceMappedAttributes = savedDDSourceMappedAttribute.map(column => ({
+        dsstrc_attr_grp_id: column.dsstrc_attr_grp_id,
+        stdiz_abrvd_attr_grp_nm: column.stdiz_abrvd_attr_grp_nm,
+        dsstrc_attr_id: column.dsstrc_attr_id,
+        stdiz_abrvd_attr_nm: column.stdiz_abrvd_attr_nm,
+        meta_tag_cmplx: column.meta_tag_cmplx,
+        column_similarity_score: column.column_similarity_score,
+        isSaved: true
+      }));
+      console.log('-- Step 9. Data Dictionary Resource Mapped Attributes Prior Saved Info :', savedDDSourceMappedAttributes); 
+
+      
+      // 10. Save Data Dictionary Group Resource Association
+      // Log the resource data being sent
+  
+      const resourceMappedGroupAsscData = {
+  
+        ds_id: 0, 
+        dsstrc_attr_grp_id: savedResource.dsstrc_attr_grp_id,
+        stdiz_abrvd_attr_grp_nm: savedResource.stdiz_abrvd_attr_grp_nm,
+        assct_ds_id: 0,
+        assct_dsstrc_attr_grp_id: savedDDSourceMappedGroup.dsstrc_attr_grp_id,
+        assct_stdiz_abrvd_attr_grp_nm: savedDDSourceMappedGroup.stdiz_abrvd_attr_grp_nm,
+        techncl_rule_nm: null,
+        dsstrc_attr_grp_assc_typ_cd: 'Source -> Data Dictionary Data',
+        ai_tag_cmplx: null,
+        user_tag_cmplx: null,
+        usr_cmt_txt: null,
+        oprtnl_stat_cd: 'Active',
+        cre_by_nm: 'System',
+        cre_ts: new Date().toISOString(),
+        updt_by_nm: 'System',
+        updt_ts: new Date().toISOString()
+  
+      };
+      console.log('Sending Resource Mapped Association data:', resourceMappedGroupAsscData);
+      const savedResourceMappedGroupAsscData = await postResourceGroupAssociation(resourceMappedGroupAsscData);
+  
+      const savedResourceMappedGroupAssc = {
+        dsstrc_attr_grp_assc_id: savedResourceMappedGroupAsscData.dsstrc_attr_grp_assc_id,
+        dsstrc_attr_grp_id: savedResourceMappedGroupAsscData.dsstrc_attr_grp_id,
+        stdiz_abrvd_attr_grp_nm: savedResourceMappedGroupAsscData.stdiz_abrvd_attr_grp_nm,
+        assct_dsstrc_attr_grp_id: savedResourceMappedGroupAsscData.assct_dsstrc_attr_grp_id,
+        assct_stdiz_abrvd_attr_grp_nm: savedResourceMappedGroupAsscData.assct_stdiz_abrvd_attr_grp_nm,
+        dsstrc_attr_grp_assc_typ_cd: savedResourceMappedGroupAsscData.dsstrc_attr_grp_assc_typ_cd,      
+        isSaved: true
+      };  
+      console.log('--> Step 10. Resource Mapped Association Prior Saved Info :', savedResourceMappedGroupAssc);      
+
+
   // // ---------------------------------------------------------------
 
   // need to deterimine if we need to store the meta data mappings between the source and the data dict data values based on the schema mapping and confidance scoring 
-  const resourceGroupAsscAttributeData = ddResourceSchemaMappingConfig?.map((mapping) => {
-    // Find source table and column IDs
-    const resourceAttribute = savedResourceAttributes.find(attr => 
-      attr.stdiz_abrvd_attr_grp_nm === mapping.source_table_name && 
-      attr.stdiz_abrvd_attr_nm === mapping.source_column_name
-    );
-    console.log('!!Source resourceAttribute:', resourceAttribute);
-  
-    // Find DD table and column IDs
-    const ddResourceAttribute = savedDDResourceAttributes.find(attr => 
-      attr.stdiz_abrvd_attr_grp_nm === mapping.matched_table_name && 
-      attr.stdiz_abrvd_attr_nm === mapping.matched_column_name
-    );
-    console.log('!!Source ddResourceAttribute:', ddResourceAttribute);
-    console.log('!!Source savedDDResourceAttributes:', savedDDResourceAttributes);
-  
-    return {
+ // First, filter savedResourceAttributes for mapped columns
+
+
+// Then create associations for matched attributes
+const resourceGroupAsscAttributeData = savedDDSourceMappedAttributes?.map((mappingAttribute) => {
+  // Find matching resource attribute based on standardized names
+  const resourceAttribute = savedResourceAttributes.find(attr =>
+      attr.stdiz_abrvd_attr_grp_nm === mappingAttribute.stdiz_abrvd_attr_grp_nm &&
+      attr.stdiz_abrvd_attr_nm === mappingAttribute.stdiz_abrvd_attr_nm
+  );
+
+  return {
       dsstrc_attr_assc_id: null,
-      dsstrc_attr_grp_assc_id: mapping.dsstrc_attr_grp_assc_id,
+      dsstrc_attr_grp_assc_id: savedResourceGroupAssc.dsstrc_attr_grp_assc_id,
       ds_id: 0,
-      dsstrc_attr_grp_id: resourceAttribute?.dsstrc_attr_grp_id,
-      stdiz_abrvd_attr_grp_nm: resourceAttribute?.stdiz_abrvd_attr_grp_nm,
-      dsstrc_attr_id: resourceAttribute?.dsstrc_attr_id,
-      stdiz_abrvd_attr_nm: resourceAttribute?.stdiz_abrvd_attr_nm,
+      dsstrc_attr_grp_id: resourceAttribute?.dsstrc_attr_grp_id || savedResourceGroupAssc.dsstrc_attr_grp_id,
+      stdiz_abrvd_attr_grp_nm: resourceAttribute?.stdiz_abrvd_attr_grp_nm || savedResourceGroupAssc.stdiz_abrvd_attr_grp_nm,
+      dsstrc_attr_id: resourceAttribute?.dsstrc_attr_id || 0,
+      stdiz_abrvd_attr_nm: resourceAttribute?.stdiz_abrvd_attr_nm || null,
       assct_ds_id: 0,
-      assct_dsstrc_attr_grp_id: ddResourceAttribute?.dsstrc_attr_grp_id,
-      assct_stdiz_abrvd_attr_grp_nm: ddResourceAttribute?.stdiz_abrvd_attr_grp_nm,
-      assct_dsstrc_attr_id: ddResourceAttribute?.dsstrc_attr_id,
-      assct_stdiz_abrvd_attr_nm: ddResourceAttribute?.stdiz_abrvd_attr_nm,
-      techncl_rule_nm: '',
-      dsstrc_attr_assc_typ_cd: 'Metadata Attribute Similarity Association',
-      dsstrc_attr_assc_cnfdnc_pct: mapping.column_similarity_score || 0,
-      ai_tag_cmplx: mapping.ai_tags ? JSON.stringify(mapping.tags) : '',
-      user_tag_cmplx: mapping.user_tags ? JSON.stringify(mapping.tags) : '',
-      usr_cmt_txt: mapping.comments || '',
+      assct_dsstrc_attr_grp_id: mappingAttribute.dsstrc_attr_grp_id,
+      assct_stdiz_abrvd_attr_grp_nm: mappingAttribute.stdiz_abrvd_attr_grp_nm,
+      assct_dsstrc_attr_id: mappingAttribute.dsstrc_attr_id,
+      assct_stdiz_abrvd_attr_nm: mappingAttribute.stdiz_abrvd_attr_nm,
+      column_similarity_score: mappingAttribute.column_similarity_score || 0,
+      dsstrc_attr_assc_typ_cd: resourceAttribute ? 'Metadata Attribute Similarity Association' : 'Unmapped Attribute',
+      dsstrc_attr_assc_cnfdnc_pct: mappingAttribute.column_similarity_score || 0,
+      ai_tag_cmplx: mappingAttribute.ai_tags ? JSON.stringify(mappingAttribute.tags) : '',
+      user_tag_cmplx: mappingAttribute.user_tags ? JSON.stringify(mappingAttribute.tags) : '',
+      usr_cmt_txt: mappingAttribute.comments || '',
       oprtnl_stat_cd: 'Active',
       cre_by_nm: 'System',
       cre_ts: new Date().toISOString(),
       updt_by_nm: 'System',
       updt_ts: new Date().toISOString()
-    };
-  });
+  };
+});
+
+
 
   console.log('Sending Resource -> Data Dictionary Mapping attribute data:', resourceGroupAsscAttributeData);
   const savedResourceGroupAsscAttributeData = await postBulkResourceAttributeAssociation({ attributes: resourceGroupAsscAttributeData }); 
@@ -470,7 +615,7 @@ const ResourceSummary = ({ wizardState }) => {
       dsstrc_attr_assc_typ_cd: savedResourceGroupAsscData.dsstrc_attr_assc_typ_cd,      
       isSaved: true
   }));
-  console.log('--> Step 8. Data Dictionary Resource Attributes Prior Saved Info :', savedResourceGroupAsscAttributes);
+  console.log('--> Step 11. Data Dictionary Resource Attributes Prior Saved Info :', savedResourceGroupAsscAttributes);
 
     
       }

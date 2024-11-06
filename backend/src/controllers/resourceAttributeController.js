@@ -32,7 +32,7 @@ exports.create = async (req, res) => {
 
 exports.bulkCreate = async (req, res) => {
     try {
-        console.log('Received request body:', req.body);
+        // console.log('Received request body:', req.body);
         if (!req.body || !Array.isArray(req.body)) {
             throw new Error('Invalid request format - expected array of attributes');
         }
