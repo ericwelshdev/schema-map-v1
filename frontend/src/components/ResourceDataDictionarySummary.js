@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Box, Typography, Grid, Card, CardContent, 
   Button, Chip, Stack, IconButton,
-  LinearProgress, Step, StepLabel, Stepper
-} from '@mui/material';
+  LinearProgress, CircularProgress, Step, StepLabel, Stepper,Divider, Tooltip
+  } from '@mui/material';
 import StorageIcon from '@mui/icons-material/Storage';
 import SchemaIcon from '@mui/icons-material/Schema';
 import CategoryIcon from '@mui/icons-material/Category';
@@ -17,7 +17,20 @@ import PIIIcon from '@mui/icons-material/Security';
 import PHIIcon from '@mui/icons-material/HealthAndSafety';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AlertComponent from './AlertComponent';
-
+import {  CheckCircle, Warning } from '@mui/icons-material';
+import {
+    TabletMac,
+    Storage,
+    TableChart,
+    Api,
+    Code,
+    Description,
+    Schema,
+    Security,
+    Key,
+    VpnKey,
+    HealthAndSafety
+  } from '@mui/icons-material';
 
 const ResourceDataDictionarySummary = ({ wizardState }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -128,17 +141,23 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
           resourceTags: wizardState?.ddResourceSetup?.resourceTags,
           name: ddResourceGeneralConfig?.resourceInfo?.name,
           type: ddResourceGeneralConfig?.resourceInfo?.type,
+          ingestionProps: ddResourceGeneralConfig?.ingestionSettings,
+          resourceChecksum: ddResourceGeneralConfig?.resourceInfo?.checksum,
+          resourceSourceLocation: ddResourceGeneralConfig?.resourceInfo?.sourceLocation,
           distinctTables: 1,
           totalColumns: new Set(ddResourceSchemaConfig.map(col => col.id)).size,
           phiColumns: ddResourceSchemaConfig.reduce((acc, table) => acc + table.isPHI, 0) || 0,
           piiColumns: ddResourceSchemaConfig.reduce((acc, table) => acc + table.isPHI, 0) || 0,
           disabledColumns: ddResourceSchemaConfig.reduce((acc, table) => acc + table.isDisabled, 0) || 0,          
-          size: ddResourceSchemaConfig?.resourceInfo?.size,
-          runRows: ddResourceSchemaConfig?.resourceInfo?.fullNumRows,
-          lastModified: ddResourceSchemaConfig?.resourceInfo?.lastModified,
-          invalidTables: ddResourceSchemaData.filter(table => table.isInvalid).length,
-          invalidColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.columns.filter(col => col.isInvalid).length, 0),
-          classifiedColumns: schemaConfig.filter(col => col.schemaClassification?.value).length,
+          size: ddResourceGeneralConfig?.resourceInfo?.size,
+          runRows: ddResourceGeneralConfig?.resourceInfo?.fullNumRows,
+          createdDate: ddResourceGeneralConfig?.resourceInfo?.createdDate,
+          lastModified: ddResourceGeneralConfig?.resourceInfo?.lastModified,
+          invalidTables: 0,
+          invalidColumns: 0,
+          classifiedColumns: ddResourceSchemaConfig.filter(col => col.schemaClassification?.value).length,
+        
+
       };
       console.log('Resource dictionarySchema Metrics:', dictionarySchemaMetrics); 
 
@@ -170,10 +189,7 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
 
       // Classification Overview metrics
       const classificationMetrics = {
-          classifiedColumns: schemaConfig.filter(col => col.schemaClassification?.value).length,
-          piiColumns: schemaConfig.filter(col => col.isPII).length,
-          phiColumns: schemaConfig.filter(col => col.isPHI).length,
-          disabledColumns: schemaConfig.filter(col => col.isDisabled).length
+
       };
 
       console.log("dictionaryDataMetrics",dictionaryDataMetrics)
@@ -476,140 +492,230 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
         </Box>
     );
 
-  
-          return (
-              <Box sx={{ p: 2 }}>
-                    {alert.show && (
-                <AlertComponent 
-                    severity={alert.severity}
-                    message={alert.message}
-                    onClose={handleCloseAlert}
-                />
-                )}
-                  <Grid container spacing={2}>
-                      {/* Dictionary Details Card */}
-                      <Grid item xs={4}>
-                          <Card sx={{ height: '100%' }}>
-                              <CardContent sx={{ p: 2 }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                      <StorageIcon sx={{ mr: 1 }} color="primary" />
-                                      <Typography variant="h6">Dictionary Details</Typography>
-                                  </Box>
-                                  <Stack spacing={1}>
-                                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                          <Typography variant="body2" color="text.secondary">Resource Name</Typography>
-                                          <Typography variant="body2">{dictionaryDataMetrics.resourceName ?? 'N/A'}</Typography>
-                                      </Box>
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                          <Typography variant="body2" color="text.secondary">Name</Typography>
-                                          <Typography variant="body2">{dictionaryDataMetrics.name ?? 'N/A'}</Typography>
-                                      </Box>
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                          <Typography variant="body2" color="text.secondary">Type</Typography>
-                                          <Chip size="small" label={dictionaryDataMetrics.type ?? 'N/A'} />
-                                      </Box>
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                          <Typography variant="body2" color="text.secondary">Size</Typography>
-                                          <Typography variant="body2">{dictionaryDataMetrics?.size ? `${ddResourceGeneralConfig.resourceInfo.size} bytes` : 'N/A'}</Typography>
-                                      </Box>
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                          <Typography variant="body2" color="text.secondary">Last Modified</Typography>
-                                          <Typography variant="body2">{dictionaryDataMetrics?.lastModified ?? 'N/A'}</Typography>
-                                      </Box>
-                                  </Stack>
-                              </CardContent>
-                          </Card>
-                      </Grid>
+    const formatFileSize = (bytes) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      };
+      
+      const formatDate = (date) => {
+        return new Date(date).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      };
+    
 
-                      {/* Schema Overview Card */}
-                      <Grid item xs={4}>
-                          <Card sx={{ height: '100%' }}>
-                              <CardContent sx={{ p: 2 }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                      <SchemaIcon sx={{ mr: 1 }} color="primary" />
-                                      <Typography variant="h6">Schema Overview</Typography>
-                                  </Box>
-                                  <Stack spacing={1}>
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                          <Typography variant="body2" color="text.secondary">Total Tables</Typography>
-                                          <Chip size="small" label={dictionaryDataMetrics.distinctTables ?? 0} />
-                                      </Box>
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                          <Typography variant="body2" color="text.secondary">Total Columns</Typography>
-                                          <Chip size="small" label={dictionaryDataMetrics.totalColumns ?? 0} />
-                                      </Box>
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                          <Typography variant="body2" color="text.secondary">PII Columns</Typography>
-                                          <Chip 
-                                              size="small" 
-                                              icon={<PIIIcon sx={{ fontSize: 16 }} />}
-                                              label={dictionaryDataMetrics.piiColumns ?? 0}
-                                              color="warning"
-                                          />
-                                      </Box>
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                          <Typography variant="body2" color="text.secondary">PHI Columns</Typography>
-                                          <Chip 
-                                              size="small"
-                                              icon={<PHIIcon sx={{ fontSize: 16 }} />} 
-                                              label={dictionaryDataMetrics.phiColumns ?? 0}
-                                              color="error"
-                                          />
-                                      </Box>
-                                  </Stack>
-                              </CardContent>
-                          </Card>
-                      </Grid>
 
-                      {/* Classification Overview Card */}
-                      <Grid item xs={4}>
-                          <Card sx={{ height: '100%' }}>
-                              <CardContent sx={{ p: 2 }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                      <CategoryIcon sx={{ mr: 1 }} color="primary" />
-                                      <Typography variant="h6">Classification Overview</Typography>
-                                  </Box>
-                                  <Stack spacing={1}>
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                          <Typography variant="body2" color="text.secondary">Classified Columns</Typography>
-                                          <Chip 
-                                              size="small"
-                                              label={ddResourceSchemaConfig?.filter(col => col?.schemaClassification?.value)?.length ?? 0}
-                                              color="success"
-                                          />
-                                      </Box>
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                          <Typography variant="body2" color="text.secondary">Primary Keys</Typography>
-                                          <Chip size="small" label={dictionaryDataMetrics.pkColumns ?? 0} />
-                                      </Box>
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                          <Typography variant="body2" color="text.secondary">Foreign Keys</Typography>
-                                          <Chip size="small" label={dictionaryDataMetrics.fkColumns ?? 0} />
-                                      </Box>
-                                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                          <Typography variant="body2" color="text.secondary">Required Fields</Typography>
-                                          <Chip size="small" label={dictionaryDataMetrics.nullableColumns ?? 0} />
-                                      </Box>
-                                  </Stack>
-                              </CardContent>
-                          </Card>
-                      </Grid>
+    const getResourceTypeIcon = (type) => {
+        const typeMap = {
+          'excel': <TabletMac color="success" />,
+          'csv': <TableChart color="primary" />,
+          'database': <Storage color="secondary" />,
+          'api': <Api color="info" />,
+          'json': <Code color="warning" />,
+          'xml': <Code color="error" />
+        };
+        return typeMap[type.toLowerCase()] || <Description />;
+      };
 
-                      {/* Action Button */}
-                      <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                          <Button 
-                              variant="contained" 
-                        color="primary"
-                        startIcon={<SaveIcon />}
-                        onClick={handleSave}
-                        disabled={isProcessing}
-                    >
-                        {isProcessing ? 'Saving...' : 'Save Data Dictionary'}
-                    </Button>
-                </Grid>
-            </Grid>
+
+      const MetricCard = ({ title, icon, children }) => (
+        <Card elevation={2} sx={{ p: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            {icon}
+            <Typography variant="subtitle1" sx={{ ml: 1 }}>{title}</Typography>
+          </Box>
+          {children}
+        </Card>
+      );
+
+      const MetricCount = ({ total, invalid, label, color = "primary" }) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CircularProgress
+            variant="determinate"
+            value={((total - invalid) / total) * 100}
+            size={24}
+            color={invalid > 0 ? "warning" : "success"}
+          />
+          <Box>
+            <Typography variant="body2">{label}</Typography>
+            <Typography variant="h6" component="span">
+              {total - invalid}
+              <Typography 
+                component="span" 
+                variant="caption" 
+                color={invalid > 0 ? 'error.main' : 'text.secondary'}
+                sx={{ ml: 0.5 }}
+              >
+                /{invalid}
+              </Typography>
+            </Typography>
+          </Box>
         </Box>
-    );
+      );
+      
+      
+      return (
+        <Grid container spacing={1} sx={{ maxHeight: '50vh' }}>
+          {/* Resource Details Card */}
+          <Grid item xs={12}>
+            <MetricCard title="Resource Details" icon={getResourceTypeIcon(dictionarySchemaMetrics.resourceType)}>
+              <Grid container spacing={2}>
+                <Grid item xs={4}>
+                  <Stack spacing={1}>
+                    <Box>
+                      <Typography variant="caption">Resource Name</Typography>
+                      <Typography variant="body1" fontWeight="medium">{dictionarySchemaMetrics.resourceName}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption">Resource</Typography>
+                      <Typography variant="body2">{dictionarySchemaMetrics.name}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption">Description</Typography>
+                      <Typography variant="body2">{dictionarySchemaMetrics.resourceDescription}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption">Tags</Typography>
+                      <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                        {dictionarySchemaMetrics.resourceTags?.map(tag => (
+                          <Chip key={tag} label={tag} size="small" />
+                        ))}
+                      </Stack>
+                    </Box>
+                  </Stack>
+                </Grid>
+                <Grid item xs={8}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={3}>
+                      <Typography variant="caption">Standardized Name</Typography>
+                      <Typography variant="body2">{dictionarySchemaMetrics.standardizedSourceName}</Typography>
+                    </Grid>
+                    <Grid item xs={3}>
+                      <Typography variant="caption">Type</Typography>
+                      <Typography variant="body2">{dictionarySchemaMetrics.type}</Typography>
+                    </Grid>
+                    <Grid item xs={2}>
+                      <Typography variant="caption">Version</Typography>
+                      <Typography variant="body2">{dictionarySchemaMetrics.versionText}</Typography>
+                    </Grid>
+                    <Grid item xs={2}>
+                      <Typography variant="caption">Size</Typography>
+                      <Typography variant="body2">{formatFileSize(dictionarySchemaMetrics.size)}</Typography>
+                    </Grid>
+                    <Grid item xs={2}>
+                      <Typography variant="caption">Modified</Typography>
+                      <Typography variant="body2">{formatDate(dictionarySchemaMetrics.lastModified)}</Typography>
+                    </Grid>
+                  </Grid>
+                </Grid>
+              </Grid>
+            </MetricCard>
+          </Grid>
+      
+          {/* Dictionary Schema Card */}
+          <Grid item xs={6}>
+            <MetricCard title="Dictionary Schema" icon={<Schema color="primary" />}>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <MetricCount 
+                    total={dictionarySchemaMetrics.distinctTables} 
+                    invalid={dictionarySchemaMetrics.invalidTables}
+                    label="Tables"
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <MetricCount 
+                    total={dictionarySchemaMetrics.totalColumns} 
+                    invalid={dictionarySchemaMetrics.invalidColumns}
+                    label="Columns"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Stack direction="row" spacing={1}>
+                    <Chip 
+                      label={`Classified: ${dictionarySchemaMetrics.classifiedColumns}`}
+                      size="small"
+                      color={dictionarySchemaMetrics.classifiedColumns > 80 ? "success" : "warning"}
+                    />
+                    <Chip 
+                      label={`Disabled: ${dictionarySchemaMetrics.disabledColumns}`}
+                      size="small"
+                      color={dictionarySchemaMetrics.disabledColumns > 0 ? "error" : "default"}
+                    />
+                    <Chip 
+                      label={`PHI: ${dictionarySchemaMetrics.phiColumns}`}
+                      size="small"
+                      color={dictionarySchemaMetrics.phiColumns > 0 ? "error" : "default"}
+                    />
+                    <Chip 
+                      label={`PII: ${dictionarySchemaMetrics.piiColumns}`}
+                      size="small"
+                      color={dictionarySchemaMetrics.piiColumns > 0 ? "warning" : "default"}
+                    />
+                  </Stack>
+                </Grid>
+              </Grid>
+            </MetricCard>
+          </Grid>
+      
+          {/* Dictionary Data Card */}
+          <Grid item xs={6}>
+            <MetricCard title="Dictionary Data" icon={<Storage color="primary" />}>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <MetricCount 
+                    total={dictionaryDataMetrics.distinctTables} 
+                    invalid={dictionaryDataMetrics.invalidTables}
+                    label="Tables"
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <MetricCount 
+                    total={dictionaryDataMetrics.totalColumns} 
+                    invalid={dictionaryDataMetrics.invalidColumns}
+                    label="Columns"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Stack direction="row" spacing={1}>
+                    <Chip 
+                      icon={<Key />}
+                      label={`PK: ${dictionaryDataMetrics.pkColumns}`}
+                      size="small"
+                      color="info"
+                    />
+                    <Chip 
+                      icon={<Key />}
+                      label={`FK: ${dictionaryDataMetrics.fkColumns}`}
+                      size="small"
+                      color="info"
+                    />
+                    <Chip 
+                      icon={<Security />}
+                      label={`PHI: ${dictionaryDataMetrics.phiColumns}`}
+                      size="small"
+                      color={dictionaryDataMetrics.phiColumns > 0 ? "error" : "default"}
+                    />
+                    <Chip 
+                      icon={<Security />}
+                      label={`PII: ${dictionaryDataMetrics.piiColumns}`}
+                      size="small"
+                      color={dictionaryDataMetrics.piiColumns > 0 ? "warning" : "default"}
+                    />
+                  </Stack>
+                </Grid>
+              </Grid>
+            </MetricCard>
+          </Grid>
+        </Grid>
+      );
+      
+      
 };
 
 export default ResourceDataDictionarySummary;
