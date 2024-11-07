@@ -465,7 +465,6 @@ return (
     </Box>
   </Box>
 );
-
     };
       
     export default DataDictionaryClassificationSummary;
