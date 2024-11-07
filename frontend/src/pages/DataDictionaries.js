@@ -1,4 +1,4 @@
-// frontend/src/components/pages/DataDictionaries.js
+// frontend/src/pages/DataDictionaries.js
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { getResources, deleteResource } from '../services/resourceService';
@@ -13,10 +13,7 @@ import { ViewModule, ViewList, Edit, FileCopy, Share, Delete, Add } from '@mui/i
 import { useNavigate } from 'react-router-dom';
 import { useView } from '../contexts/ViewContext';
 
-
-
-
-const Sources = () => {
+const DataDictionaries = () => {
   const { projectsView, setProjectsView } = useView();
   const [sourcesView, setSourcesView] = useState('card');
   const [filter, setFilter] = useState('all');
@@ -27,18 +24,21 @@ const Sources = () => {
   const [sources, setSources] = useState([]);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
 
-  useEffect(() => {
-    fetchSources();
-  }, []);
-
-  const fetchSources = async () => {
+  const fetchDataDictionaries = async () => {
     try {
       const data = await getResources();
-      setSources(data);
+      const dataDictionaries = data.filter(
+        resource => resource.dsstrc_attr_grp_src_typ_cd === 'Data Dictionary'
+      );
+      setSources(dataDictionaries);
     } catch (error) {
-      console.error('Error fetching resources:', error);
+      console.error('Error fetching data dictionaries:', error);
     }
   };
+
+  useEffect(() => {
+    fetchDataDictionaries();
+  }, []);
 
   const handleViewChange = (event, newView) => {
     if (newView !== null) {
@@ -65,14 +65,14 @@ const Sources = () => {
     try {
       await deleteResource(selectedSource.ds_id);
       setDeleteDialogOpen(false);
-      fetchSources();
+      fetchDataDictionaries();
     } catch (error) {
       console.error('Error deleting source:', error);
     }
   };
 
-  const handleAddNewSource = () => {
-    navigate('/sources/new');
+  const handleAddNewDataDictionary = () => {
+    navigate('/data-dictionaries/new');
   };
 
   const columns = [
@@ -80,7 +80,7 @@ const Sources = () => {
     { field: 'dsstrc_attr_grp_nm', headerName: 'Source Name', flex: 1 },
     { field: 'dsstrc_attr_grp_shrt_nm', headerName: 'Source Short Name', flex: 1 },
     { field: 'dsstrc_attr_grp_desc', headerName: 'Description', flex: 1 },
-    { field: 'physcl_data_typ_nm', headerName: 'Data Type', flex: 1 },
+    { field: 'dsstrc_attr_grp_src_typ_cd', headerName: 'Type', flex: 1 },
     { field: 'updt_ts', headerName: 'Last Updated', flex: 1 },
     {
       field: 'actions',
@@ -142,7 +142,7 @@ const Sources = () => {
         <Box mb={3}>
           <Breadcrumbs aria-label="breadcrumb">
             <Link color="inherit" href="/">Home</Link>
-            <Typography color="textPrimary">Sources</Typography>
+            <Typography color="textPrimary">Data Dictionaries</Typography>
           </Breadcrumbs>
         </Box>
 
@@ -156,10 +156,10 @@ const Sources = () => {
           <Button
             variant="contained"
             color="primary"
-            onClick={handleAddNewSource}
+            onClick={handleAddNewDataDictionary}
             startIcon={<Add />}
           >
-            Add New Source
+            Add New Data Dictionary
           </Button>
           
           <ToggleButtonGroup 
@@ -231,4 +231,4 @@ const Sources = () => {
   );
 };
 
-export default Sources;
+export default DataDictionaries;

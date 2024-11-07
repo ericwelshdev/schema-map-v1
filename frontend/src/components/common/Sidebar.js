@@ -125,7 +125,7 @@ const Sidebar = () => {
     { text: 'Projects', icon: <AccountTreeIcon />, path: '/projects' },
     { text: 'Sources', icon: <BookKeyIcon />, path: '/sources' },
     { text: 'Targets', icon: <AdsClickIcon />, path: '/targets' },
-    { text: 'Data Dictionaries', icon: <BookAIcon />, path: '/sources' },
+    { text: 'Data Dictionaries', icon: <BookAIcon />, path: '/data-dictionaries' },
     { text: 'Admin', icon: <AdminIcon />, path: '/admin' },
   ];
 

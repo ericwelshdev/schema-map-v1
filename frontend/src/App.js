@@ -15,6 +15,8 @@ import Dashboard from './pages/Dashboard';
 import Workspace from './pages/Workspace';
 import Projects from './pages/Projects';
 import Sources from './pages/Sources';
+import DataDictionaries from './pages/DataDictionaries';
+import NewDataDictionary from './pages/NewDataDictionary';
 import NewSource from './pages/NewSource';
 import SourceDetail from './pages/SourceDetail';
 import Targets from './pages/Targets';
@@ -25,6 +27,7 @@ import { SnackbarProvider } from 'notistack';
 import { ViewProvider } from './contexts/ViewContext';
 import { userConfig } from './config/userConfig';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
+
 
 
   const theme = createTheme({
@@ -62,6 +65,8 @@ import { WorkspaceProvider } from './contexts/WorkspaceContext';
                               <Route path="/workspace" element={<Workspace />} />
                               <Route path="/projects" element={<Projects />} />
                               <Route path="/sources" element={<Sources />} />
+                              <Route path="/data-dictionaries" element={<DataDictionaries />} />
+                              <Route path="/data-dictionaries/new" element={<NewDataDictionary />} />
                               <Route path="/source/:id" element={<SourceDetail />} />
                               <Route path="/sources/new" element={<NewSource />} />
                               <Route path="/targets" element={<Targets />} />
