@@ -1,9 +1,6 @@
 // DataDictionaryClassificationSummary.js
-import React, { useState , useEffect, useCallback} from 'react';
-import { 
-  Box, Card, Typography, Chip, CardContent,Grid,
-  IconButton, Collapse, Stack ,LinearProgress
-} from '@mui/material';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Box, Card, Typography, Chip, CardContent, Grid, IconButton, Collapse, Stack, LinearProgress } from '@mui/material';
 import { DataGrid, GridCell } from '@mui/x-data-grid';
 import { initDB, getData, setData } from '../utils/storageUtils';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -20,62 +17,77 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 
-  const DataDictionaryClassificationSummary = ({ classificationData }) => {
-    const [isLoading, setIsLoading] = useState(true);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [ddResourceSchemaConfig, setDDResourceSchemaConfig] = useState([]);
-    const [ddResourceSchemaData, setDDResourceSchemaData] = useState([]);
-    const [generalConfigData, setGeneralConfigData] = useState({});
-    const [ddResourceProcessedData, setDDResourceProcessedData] = useState([]);
-    const [ddResourceGeneralConfig, setDDResourceGeneralConfig] = useState({});
-    const [expandedRowId, setExpandedRowId] = useState(null);
+const DataDictionaryClassificationSummary = ({ classificationData }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [ddResourceSchemaConfig, setDDResourceSchemaConfig] = useState([]);
+  const [ddResourceSchemaData, setDDResourceSchemaData] = useState([]);
+  const [generalConfigData, setGeneralConfigData] = useState({});
+  const [ddResourceProcessedData, setDDResourceProcessedData] = useState([]);
+  const [ddResourceGeneralConfig, setDDResourceGeneralConfig] = useState({});
+  const [expandedRowId, setExpandedRowId] = useState(null);
+  const [processedData, setProcessedData] = useState([]);
+  const [validationMetrics, setValidationMetrics] = useState({
+    invalidTables: 0,
+    invalidColumns: 0
+  });
 
-    useEffect(() => {
-      const loadData = async () => {
-          setIsLoading(true);
-          try {
-              await initDB();
-            
-              const rawDDResourceGeneralConfig = await localStorage.getItem('ddResourceGeneralConfig') || {};
-              const ddResourceGeneralConfig = typeof rawDDResourceGeneralConfig === 'string'
-                  ? JSON.parse(rawDDResourceGeneralConfig)
-                  : rawDDResourceGeneralConfig;
 
-              // Poll for IndexedDB data until it's available
-              const checkData = async () => {
-                  const schemaData = await getData('ddResourcePreviewRows');
-                  if (schemaData && Object.keys(schemaData).length > 0) {
-                      setDDResourceSchemaConfig(schemaData);
-                      setGeneralConfigData(generalConfigData);
-                      setDDResourceGeneralConfig(ddResourceGeneralConfig);
-                      setIsLoading(false);
-                  } else {
-                      setTimeout(checkData, 500);
-                  }
-                  const dataDictionaryData = await getData('ddResourceFullData');
-                  if (dataDictionaryData && Object.keys(dataDictionaryData).length > 0) {
-                      setDDResourceSchemaData(dataDictionaryData);
-                      setIsLoading(false);
-                  } else {
-                      setTimeout(checkData, 500);
-                  }
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        await initDB();
 
-              };
-            
-              await checkData();
-          } catch (error) {
-              console.error('Error loading data:', error);
-              setIsLoading(false);
+        const rawDDResourceGeneralConfig = await localStorage.getItem('ddResourceGeneralConfig') || {};
+        const ddResourceGeneralConfig = typeof rawDDResourceGeneralConfig === 'string'
+          ? JSON.parse(rawDDResourceGeneralConfig)
+          : rawDDResourceGeneralConfig;
+
+        // Poll for IndexedDB data until it's available
+        const checkData = async () => {
+          const schemaData = await getData('ddResourcePreviewRows');
+          if (schemaData && Object.keys(schemaData).length > 0) {
+            setDDResourceSchemaConfig(schemaData);
+            setGeneralConfigData(generalConfigData);
+            setDDResourceGeneralConfig(ddResourceGeneralConfig);
+            setIsLoading(false);
+          } else {
+            setTimeout(checkData, 500);
           }
-      };
+          const dataDictionaryData = await getData('ddResourceFullData');
+          if (dataDictionaryData && Object.keys(dataDictionaryData).length > 0) {
+            setDDResourceSchemaData(dataDictionaryData);
+            setIsLoading(false);
+          } else {
+            setTimeout(checkData, 500);
+          }
 
-      loadData();
+        };
+
+        await checkData();
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   useEffect(() => {
     if (ddResourceSchemaData && Object.keys(ddResourceSchemaData).length > 0) {
       const processedData = processSchemaData();
       setData('ddResourceProcessedData', processedData);
+      
+      const invalidTables = processedData.filter(table => table.isInvalid).length;
+      const invalidColumns = processedData.reduce((acc, table) => acc + table.columns.filter(col => col.isInvalid).length, 0);
+  
+      setValidationMetrics({
+        invalidTables,
+        invalidColumns
+      });
+      console.log('validationMetrics:', { invalidTables, invalidColumns });
     }
   }, [ddResourceSchemaData]);
 
@@ -101,7 +113,6 @@ import {
       'FLOAT8': faPercent,
       'LONGVARBINARY': faPercent,
 
-      
       // strings
       'CHAR': faFont,
       'VARCHAR': faFont,
@@ -113,7 +124,6 @@ import {
       'CLOB': faFont,
       'NCLOB': faFont,
 
-      
       // dates and times
       'DATE': faCalendar,
       'DATETIME': faClock,
@@ -128,37 +138,27 @@ import {
       'ARRAY': faDatabase,
       'MAP': faDatabase,
       
-      // Boolean
+      // boolean
       'BOOLEAN': faToggleOn,
       'BOOL': faToggleOn,
       
       'DEFAULT': faDatabase
     };
-  
+
     return typeMap[baseType] || typeMap.DEFAULT;
   };
-  
+
  
 
   const [sourceData, setSourceData] = useState({
     ddClassifiedPreviewRows: null,
   });
 
-  const getClassifiedColumns = useCallback((classificationType) => {
-    return ddResourceSchemaConfig?.filter(
-      (column) => column.schemaClassification?.value === classificationType
-    );
-  }, [sourceData.ddClassifiedPreviewRows]);
-
-  const getColumnDataByClassification = useCallback((classificationType, rowData) => {
-    const classifiedColumns = getClassifiedColumns(classificationType);
-    if (!classifiedColumns?.length || !rowData) return '';
-    const columnName = classifiedColumns[0].name;
-    return rowData[columnName] || '';
-  }, [getClassifiedColumns]);
-
-  
-
+  // const getClassifiedColumns = useCallback((classificationType) => {
+  //   return ddResourceSchemaConfig?.filter(
+  //     (column) => column.schemaClassification?.value === classificationType
+  //   );
+  // }, [ddResourceSchemaConfig]);
 
 
   const processSchemaData = () => {
@@ -180,34 +180,35 @@ import {
 
     // Group dictionary data by table
     const tableGroups = ddResourceSchemaData.reduce((acc, row) => {
-        const tableName = row[tableNameField];
-        if (!acc[tableName]) {
-            acc[tableName] = [];
-        }
-        acc[tableName].push(row);
-        return acc;
+      const tableName = row[tableNameField];
+      if (!acc[tableName]) {
+        acc[tableName] = [];
+      }
+      acc[tableName].push(row);
+      return acc;
     }, {});
 
-    const data = 
+    const processedSchemaData = 
      Object.entries(tableGroups).map(([tableName, rows]) => ({
-        id: tableName,
-        tableName: tableName,
-        logicalName: rows[0][getClassifiedColumns('dsstrc_attr_grp_nm')[0]?.name] || '',
-        tableDescription: rows[0][getClassifiedColumns('dsstrc_attr_grp_desc')[0]?.name] || '',
-        totalColumns: rows.length,
-        nullableColumns: rows.filter(row => row['mand_ind'] === 'YES').length,
-        classifiedColumns: Math.round(
-            (rows.filter(row => row[columnNameField]).length / rows.length) * 100
-        ),
-        piiColumns: rows.filter(row => row['pii_ind'] === 'YES').length,
-        phiColumns: rows.filter(row => row['phi_ind'] === 'YES').length,
-        primaryKeys: {
+      
+          id: tableName,
+          tableName: tableName,
+          isInvalid: !(tableName && tableName !== 'undefined' && tableName.trim() !== '' && tableName !== null),
+          logicalName: rows[0][getClassifiedColumns('dsstrc_attr_grp_nm')[0]?.name] || '',
+          tableDescription: rows[0][getClassifiedColumns('dsstrc_attr_grp_desc')[0]?.name] || '',
+          totalColumns: rows.length,
+          nullableColumns: rows.filter(row => row['mand_ind'] === 'YES').length,
+          classifiedColumns: Math.round((rows.filter(row => row[columnNameField]).length / rows.length) * 100),
+          piiColumns: rows.filter(row => row['pii_ind'] === 'YES').length,
+          phiColumns: rows.filter(row => row['phi_ind'] === 'YES').length,
+          primaryKeys: {
             pk: rows.filter(row => row['pk_ind'] === 'YES').length,
             fk: rows.filter(row => row['fk_ind'] === 'YES').length
-        },
+          },
         columns: rows.map(row => ({
             id: row[columnNameField],
             physicalName: row[columnNameField],
+            isInvalid: !(row[columnNameField] && row[columnNameField] !== 'undefined' && row[columnNameField].trim() !== '' && row[columnNameField] !== null),
             logicalName: row[getClassifiedColumns('dsstrc_attr_nm')[0]?.name],
             dataType: row[getClassifiedColumns('physcl_data_typ_nm')[0]?.name],
             description: row[getClassifiedColumns('dsstrc_attr_desc')[0]?.name],
@@ -222,72 +223,92 @@ import {
             isDisabled: row['disabled_ind'] === 'YES',
             isEncrypted: row['encrypted_ind'] === 'YES',
             attributes: [
-                ...(row['pk_ind'] === 'YES' ? ['PK'] : []),
-                ...(row['fk_ind'] === 'YES' ? ['FK'] : []),
-                ...(row['pii_ind'] === 'YES' ? ['PII'] : []),
-                ...(row['phi_ind'] === 'YES' ? ['PHI'] : [])
+              ...(row['pk_ind'] === 'YES' ? ['PK'] : []),
+              ...(row['fk_ind'] === 'YES' ? ['FK'] : []),
+              ...(row['pii_ind'] === 'YES' ? ['PII'] : []),
+              ...(row['phi_ind'] === 'YES' ? ['PHI'] : [])
             ]
         }))
     }));
-    console.log('data', data);
-    return data;    
+    console.log('processedSchemaData', processedSchemaData);
+    return processedSchemaData;    
 };
 
 
-    if (isLoading) {
-      return <Box sx={{ width: '100%' }}><LinearProgress /></Box>;
-    }
-
+  if (isLoading) {
+    return <Box sx={{ width: '100%' }}><LinearProgress /></Box>;
+  }
+    
 // Add this new component for the summary card
 const DataDictionarySummaryCard = ({ data }) => {
-  const summary = data.reduce((acc, table) => ({
-    totalTables: acc.totalTables + 1,
-    totalColumns: acc.totalColumns + table.totalColumns,
-    totalPII: acc.totalPII + table.piiColumns,
-    totalPHI: acc.totalPHI + table.phiColumns,
-    totalPK: acc.totalPK + table.primaryKeys.pk,
-    totalFK: acc.totalFK + table.primaryKeys.fk,
-  }), {
-    totalTables: 0,
-    totalColumns: 0,
-    totalPII: 0,
-    totalPHI: 0,
-    totalPK: 0,
-    totalFK: 0
-  });
+    const summary = data.reduce((acc, table) => ({
+      totalTables: acc.totalTables + 1,
+      totalColumns: acc.totalColumns + table.totalColumns,
+      totalPII: acc.totalPII + table.piiColumns,
+      totalPHI: acc.totalPHI + table.phiColumns,
+      totalPK: acc.totalPK + table.primaryKeys.pk,
+      totalFK: acc.totalFK + table.primaryKeys.fk,
+    }), {
+      totalTables: 0,
+      totalColumns: 0,
+      totalPII: 0,
+      totalPHI: 0,
+      totalPK: 0,
+      totalFK: 0
+    });
 
-  return (
+    return (
     <Card sx={{ mb: 1 }}>
-      <CardContent>
-        <Grid container spacing={2}>
-          <Grid item xs={2}>
+        <CardContent>
+          <Grid container spacing={2}>
+            <Grid item xs={2}>
             <Typography variant="subtitle2" color="textSecondary">Tables</Typography>
-            <Typography variant="h6">{summary.totalTables}</Typography>
+            <Typography variant="h6">
+              {summary.totalTables}
+              <Typography 
+                component="span" 
+                variant="caption" 
+                color={validationMetrics.invalidTables > 0 ? 'error' : 'inherit'}
+                sx={{ ml: 0.5 }}
+              >
+                /{validationMetrics.invalidTables||0} 
+              </Typography>
+            </Typography>
           </Grid>
           <Grid item xs={2}>
             <Typography variant="subtitle2" color="textSecondary">Columns</Typography>
-            <Typography variant="h6">{summary.totalColumns}</Typography>
+            <Typography variant="h6">
+              {summary.totalColumns}
+              <Typography 
+                component="span" 
+                variant="caption" 
+                color={validationMetrics.invalidColumns > 0 ? 'error' : 'inherit'}
+                sx={{ ml: 0.5 }}
+              >
+                /{validationMetrics.invalidColumns||0}
+              </Typography>
+            </Typography>
           </Grid>
-          <Grid item xs={2}>
-            <Typography variant="subtitle2" color="textSecondary">PII</Typography>
-            <Typography variant="h6" color="warning.main">{summary.totalPII}</Typography>
+            <Grid item xs={2}>
+              <Typography variant="subtitle2" color="textSecondary">PII</Typography>
+              <Typography variant="h6" color="warning.main">{summary.totalPII}</Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <Typography variant="subtitle2" color="textSecondary">PHI</Typography>
+              <Typography variant="h6" color="error.main">{summary.totalPHI}</Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <Typography variant="subtitle2" color="textSecondary">Primary Keys</Typography>
+              <Typography variant="h6">{summary.totalPK}</Typography>
+            </Grid>
+            <Grid item xs={2}>
+              <Typography variant="subtitle2" color="textSecondary">Foreign Keys</Typography>
+              <Typography variant="h6">{summary.totalFK}</Typography>
+            </Grid>
           </Grid>
-          <Grid item xs={2}>
-            <Typography variant="subtitle2" color="textSecondary">PHI</Typography>
-            <Typography variant="h6" color="error.main">{summary.totalPHI}</Typography>
-          </Grid>
-          <Grid item xs={2}>
-            <Typography variant="subtitle2" color="textSecondary">Primary Keys</Typography>
-            <Typography variant="h6">{summary.totalPK}</Typography>
-          </Grid>
-          <Grid item xs={2}>
-            <Typography variant="subtitle2" color="textSecondary">Foreign Keys</Typography>
-            <Typography variant="h6">{summary.totalFK}</Typography>
-          </Grid>
-        </Grid>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
 };   
 
 
@@ -399,72 +420,87 @@ const processedRows = processSchemaData().flatMap((row) => [
 
 
 
-return (
-  <Box sx={{ height: '100%', width: '100%', p: 2 }}>
-    <Typography variant="h5" gutterBottom>
-      Data Dictionary Classification Summary
-    </Typography>
+  return (
+    <Box sx={{ height: '100%', width: '100%', p: 2 }}>
+      <Typography variant="h5" gutterBottom>
+        Data Dictionary Classification Summary
+      </Typography>
 
     <DataDictionarySummaryCard data={processSchemaData()} />
-    <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
-    <DataGrid
+      <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
+      <DataGrid
       rows={processedRows}
-      columns={[
-        {
-          field: 'content',
-          headerName: '',
-          width: 1,
-          renderCell: (params) => {
-            if (params.row.isExpandedRow) {
-              return (
-                <Box sx={{position: 'absolute', left: 0, right: 0, pl: 0,pr: 0, bgcolor: '#deebff', height:250}}>
-                  <DataGrid
-                    rows={params.row.columns}
-                    columns={columnDetails.columns}
-                    columnHeaderHeight={40}
-                    rowHeight={40}
-                    density="compact"
-                    hideFooter
-                    disableColumnMenu
-                    disableSelectionOnClick
-                    isRowSelectable={() => false}
-                    sx={{
-                      '.MuiDataGrid-cell': {
-                        cursor: 'pointer',
-                        userSelect: 'none'
+        columns={[
+          {
+            field: 'content',
+            headerName: '',
+            width: 1,
+            renderCell: (params) => {
+              if (params.row.isExpandedRow) {
+                return (
+                  <Box sx={{position: 'absolute', left: 0, right: 0, pl: 0,pr: 0, bgcolor: '#deebff', height:250}}>
+                    <DataGrid
+                      rows={params.row.columns}
+                      columns={columnDetails.columns}
+                      columnHeaderHeight={40}
+                      rowHeight={40}
+                      density="compact"
+                      hideFooter
+                      disableColumnMenu
+                      disableSelectionOnClick
+                      isRowSelectable={() => false}
+                      getRowClassName={(params) => params.row.isInvalid ? 'invalid-row' : ''}
+                      sx={{
+                        '.MuiDataGrid-cell': {
+                          cursor: 'pointer',
+                          userSelect: 'none'
+                        },
+                        '& .invalid-row': {
+                        bgcolor: '#ffebee',
+                        '&:hover': {
+                          bgcolor: '#ffcdd2',
+                        },
                       }
-                    }}
-                  />
-                </Box>
-              );
+                                      }}
+                    />
+                  </Box>
+                );
+              }
+              return null;
             }
-            return null;
+          },
+          ...tableMetrics.columns.filter(col => col.field !== 'expand')
+        ]}
+        columnHeaderHeight={40}
+        rowHeight={40}
+        density="compact"
+        onRowClick={(params) => {
+          if (!params.row.isExpandedRow) {
+            handleRowClick(params.row.id);
           }
+        }}
+        disableSelectionOnClick
+        isRowSelectable={() => false}
+        getRowClassName={(params) => params.row.isInvalid ? 'invalid-row' : ''}
+        sx={{
+          '.MuiDataGrid-cell': {
+            cursor: 'pointer',
+            userSelect: 'none'
+          },
+          '& .invalid-row': {
+        bgcolor: '#ffebee',
+        '&:hover': {
+          bgcolor: '#ffcdd2',
         },
-        ...tableMetrics.columns.filter(col => col.field !== 'expand')
-      ]}
-      columnHeaderHeight={40}
-      rowHeight={40}
-      density="compact"
-      onRowClick={(params) => {
-        if (!params.row.isExpandedRow) {
-          handleRowClick(params.row.id);
-        }
-      }}
-      disableSelectionOnClick
-      isRowSelectable={() => false}
-      sx={{
-        '.MuiDataGrid-cell': {
-          cursor: 'pointer',
-          userSelect: 'none'
-        }
-      }}
-    />
+      }
+        }}
+      />
 
 
+      </Box>
     </Box>
-  </Box>
-);
+  );
+
     };
       
     export default DataDictionaryClassificationSummary;

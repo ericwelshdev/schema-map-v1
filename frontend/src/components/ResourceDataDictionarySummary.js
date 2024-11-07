@@ -119,7 +119,7 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
       const schemaConfig = Array.isArray(ddResourceGeneralConfig) ? ddResourceGeneralConfig : [];
 
       // Dictionary Details Card metrics
-      const dictionaryMetrics = {
+      const dictionarySchemaMetrics = {
           resourceName: wizardState?.ddResourceSetup?.resourceName,
           resourceDescription: wizardState?.ddResourceSetup?.resourceDescription,
           resourceType: wizardState?.ddResourceSetup?.resourceType,
@@ -128,19 +128,45 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
           resourceTags: wizardState?.ddResourceSetup?.resourceTags,
           name: ddResourceGeneralConfig?.resourceInfo?.name,
           type: ddResourceGeneralConfig?.resourceInfo?.type,
-          distinctTables: new Set(ddResourceSchemaData.map(col => col.tableName)).size,
-          totalColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.totalColumns, 0) || 0,
-          nullableColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.nullableColumns, 0) || 0,
-          phiColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.phiColumns, 0) || 0,
-          piiColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.piiColumns, 0) || 0,
-          pkColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.primaryKeys?.pk, 0) || 0,
-          fkColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.foreignKeys?.fk, 0) || 0,
-        //   totalColumns: ddResourceSchemaData.reduce((acc, table) => acc + (Array.isArray(table.totalColumns) ? table.columns.length : 0), 0),          
-          size: ddResourceGeneralConfig?.resourceInfo?.size,
-          runRows: ddResourceGeneralConfig?.resourceInfo?.fullNumRows,
-          lastModified: ddResourceGeneralConfig?.resourceInfo?.lastModified
+          distinctTables: 1,
+          totalColumns: new Set(ddResourceSchemaConfig.map(col => col.id)).size,
+          phiColumns: ddResourceSchemaConfig.reduce((acc, table) => acc + table.isPHI, 0) || 0,
+          piiColumns: ddResourceSchemaConfig.reduce((acc, table) => acc + table.isPHI, 0) || 0,
+          disabledColumns: ddResourceSchemaConfig.reduce((acc, table) => acc + table.isDisabled, 0) || 0,          
+          size: ddResourceSchemaConfig?.resourceInfo?.size,
+          runRows: ddResourceSchemaConfig?.resourceInfo?.fullNumRows,
+          lastModified: ddResourceSchemaConfig?.resourceInfo?.lastModified,
+          invalidTables: ddResourceSchemaData.filter(table => table.isInvalid).length,
+          invalidColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.columns.filter(col => col.isInvalid).length, 0),
+          classifiedColumns: schemaConfig.filter(col => col.schemaClassification?.value).length,
       };
-      console.log('Resource dictionaryMetrics:', dictionaryMetrics); 
+      console.log('Resource dictionarySchema Metrics:', dictionarySchemaMetrics); 
+
+      // Dictionary Details Card metrics
+      const dictionaryDataMetrics = {
+        resourceName: wizardState?.ddResourceSetup?.resourceName,
+        resourceDescription: wizardState?.ddResourceSetup?.resourceDescription,
+        resourceType: wizardState?.ddResourceSetup?.resourceType,
+        standardizedSourceName: wizardState?.ddResourceSetup?.standardizedSourceName,
+        versionText: wizardState?.ddResourceSetup?.versionText,
+        resourceTags: wizardState?.ddResourceSetup?.resourceTags,
+        name: ddResourceGeneralConfig?.resourceInfo?.name,
+        type: ddResourceGeneralConfig?.resourceInfo?.type,
+        distinctTables: new Set(ddResourceSchemaData.map(col => col.tableName)).size,
+        totalColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.totalColumns, 0) || 0,
+        nullableColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.nullableColumns, 0) || 0,
+        phiColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.phiColumns, 0) || 0,
+        piiColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.piiColumns, 0) || 0,
+        pkColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.primaryKeys?.pk, 0) || 0,
+        fkColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.foreignKeys?.fk, 0) || 0,
+        disabledColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.foreignKeys?.fk, 0) || 0,   
+        size: ddResourceGeneralConfig?.resourceInfo?.size,
+        runRows: ddResourceGeneralConfig?.resourceInfo?.fullNumRows,
+        lastModified: ddResourceGeneralConfig?.resourceInfo?.lastModified,
+        invalidTables: ddResourceSchemaData.filter(table => table.isInvalid).length,
+        invalidColumns: ddResourceSchemaData.reduce((acc, table) => acc + table.columns.filter(col => col.isInvalid).length, 0)
+    };
+    console.log('Resource dictionaryData Metrics:', dictionaryDataMetrics);       
 
       // Classification Overview metrics
       const classificationMetrics = {
@@ -150,7 +176,7 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
           disabledColumns: schemaConfig.filter(col => col.isDisabled).length
       };
 
-      console.log("dictionaryMetrics",dictionaryMetrics)
+      console.log("dictionaryDataMetrics",dictionaryDataMetrics)
       console.log("classificationMetrics",classificationMetrics)
 
 
@@ -166,8 +192,8 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
               dsstrc_attr_grp_shrt_nm: generalConfigData?.ddResourceSetup?.standardizedSourceName,
               dsstrc_attr_grp_desc: generalConfigData?.ddResourceSetup?.resourceDescription,
               dsstrc_attr_grp_src_typ_cd: 'Data Dictionary Schema',
-              phi_ind: dictionaryMetrics.phiColumns > 0 ? true : false,
-              pii_ind: dictionaryMetrics.piiColumns > 0 ? true : false,
+              phi_ind: dictionaryDataMetrics.phiColumns > 0 ? true : false,
+              pii_ind: dictionaryDataMetrics.piiColumns > 0 ? true : false,
               user_tag_cmplx: JSON.stringify(generalConfigData?.ddResourceSetup?.resourceTags || []),
               usr_cmt_txt: generalConfigData?.ddResourceSetup?.resourceDescription,
               oprtnl_stat_cd: 'Active'
@@ -472,23 +498,23 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
                                   <Stack spacing={1}>
                                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                           <Typography variant="body2" color="text.secondary">Resource Name</Typography>
-                                          <Typography variant="body2">{dictionaryMetrics.resourceName ?? 'N/A'}</Typography>
+                                          <Typography variant="body2">{dictionaryDataMetrics.resourceName ?? 'N/A'}</Typography>
                                       </Box>
                                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                           <Typography variant="body2" color="text.secondary">Name</Typography>
-                                          <Typography variant="body2">{dictionaryMetrics.name ?? 'N/A'}</Typography>
+                                          <Typography variant="body2">{dictionaryDataMetrics.name ?? 'N/A'}</Typography>
                                       </Box>
                                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                           <Typography variant="body2" color="text.secondary">Type</Typography>
-                                          <Chip size="small" label={dictionaryMetrics.type ?? 'N/A'} />
+                                          <Chip size="small" label={dictionaryDataMetrics.type ?? 'N/A'} />
                                       </Box>
                                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                           <Typography variant="body2" color="text.secondary">Size</Typography>
-                                          <Typography variant="body2">{dictionaryMetrics?.size ? `${ddResourceGeneralConfig.resourceInfo.size} bytes` : 'N/A'}</Typography>
+                                          <Typography variant="body2">{dictionaryDataMetrics?.size ? `${ddResourceGeneralConfig.resourceInfo.size} bytes` : 'N/A'}</Typography>
                                       </Box>
                                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                           <Typography variant="body2" color="text.secondary">Last Modified</Typography>
-                                          <Typography variant="body2">{dictionaryMetrics?.lastModified ?? 'N/A'}</Typography>
+                                          <Typography variant="body2">{dictionaryDataMetrics?.lastModified ?? 'N/A'}</Typography>
                                       </Box>
                                   </Stack>
                               </CardContent>
@@ -506,18 +532,18 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
                                   <Stack spacing={1}>
                                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                           <Typography variant="body2" color="text.secondary">Total Tables</Typography>
-                                          <Chip size="small" label={dictionaryMetrics.distinctTables ?? 0} />
+                                          <Chip size="small" label={dictionaryDataMetrics.distinctTables ?? 0} />
                                       </Box>
                                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                           <Typography variant="body2" color="text.secondary">Total Columns</Typography>
-                                          <Chip size="small" label={dictionaryMetrics.totalColumns ?? 0} />
+                                          <Chip size="small" label={dictionaryDataMetrics.totalColumns ?? 0} />
                                       </Box>
                                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                           <Typography variant="body2" color="text.secondary">PII Columns</Typography>
                                           <Chip 
                                               size="small" 
                                               icon={<PIIIcon sx={{ fontSize: 16 }} />}
-                                              label={dictionaryMetrics.piiColumns ?? 0}
+                                              label={dictionaryDataMetrics.piiColumns ?? 0}
                                               color="warning"
                                           />
                                       </Box>
@@ -526,7 +552,7 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
                                           <Chip 
                                               size="small"
                                               icon={<PHIIcon sx={{ fontSize: 16 }} />} 
-                                              label={dictionaryMetrics.phiColumns ?? 0}
+                                              label={dictionaryDataMetrics.phiColumns ?? 0}
                                               color="error"
                                           />
                                       </Box>
@@ -554,15 +580,15 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
                                       </Box>
                                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                           <Typography variant="body2" color="text.secondary">Primary Keys</Typography>
-                                          <Chip size="small" label={dictionaryMetrics.pkColumns ?? 0} />
+                                          <Chip size="small" label={dictionaryDataMetrics.pkColumns ?? 0} />
                                       </Box>
                                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                           <Typography variant="body2" color="text.secondary">Foreign Keys</Typography>
-                                          <Chip size="small" label={dictionaryMetrics.fkColumns ?? 0} />
+                                          <Chip size="small" label={dictionaryDataMetrics.fkColumns ?? 0} />
                                       </Box>
                                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                           <Typography variant="body2" color="text.secondary">Required Fields</Typography>
-                                          <Chip size="small" label={dictionaryMetrics.nullableColumns ?? 0} />
+                                          <Chip size="small" label={dictionaryDataMetrics.nullableColumns ?? 0} />
                                       </Box>
                                   </Stack>
                               </CardContent>
