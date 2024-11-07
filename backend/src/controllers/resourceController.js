@@ -15,12 +15,12 @@ exports.create = async (req, res) => {
         
         res.status(201).json(resource);
     } catch (error) {
-        console.error('Create error:', error);
-        res.status(400).json({
+        const errorResponse = {
             error: {
-                message: error.message,
                 name: error.name,
-                details: error.errors?.map(e => ({
+                message: error.message,
+                stack: error.stack,
+                errors: error.errors?.map(e => ({
                     field: e.path,
                     type: e.type,
                     message: e.message,
@@ -29,7 +29,9 @@ exports.create = async (req, res) => {
                 sql: error.parent?.sql,
                 code: error.parent?.code
             }
-        });
+        };
+        console.log('Error details:', errorResponse);
+        res.status(400).json(errorResponse);
     }
 };
   
@@ -37,15 +39,19 @@ exports.create = async (req, res) => {
 // bulk inserts for all rows
 exports.bulkCreate = async (req, res) => {
     try {
+        // console.log('Received request body:', req.body);
+        if (!req.body || !Array.isArray(req.body)) {
+            throw new Error('Invalid request format - expected array of groups');
+        }
         const resources = await resourceGroup.bulkCreate(req.body);
         res.status(201).json(resources);
     } catch (error) {
-        console.error('Bulk create error:', error);
-        res.status(400).json({
+        const errorResponse = {
             error: {
-                message: error.message,
                 name: error.name,
-                details: error.errors?.map(e => ({
+                message: error.message,
+                stack: error.stack,
+                errors: error.errors?.map(e => ({
                     field: e.path,
                     type: e.type,
                     message: e.message,
@@ -54,13 +60,13 @@ exports.bulkCreate = async (req, res) => {
                 sql: error.parent?.sql,
                 code: error.parent?.code
             }
-        });
+        };
+        console.log('Error details:', errorResponse);
+        res.status(400).json(errorResponse);
     }
 };
-
-// Rest of your existing controller methods
   
-// Get all resourceGroupProfile
+// Get all resourceGroups
 exports.getAll = async (req, res) => {
     try {
         // console.log('Executing SQL query:', resourceGroup.findAll().toString());
@@ -68,12 +74,12 @@ exports.getAll = async (req, res) => {
         console.log('7. SQL query result:', resources.toString());
         res.status(200).json(resources);
     } catch (error) {
-        console.error('Get error:', error);
-        res.status(400).json({
+        const errorResponse = {
             error: {
-                message: error.message,
                 name: error.name,
-                details: error.errors?.map(e => ({
+                message: error.message,
+                stack: error.stack,
+                errors: error.errors?.map(e => ({
                     field: e.path,
                     type: e.type,
                     message: e.message,
@@ -82,7 +88,9 @@ exports.getAll = async (req, res) => {
                 sql: error.parent?.sql,
                 code: error.parent?.code
             }
-        });
+        };
+        console.log('Error details:', errorResponse);
+        res.status(400).json(errorResponse);
     }
 };
 
@@ -97,12 +105,12 @@ exports.getById = async (req, res) => {
         }
         res.status(200).json(resource);
     } catch (error) {
-        console.error('Get By ID error:', error);
-        res.status(400).json({
+        const errorResponse = {
             error: {
-                message: error.message,
                 name: error.name,
-                details: error.errors?.map(e => ({
+                message: error.message,
+                stack: error.stack,
+                errors: error.errors?.map(e => ({
                     field: e.path,
                     type: e.type,
                     message: e.message,
@@ -111,7 +119,9 @@ exports.getById = async (req, res) => {
                 sql: error.parent?.sql,
                 code: error.parent?.code
             }
-        });
+        };
+        console.log('Error details:', errorResponse);
+        res.status(400).json(errorResponse);
     }
 };
 
@@ -126,12 +136,12 @@ exports.update = async (req, res) => {
         await resource.update(req.body);
         res.status(200).json(resource);
     } catch (error) {
-        console.error('Update error:', error);
-        res.status(400).json({
+        const errorResponse = {
             error: {
-                message: error.message,
                 name: error.name,
-                details: error.errors?.map(e => ({
+                message: error.message,
+                stack: error.stack,
+                errors: error.errors?.map(e => ({
                     field: e.path,
                     type: e.type,
                     message: e.message,
@@ -140,7 +150,9 @@ exports.update = async (req, res) => {
                 sql: error.parent?.sql,
                 code: error.parent?.code
             }
-        });
+        };
+        console.log('Error details:', errorResponse);
+        res.status(400).json(errorResponse);
     }
 };
 
@@ -155,12 +167,12 @@ exports.delete = async (req, res) => {
         await resource.destroy();
         res.status(204).send();
     } catch (error) {
-        console.error('Delete error:', error);
-        res.status(400).json({
+        const errorResponse = {
             error: {
-                message: error.message,
                 name: error.name,
-                details: error.errors?.map(e => ({
+                message: error.message,
+                stack: error.stack,
+                errors: error.errors?.map(e => ({
                     field: e.path,
                     type: e.type,
                     message: e.message,
@@ -169,6 +181,8 @@ exports.delete = async (req, res) => {
                 sql: error.parent?.sql,
                 code: error.parent?.code
             }
-        });
+        };
+        console.log('Error details:', errorResponse);
+        res.status(400).json(errorResponse);
     }
 };

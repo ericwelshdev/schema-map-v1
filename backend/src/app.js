@@ -78,6 +78,11 @@ app.use('/api/resources', (req, res, next) => {
   next();
 }, resourceRoutes);
 
+app.use('/api/resources/bulk', (req, res, next) => {
+  console.log('2. Request reaching /api/resources/bulk in app.js');
+  next();
+}, resourceRoutes);
+
 app.use('/api/resource-attributes', (req, res, next) => {
   console.log('2. Request reaching /api/resource-attributes in app.js');
   next();

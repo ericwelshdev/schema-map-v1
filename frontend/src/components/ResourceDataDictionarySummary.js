@@ -10,7 +10,7 @@ import SchemaIcon from '@mui/icons-material/Schema';
 import CategoryIcon from '@mui/icons-material/Category';
 import SaveIcon from '@mui/icons-material/Save';
 import { initDB, getData } from '../utils/storageUtils';
-import { postResource } from '../services/resourceService';
+import { postResource, postBulkResource } from '../services/resourceService';
 import { postBulkResourceAttribute } from '../services/resourceAttributeService';
 import { postResourceProfile } from '../services/resourceProfileService';
 import PIIIcon from '@mui/icons-material/Security';
@@ -29,10 +29,44 @@ import {
     Security,
     Key,
     VpnKey,
-    HealthAndSafety
+    HealthAndSafety,
+    Label,
+    Category,
+    Schedule,
+    CalendarToday,
+    LocationOn,
+    Fingerprint,
+    Settings,
+    Class,
+    Lightbulb,
+    VisibilityOff
   } from '@mui/icons-material';
+  import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+  import { 
+    faTable, 
+    faFont, 
+    faHashtag, 
+    faCalendar, 
+    faClock,
+    faPercent,
+    faToggleOn,
+    faToggleOff,
+    faLink,
+    faShieldHalved,
+    fdShieldHeart,
+    faFileExcel, 
+    faFileCsv, 
+    faDatabase, 
+    faCloud, 
+    faFileCode, 
+    faFileAlt,
+    faFile
+  } from '@fortawesome/free-solid-svg-icons';
 
-const ResourceDataDictionarySummary = ({ wizardState }) => {
+
+
+
+const ResourceDataDictionarySummary = ({ wizardState, onFinish }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [ddResourceSchemaConfig, setDDResourceSchemaConfig] = useState([]);
@@ -142,6 +176,7 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
           name: ddResourceGeneralConfig?.resourceInfo?.name,
           type: ddResourceGeneralConfig?.resourceInfo?.type,
           ingestionProps: ddResourceGeneralConfig?.ingestionSettings,
+          ingestionPropsConfig: ddResourceGeneralConfig?.ingestionConfig,
           resourceChecksum: ddResourceGeneralConfig?.resourceInfo?.checksum,
           resourceSourceLocation: ddResourceGeneralConfig?.resourceInfo?.sourceLocation,
           distinctTables: 1,
@@ -201,6 +236,7 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
             setIsProcessing(true);
             setSaveProgress(prev => ({ ...prev, activeStep: 0 }));
 
+            console.log('-- Step 1. ')
             // 1.  Save General Config
             const ddResourceSchema = {
               stdiz_abrvd_attr_grp_nm: generalConfigData?.ddResourceSetup?.standardizedSourceName,
@@ -212,7 +248,7 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
               pii_ind: dictionaryDataMetrics.piiColumns > 0 ? true : false,
               user_tag_cmplx: JSON.stringify(generalConfigData?.ddResourceSetup?.resourceTags || []),
               usr_cmt_txt: generalConfigData?.ddResourceSetup?.resourceDescription,
-              oprtnl_stat_cd: 'Active'
+              oprtnl_stat_cd: 'Active'              
             };
       
             console.log('Sending Data Dictionary Schema resource data:', ddResourceSchema);
@@ -227,7 +263,7 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
     
             // ---------------------------------------------------------------
           
-
+          console.log('-- Step 2. ')
           // 2. Save Schema Config
           console.log('Data Dictionary Schema Config:', ddResourceSchemaConfig);
           // Log the resource data being sent
@@ -286,7 +322,7 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
 
 
           
-
+      console.log('-- Step 3. ')
       // 3. Save Resource Profile Configuration
       const ddResourceProfileData = {
         dsstrc_attr_grp_id: savedDDResourceSchema.dsstrc_attr_grp_id,
@@ -330,7 +366,7 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
     
         //   // ---------------------------------------------------------------
             
-
+    console.log('-- Step 4. ')
     // 4.  Save Resource Schema Data ( the data from the data dictionary )
     const ddResourceData = ddResourceSchemaData.flatMap(table => ({
         stdiz_abrvd_attr_grp_nm: table.tableName,
@@ -342,11 +378,13 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
         pii_ind: table.piiColumns > 0 ? true : false,
         user_tag_cmplx: JSON.stringify(generalConfigData?.ddResourceSetup?.resourceTags || []),
         usr_cmt_txt: null,
-        oprtnl_stat_cd: 'Active'
+        oprtnl_stat_cd: 'Active',
+        isInvalid:table.isInvalid
     }));
 
-    console.log('Sending Data Dictionary Data resource data:', ddResourceData);
-    const savedDDResourceResponse = await postResource(ddResourceData);
+    const savedDDResourceResponseFiltered = ddResourceData.filter(table => table.isInvalid === false);
+    console.log('Sending Data Dictionary Data resource data:', savedDDResourceResponseFiltered)
+    const savedDDResourceResponse = await postBulkResource(savedDDResourceResponseFiltered);
 
     const savedDDResources = savedDDResourceResponse.map(table => ({
         dsstrc_attr_grp_id: table.dsstrc_attr_grp_id,
@@ -358,64 +396,65 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
 
     // ---------------------------------------------------------------        
 
+          console.log('-- Step 5. ')
+          // 5. Save Schema Config
+          console.log('Data Dictionary Schema Data:', ddResourceSchemaData);
+          // Log the resource data being sent
+          
+          const ddResourceAttributeData = ddResourceSchemaData.flatMap(table => 
+            table.columns.map(column => ({
+            ds_id: 0,
+            abrvd_attr_nm: column.physicalName || null,
+            dsstrc_attr_grp_id: savedDDResources.filter(response => response.stdiz_abrvd_attr_grp_nm === table.tableName).map(response => response.dsstrc_attr_grp_id)[0],
+            stdiz_abrvd_attr_grp_nm: table.tableName,
+            dsstrc_attr_nm: column.logicalName || column.physicalName,
+            dsstrc_alt_attr_nm: column.alternativeName || null,
+            stdiz_abrvd_attr_nm: column.physicalName,
+            stdiz_abrvd_alt_attr_nm: column?.alternativeName || null,
+            dsstrc_attr_desc: column.description || null,
+            dsstrc_attr_seq_nbr: column.columnOrder || column.id,
+            physcl_data_typ_nm: column.dataType || 'string',
+            mand_ind: column?.isNullable || false,
+            pk_ind: column?.isPrimaryKey || false,
+            fk_ind: column?.isForeignKey || false,
+            encrypt_ind: false,
+            pii_ind: column.isPII || false,
+            phi_ind: column.isPHI || false,
+            disabld_ind: column.isDisabled,
+            ai_tag_cmplx: JSON.stringify(column?.ai_tag_cmplx || []),
+            user_tag_cmplx: JSON.stringify(column?.tags || []),
+            meta_tag_cmplx: JSON.stringify({
+              ...(column?.schemaClassification?.value && {
+                  schemaClassification: {
+                      label: column.schemaClassification.label,
+                      value: column.schemaClassification.value
+                  }
+              }),
+              ...(column.column_similarity_score && {
+                  column_similarity_score: column.column_similarity_score
+              })
+          }) || JSON.stringify([]),
+            usr_cmt_txt: column.comment || null,
+            oprtnl_stat_cd: 'Active',
+            isInvalid: column.isInvalid || table.isInvalid
+        }))
+    );
+        const ddResourceAttributeDataFiltered = ddResourceAttributeData.filter(table => !table.isInvalid);
+        console.log('Sending Data Dictionary attribute data:', ddResourceAttributeDataFiltered)
+        const savedDDSourceAttributeData = await postBulkResourceAttribute({ attributes: ddResourceAttributeDataFiltered}); 
+        console.log('Recevied Data Dictionary saved attribute data:', savedDDSourceAttributeData);
 
-    //       // 2. Save Schema Config
-    //       console.log('Data Dictionary Schema Data:', ddResourceSchemaData);
-    //       // Log the resource data being sent
-          
-    //       const ddColumnData = ddResourceSchemaData.flatMap(table => 
-    //         table.columns.map(column => ({
-    //         ds_id: 0,
-    //         abrvd_attr_nm: column.physicalName || null,
-    //         dsstrc_attr_grp_id: savedDDResource.dsstrc_attr_grp_id,
-    //         stdiz_abrvd_attr_grp_nm: column.physicalName,
-    //         dsstrc_attr_nm: column.logicalName || column.physicalName,
-    //         dsstrc_alt_attr_nm: column.alternativeName || null,
-    //         stdiz_abrvd_attr_nm: column.physicalName,
-    //         stdiz_abrvd_alt_attr_nm: column?.alternativeName || null,
-    //         dsstrc_attr_desc: column.description || null,
-    //         dsstrc_attr_seq_nbr: column.columnOrder || column.id,
-    //         physcl_data_typ_nm: column.dataType || 'string',
-    //         mand_ind: column?.isNullable || false,
-    //         pk_ind: column?.isPrimaryKey || false,
-    //         fk_ind: column?.isForeignKey || false,
-    //         encrypt_ind: false,
-    //         pii_ind: column.isPII || false,
-    //         phi_ind: column.isPHI || false,
-    //         disabld_ind: column.isDisabled,
-    //         ai_tag_cmplx: JSON.stringify(column?.ai_tag_cmplx || []),
-    //         user_tag_cmplx: JSON.stringify(column?.tags || []),
-    //         meta_tag_cmplx: JSON.stringify({
-    //           ...(column?.schemaClassification?.value && {
-    //               schemaClassification: {
-    //                   label: column.schemaClassification.label,
-    //                   value: column.schemaClassification.value
-    //               }
-    //           }),
-    //           ...(column.column_similarity_score && {
-    //               column_similarity_score: column.column_similarity_score
-    //           })
-    //       }) || JSON.stringify([]),
-    //         usr_cmt_txt: column.comment || null,
-    //         oprtnl_stat_cd: 'Active'
-    //     }))
-    // );
         
-    //       console.log('Sending Data Dictionary attribute data:', ddColumnData);
-    //       const savedDDSourceAttributeData = await postBulkResourceAttribute({ attributes: ddColumnData }); 
-    //       console.log('Recevied Data Dictionary saved attribute data:', savedDDSourceAttributeData);
-    
-          
-    //       const savedDDResourceAttributes = savedDDSourceAttributeData.map(column => ({
-    //         dsstrc_attr_grp_id: column.dsstrc_attr_grp_id,
-    //         stdiz_abrvd_attr_grp_nm: column.stdiz_abrvd_attr_grp_nm,
-    //         dsstrc_attr_id: column.dsstrc_attr_id,
-    //         stdiz_abrvd_attr_nm: column.stdiz_abrvd_attr_nm,
-    //         meta_tag_cmplx: column.meta_tag_cmplx,
-    //         isSaved: true
-    //       }));
-    //       console.log('-- Step 2. Data Dictionary Resource Attributes Prior Saved Info :', savedDDResourceAttributes); 
-    
+        const savedDDResourceAttributes = savedDDSourceAttributeData.map(column => ({
+        dsstrc_attr_grp_id: column.dsstrc_attr_grp_id,
+        stdiz_abrvd_attr_grp_nm: column.stdiz_abrvd_attr_grp_nm,
+        dsstrc_attr_id: column.dsstrc_attr_id,
+        stdiz_abrvd_attr_nm: column.stdiz_abrvd_attr_nm,
+        meta_tag_cmplx: column.meta_tag_cmplx,
+        isSaved: true
+        }));
+        console.log('-- Step 5. Data Dictionary Resource Attributes Prior Saved Info :', savedDDResourceAttributes); 
+
     //     //   // ---------------------------------------------------------------
           
     
@@ -510,16 +549,47 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
     
 
 
-    const getResourceTypeIcon = (type) => {
+      const getResourceTypeIcon = (type) => {
+        if (!type) return <FontAwesomeIcon icon={faFile} />;
+        
+        const normalizedType = type.toLowerCase();
+        
         const typeMap = {
-          'excel': <TabletMac color="success" />,
-          'csv': <TableChart color="primary" />,
-          'database': <Storage color="secondary" />,
-          'api': <Api color="info" />,
-          'json': <Code color="warning" />,
-          'xml': <Code color="error" />
+          // Excel formats
+          'excel': <FontAwesomeIcon icon={faFileExcel} className="text-success" />,
+          'application/vnd.ms-excel': <FontAwesomeIcon icon={faFileExcel} className="text-success" />,
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': <FontAwesomeIcon icon={faFileExcel} className="text-success" />,
+          '.xlsx': <FontAwesomeIcon icon={faFileExcel} className="text-success" />,
+          '.xls': <FontAwesomeIcon icon={faFileExcel} className="text-success" />,
+          
+          // CSV formats
+          'csv': <FontAwesomeIcon icon={faFileCsv} className="text-primary" />,
+          'text/csv': <FontAwesomeIcon icon={faFileCsv} className="text-primary" />,
+          '.csv': <FontAwesomeIcon icon={faFileCsv} className="text-primary" />,
+          
+          // Database
+          'database': <FontAwesomeIcon icon={faDatabase} className="text-secondary" />,
+          
+          // API
+          'api': <FontAwesomeIcon icon={faCloud} className="text-info" />,
+          
+          // JSON formats
+          'json': <FontAwesomeIcon icon={faFileCode} className="text-warning" />,
+          'application/json': <FontAwesomeIcon icon={faFileCode} className="text-warning" />,
+          '.json': <FontAwesomeIcon icon={faFileCode} className="text-warning" />,
+          
+          // XML formats
+          'xml': <FontAwesomeIcon icon={faFileCode} className="text-error" />,
+          'application/xml': <FontAwesomeIcon icon={faFileCode} className="text-error" />,
+          'text/xml': <FontAwesomeIcon icon={faFileCode} className="text-error" />,
+          '.xml': <FontAwesomeIcon icon={faFileCode} className="text-error" />,
+          
+          // Text formats
+          'text/plain': <FontAwesomeIcon icon={faFileAlt} className="text-primary" />,
+          '.txt': <FontAwesomeIcon icon={faFileAlt} className="text-primary" />
         };
-        return typeMap[type.toLowerCase()] || <Description />;
+      
+        return typeMap[normalizedType] || <FontAwesomeIcon icon={faFile} />;
       };
 
 
@@ -558,63 +628,200 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
         </Box>
       );
       
+      const IngestionSettingsDisplay = ({ ingestionProps, ingestionPropsConfig }) => {
+        // console.log('Raw ingestionProps:', ingestionProps);
+        // console.log('Raw ingestionPropsConfig:', ingestionPropsConfig);
+      
+        const formattedIngestionProps = Object.entries(ingestionProps || {})
+          .map(([key, value]) => {
+            const config = ingestionPropsConfig?.[key] || {};
+            const formattedProp = {
+              key,
+              value: value ?? 'N/A',
+              uiField: config.uiField || key,
+              default: config.default,
+              uiType: config.uiType,
+              isDefault: value === config.default
+            };
+            
+            // console.log('Formatted prop:', formattedProp);
+            return formattedProp;
+          })
+          .filter(prop => {
+            const isValid = prop.uiField && prop.value !== undefined;
+            // console.log(`Prop ${prop.key} valid:`, isValid);
+            return isValid;
+          });
+      
+        // console.log('Final formatted props:', formattedIngestionProps);
+      
+        return (
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Settings fontSize="small" color="primary" />
+              <Typography variant="caption">Ingestion Settings ({formattedIngestionProps.length})</Typography>
+            </Box>
+            <Stack direction="row" spacing={1} flexWrap="wrap">
+              {formattedIngestionProps.map(prop => (
+                <Tooltip 
+                  key={prop.key}
+                  title={`Default: ${prop.default ?? 'Not set'}`}
+                  placement="top"
+                >
+                  <Chip
+                    label={`${prop.uiField}: ${prop.value}`}
+                    size="small"
+                    color={prop.isDefault ? "default" : "primary"}
+                    variant={prop.isDefault ? "outlined" : "filled"}
+                  />
+                </Tooltip>
+              ))}
+            </Stack>
+          </Box>
+        );
+      };
+      
+
+
+    const ResourceDetailsCard = ({ metrics, ingestionPropsConfig }) => (
+        <MetricCard title="Resource Details" icon={getResourceTypeIcon(metrics.type)}>
+          <Grid container spacing={2}>
+            {/* Primary Information */}
+            <Grid item xs={4}>
+              <Stack spacing={2}>
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Description fontSize="small" color="primary" />
+                    <Typography variant="caption">Resource Identity</Typography>
+                  </Box>
+                  <Typography variant="body1" fontWeight="medium">{metrics.resourceName}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {metrics.standardizedSourceName}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2">{metrics.resourceDescription}</Typography>
+                </Box>
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Label fontSize="small" color="primary" />
+                    <Typography variant="caption">Tags</Typography>
+                  </Box>
+                  <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                    {metrics.resourceTags?.map(tag => (
+                      <Chip key={tag} label={tag} size="small" />
+                    ))}
+                  </Stack>
+                </Box>
+              </Stack>
+            </Grid>
+      
+            {/* Technical Details */}
+            <Grid item xs={4}>
+              <Stack spacing={2}>
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Category fontSize="small" color="primary" />
+                    <Typography variant="caption">Classification</Typography>
+                  </Box>
+                  <Stack spacing={1}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2">Type</Typography>
+                      <Chip label={metrics.type} size="small" />
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2">Version</Typography>
+                      <Chip label={metrics.versionText} size="small" />
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2">Classified Columns</Typography>
+                      <Chip label={metrics.classifiedColumns} size="small" color={dictionarySchemaMetrics.classifiedColumns > 80 ? "success" : "warning"} icon={<FontAwesomeIcon icon={faLink} size='2xs' />} />
+                    </Box>
+                  </Stack>
+                </Box>
+                <IngestionSettingsDisplay 
+                    ingestionProps={metrics.ingestionProps}
+                    ingestionPropsConfig={ingestionPropsConfig}
+                />
+              </Stack>
+            </Grid>
+      
+            {/* Resource Metrics */}
+            <Grid item xs={4}>
+              <Stack spacing={2}>
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Storage fontSize="small" color="primary" />
+                    <Typography variant="caption">Resource Metrics</Typography>
+                  </Box>
+                  <Stack spacing={1}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2">Size</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {formatFileSize(metrics.size)}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2">Total Rows</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {metrics.runRows?.toLocaleString()}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Schedule fontSize="small" color="primary" />
+                    <Typography variant="caption">Timestamps</Typography>
+                  </Box>
+                  <Stack spacing={1}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2">Created</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {formatDate(metrics.createdDate)}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2">Modified</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {formatDate(metrics.lastModified)}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Fingerprint fontSize="small" color="primary" />
+                    <Typography variant="caption">Resource Location</Typography>
+                  </Box>
+                  <Typography variant="body2" noWrap>{metrics.resourceSourceLocation}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Checksum: {metrics.resourceChecksum}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Grid>
+          </Grid>
+        </MetricCard>
+      );
+      
+    
       
       return (
+        <Box sx={{ 
+            position: 'relative', 
+            zIndex: 0,
+            maxHeight: 'calc(100vh - 200px)', // Adjust based on wizard header/footer height
+            overflow: 'auto',
+            pb: 8 // Add padding bottom to avoid overlap with buttons
+          }}>
         <Grid container spacing={1} sx={{ maxHeight: '50vh' }}>
           {/* Resource Details Card */}
           <Grid item xs={12}>
-            <MetricCard title="Resource Details" icon={getResourceTypeIcon(dictionarySchemaMetrics.resourceType)}>
-              <Grid container spacing={2}>
-                <Grid item xs={4}>
-                  <Stack spacing={1}>
-                    <Box>
-                      <Typography variant="caption">Resource Name</Typography>
-                      <Typography variant="body1" fontWeight="medium">{dictionarySchemaMetrics.resourceName}</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="caption">Resource</Typography>
-                      <Typography variant="body2">{dictionarySchemaMetrics.name}</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="caption">Description</Typography>
-                      <Typography variant="body2">{dictionarySchemaMetrics.resourceDescription}</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="caption">Tags</Typography>
-                      <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                        {dictionarySchemaMetrics.resourceTags?.map(tag => (
-                          <Chip key={tag} label={tag} size="small" />
-                        ))}
-                      </Stack>
-                    </Box>
-                  </Stack>
-                </Grid>
-                <Grid item xs={8}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={3}>
-                      <Typography variant="caption">Standardized Name</Typography>
-                      <Typography variant="body2">{dictionarySchemaMetrics.standardizedSourceName}</Typography>
-                    </Grid>
-                    <Grid item xs={3}>
-                      <Typography variant="caption">Type</Typography>
-                      <Typography variant="body2">{dictionarySchemaMetrics.type}</Typography>
-                    </Grid>
-                    <Grid item xs={2}>
-                      <Typography variant="caption">Version</Typography>
-                      <Typography variant="body2">{dictionarySchemaMetrics.versionText}</Typography>
-                    </Grid>
-                    <Grid item xs={2}>
-                      <Typography variant="caption">Size</Typography>
-                      <Typography variant="body2">{formatFileSize(dictionarySchemaMetrics.size)}</Typography>
-                    </Grid>
-                    <Grid item xs={2}>
-                      <Typography variant="caption">Modified</Typography>
-                      <Typography variant="body2">{formatDate(dictionarySchemaMetrics.lastModified)}</Typography>
-                    </Grid>
-                  </Grid>
-                </Grid>
-              </Grid>
-            </MetricCard>
+            <ResourceDetailsCard 
+              metrics={dictionarySchemaMetrics} 
+              ingestionPropsConfig={ddResourceGeneralConfig?.ingestionConfig}
+            />
           </Grid>
       
           {/* Dictionary Schema Card */}
@@ -625,7 +832,7 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
                   <MetricCount 
                     total={dictionarySchemaMetrics.distinctTables} 
                     invalid={dictionarySchemaMetrics.invalidTables}
-                    label="Tables"
+                    label="Sources"
                   />
                 </Grid>
                 <Grid item xs={6}>
@@ -641,21 +848,25 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
                       label={`Classified: ${dictionarySchemaMetrics.classifiedColumns}`}
                       size="small"
                       color={dictionarySchemaMetrics.classifiedColumns > 80 ? "success" : "warning"}
+                      icon={<FontAwesomeIcon icon={faLink} size='2xs' />}
                     />
                     <Chip 
                       label={`Disabled: ${dictionarySchemaMetrics.disabledColumns}`}
                       size="small"
                       color={dictionarySchemaMetrics.disabledColumns > 0 ? "error" : "default"}
+                      icon={<VisibilityOff/>}
                     />
                     <Chip 
                       label={`PHI: ${dictionarySchemaMetrics.phiColumns}`}
                       size="small"
                       color={dictionarySchemaMetrics.phiColumns > 0 ? "error" : "default"}
+                      icon={<Security/>}
                     />
                     <Chip 
                       label={`PII: ${dictionarySchemaMetrics.piiColumns}`}
                       size="small"
                       color={dictionarySchemaMetrics.piiColumns > 0 ? "warning" : "default"}
+                      icon={<HealthAndSafety/>}
                     />
                   </Stack>
                 </Grid>
@@ -702,7 +913,7 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
                       color={dictionaryDataMetrics.phiColumns > 0 ? "error" : "default"}
                     />
                     <Chip 
-                      icon={<Security />}
+                      icon={<HealthAndSafety />}
                       label={`PII: ${dictionaryDataMetrics.piiColumns}`}
                       size="small"
                       color={dictionaryDataMetrics.piiColumns > 0 ? "warning" : "default"}
@@ -713,7 +924,35 @@ const ResourceDataDictionarySummary = ({ wizardState }) => {
             </MetricCard>
           </Grid>
         </Grid>
+
+{/* Action Button Container */}
+<Box sx={{ 
+      position: 'sticky',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      p: 2,
+      backgroundColor: 'background.paper',
+      borderTop: 1,
+      borderColor: 'divider',
+      display: 'flex',
+      justifyContent: 'flex-end',
+      zIndex: 1
+    }}>
+      <Button 
+        variant="contained" 
+        color="primary"
+        startIcon={<SaveIcon />}
+        onClick={handleSave}
+        disabled={isProcessing}
+      >
+        {isProcessing ? 'Saving...' : 'Save Data Dictionary'}
+      </Button>
+    </Box>
+  </Box>
+     
       );
+      
       
       
 };

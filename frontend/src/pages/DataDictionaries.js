@@ -27,9 +27,7 @@ const DataDictionaries = () => {
   const fetchDataDictionaries = async () => {
     try {
       const data = await getResources();
-      const dataDictionaries = data.filter(
-        resource => resource.dsstrc_attr_grp_src_typ_cd === 'Data Dictionary'
-      );
+      const dataDictionaries = data.filter(resource => ['Data Dictionary', 'Data Dictionary Schema'].includes(resource.dsstrc_attr_grp_src_typ_cd));      
       setSources(dataDictionaries);
     } catch (error) {
       console.error('Error fetching data dictionaries:', error);

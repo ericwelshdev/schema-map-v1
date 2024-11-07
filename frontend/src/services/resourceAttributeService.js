@@ -106,7 +106,7 @@ export const postBulkResourceAttribute = async (sourceAttributes) => {
       updt_by_nm: 'System',
       updt_ts: new Date().toISOString()
     }));
-//     console.log('postBulkSourceAttribute Sending column data:', formattedData); // to verify the array
+    console.log('!!! postBulkSourceAttribute Sending column data:', formattedData); // to verify the array
     const response = await axios.post(`${API_URL}/resource-attributes/bulk`, formattedData);
     console.log('response.data', response.data);
     return response.data;    

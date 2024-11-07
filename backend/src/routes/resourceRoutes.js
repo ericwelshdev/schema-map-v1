@@ -3,7 +3,7 @@ const router = express.Router();
 const resourceController = require('../controllers/resourceController');
 
 router.use((req, res, next) => {
-    console.log('3. Request entered reourceRoutes');
+    console.log('3. Request entered resourceController');
     next();
   });
 
@@ -14,9 +14,9 @@ router.post('/', resourceController.create);
 // bulk inserts for all rows 
 router.post('/bulk', resourceController.bulkCreate);
 
-// Get all resourceProfileController
+// Get all resources
 router.get('/', (req, res, next) => {
-    console.log('4. GET request received in resourceRoutes');
+    console.log('4. GET request received in resourceController');
     next();
   }, resourceController.getAll);
   
