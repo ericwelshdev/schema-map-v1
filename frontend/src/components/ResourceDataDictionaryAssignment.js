@@ -1,17 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import { Box, Typography, Link, Alert } from '@mui/material';
+import { getResources } from '../services/resourceService';
 
-const columns = [
-  { field: 'name', headerName: 'Name', width: 200 },
-  { field: 'description', headerName: 'Description', width: 300 },
-  { field: 'rowCount', headerName: '# Rows', type: 'number', width: 100 },
-  { field: 'tableCount', headerName: '# Tables', type: 'number', width: 100 },
-  { field: 'columnCount', headerName: '# Columns', type: 'number', width: 100 },
-  { field: 'assignedResourceCount', headerName: 'Assigned Resources', type: 'number', width: 150 },
-  { field: 'createdDate', headerName: 'Created Date', type: 'date', width: 150 },
-  { field: 'createdBy', headerName: 'Created By', width: 150 },
-];
 
 const ResourceDataDictionaryAssignment = ({ onSelect, onCreateNew }) => {
   const [dataDictionaries, setDataDictionaries] = useState([]);
@@ -20,32 +11,18 @@ const ResourceDataDictionaryAssignment = ({ onSelect, onCreateNew }) => {
 
   useEffect(() => {
     const fetchDataDictionaries = async () => {
-        try {
-          const response = await fetch('/api/data-dictionaries');
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-      
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const data = await response.json();
-      
-            // Handle case where data is null or not an array
-            if (!data || !Array.isArray(data)) {
-              setDataDictionaries([]);
-            } else {
-              setDataDictionaries(data);
-            }
-          } else {
-            throw new Error('Received non-JSON response from server');
-          }
-        } catch (e) {
-          console.warn('Error fetching data dictionaries:', e);
-          setError(`Failed to load data dictionaries: ${e.message}`);
-          setDataDictionaries([]);  // Ensure we set it to an empty array in case of error
-        }
-      };
-      
+      try {
+        const data = await getResources();
+        const dataDictionaries = data.filter(
+          resource => ['Data Dictionary', 'Data Dictionary Schema'].includes(resource.dsstrc_attr_grp_src_typ_cd)
+        );
+        setDataDictionaries(dataDictionaries);
+      } catch (error) {
+        console.error('Error fetching data dictionaries:', error);
+        setError(`Failed to load data dictionaries: ${error.message}`);
+      }
+    };
+    
     fetchDataDictionaries();
   }, []);
 
@@ -59,6 +36,22 @@ const ResourceDataDictionaryAssignment = ({ onSelect, onCreateNew }) => {
       onSelect(null);
     }
   };
+
+
+  const columns = [
+    { field: 'dsstrc_attr_grp_id', headerName: 'ID', flex: 1 },
+    { field: 'dsstrc_attr_grp_nm', headerName: 'Name', width: 200 },
+    { field: 'dsstrc_attr_grp_desc', headerName: 'Description', width: 300 },
+    { field: 'rowCount', headerName: '# Rows', type: 'number', width: 100 },
+    { field: 'tableCount', headerName: '# Tables', type: 'number', width: 100 },
+    { field: 'columnCount', headerName: '# Columns', type: 'number', width: 100 },
+    { field: 'assignedResourceCount', headerName: 'Assigned Resources', type: 'number', width: 150 },
+    { field: 'cre_ts', headerName: 'Created Date',  width: 150 },
+    { field: 'cre_by_nm', headerName: 'Created By', width: 150 },
+    { field: 'updt_ts', headerName: 'Last Updated', width: 150 },
+  ];
+
+  
 
 
 //   if (error) {
@@ -105,6 +98,7 @@ const ResourceDataDictionaryAssignment = ({ onSelect, onCreateNew }) => {
         disableMultipleSelection
         onSelectionModelChange={handleSelectionChange}
         selectionModel={selectedDictionary ? [selectedDictionary.id] : []}
+        getRowId={(row) => row.dsstrc_attr_grp_id}
         components={{
           NoRowsOverlay: NoRowsOverlay,
         }}

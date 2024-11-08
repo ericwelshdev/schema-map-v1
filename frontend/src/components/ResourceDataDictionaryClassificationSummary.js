@@ -55,6 +55,8 @@ const DataDictionaryClassificationSummary = ({ classificationData }) => {
           } else {
             setTimeout(checkData, 500);
           }
+          console.log('!!ddResourceSchemaConfig:', ddResourceSchemaConfig);
+
           const dataDictionaryData = await getData('ddResourceFullData');
           if (dataDictionaryData && Object.keys(dataDictionaryData).length > 0) {
             setDDResourceSchemaData(dataDictionaryData);
@@ -62,8 +64,10 @@ const DataDictionaryClassificationSummary = ({ classificationData }) => {
           } else {
             setTimeout(checkData, 500);
           }
+          console.log('dataDictionaryData:', dataDictionaryData);
 
         };
+        
 
         await checkData();
       } catch (error) {
@@ -167,13 +171,15 @@ const DataDictionaryClassificationSummary = ({ classificationData }) => {
 
 
     const getClassifiedColumns = (classificationType) => {
-        return ddResourceSchemaConfig.filter(
-            (column) => column.schemaClassification?.value === classificationType
-        );
-    };
+      return ddResourceSchemaConfig.filter(
+          (column) => column.schemaClassification?.value === classificationType
+      );
+  };
 
     const tableNameColumns = getClassifiedColumns('stdiz_abrvd_attr_grp_nm');
     const columnNameColumns = getClassifiedColumns('stdiz_abrvd_attr_nm');
+    console.log('tableNameColumns:', tableNameColumns);
+    console.log('columnNameColumns:', columnNameColumns);
     
     const tableNameField = tableNameColumns[0]?.name;
     const columnNameField = columnNameColumns[0]?.name;
@@ -188,9 +194,10 @@ const DataDictionaryClassificationSummary = ({ classificationData }) => {
       return acc;
     }, {});
 
+
     const processedSchemaData = 
      Object.entries(tableGroups).map(([tableName, rows]) => ({
-      
+          
           id: tableName,
           tableName: tableName,
           isInvalid: !(tableName && tableName !== 'undefined' && tableName.trim() !== '' && tableName !== null),

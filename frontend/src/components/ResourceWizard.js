@@ -1,5 +1,5 @@
 import React, { useState, useEffect ,useMemo, useCallback} from 'react';
-import { Stepper, Step, StepLabel, Button, Box, Slide } from '@mui/material';
+import { Stepper, Step, StepLabel, Button, Box, Slide, Alert } from '@mui/material';
 import ResourceTypeSelection from './ResourceTypeSelection';
 import ResourceConfiguration from './ResourceConfiguration';
 import ResourceDataDictionaryTypeSelection from './ResourceDataDictionaryTypeSelection';
@@ -14,6 +14,7 @@ const ResourceWizard = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [slideDirection, setSlideDirection] = useState('left');
   const [prevStep, setPrevStep] = useState(0);
+  const [validationError, setValidationError] = useState(null);
     const [wizardState, setWizardState] = useState(() => {
       const savedState = localStorage.getItem('wizardState');
       if (savedState) {
@@ -113,70 +114,40 @@ const ResourceWizard = () => {
       setSlideDirection('left');
     }
   }, [activeStep]);
-    const handleNext = async () => {
-      setSlideDirection('left');
-      setPrevStep(activeStep);
+
+
+
+
+const handleNext = () => {
+  switch (activeStep) {
+    case 0:
+      const typeSelectionValid = wizardState.resourceSetup?.isValid;
+      if (!typeSelectionValid) {
+        setValidationError('Please complete all required fields');
+        return;
+      }
+      break;
+  }
+  setSlideDirection('left');
+  setValidationError(null);
+  setPrevStep(activeStep);
+  setActiveStep((prevStep) => prevStep + 1);
+};
+
+const validateTypeSelection = (setup) => {
+      return setup.resourceType && 
+             setup.standardizedSourceName && 
+             setup.resourceDescription;
+};
     
-      // Save current step state before moving
-      // const currentStepData = {
-      //   resourcePreviewRows: await getData('resourcePreviewRows'),
-      //   ddResourcePreviewRows: await getData('ddResourcePreviewRows'),
-      //   ddResourceFullData: await getData('ddResourceFullData'),
-      //   resourceSampleData: await getData('resourceSampleData'),
-      //   ddResourceSampleData: await getData('ddResourceSampleData')
-      // };
 
-      // setWizardState(prev => ({
-      //   ...prev,
-      //   dataDictionaryConfig: {
-      //     ...prev.dataDictionaryConfig,
-      //     processedSchema: currentStepData.ddResourcePreviewRows,
-      //     fullData: currentStepData.ddResourceFullData,
-      //     sampleData: currentStepData.ddResourceSampleData
-      //   },
-      //   resourceConfig: {
-      //     ...prev.resourceConfig,
-      //     processedSchema: currentStepData.resourcePreviewRows,
-      //     sampleData: currentStepData.resourceSampleData
-      //   }
-      // }));
-
-      setActiveStep((prevStep) => prevStep + 1);
-    };
-
-    const handleBack = async () => {
+const handleBack = async () => {
       setSlideDirection('right');
       setPrevStep(activeStep);
-
-      // // Load saved state when moving back
-      // const savedStepData = {
-      //   resourcePreviewRows: await getData('resourcePreviewRows'),
-      //   ddResourcePreviewRows: await getData('ddResourcePreviewRows'),
-      //   ddResourceFullData: await getData('ddResourceFullData'),
-      //   resourceSampleData: await getData('resourceSampleData'),
-      //   ddResourceSampleData: await getData('ddResourceSampleData')
-      // };
-
-      // setWizardState(prev => ({
-      //   ...prev,
-      //   dataDictionaryConfig: {
-      //     ...prev.dataDictionaryConfig,
-      //     processedSchema: savedStepData.ddResourcePreviewRows,
-      //     fullData: savedStepData.ddResourceFullData,
-      //     sampleData: savedStepData.ddResourceSampleData,
-      //     uploadStatus: savedStepData.ddResourcePreviewRows ? 'success' : null
-      //   },
-      //   resourceConfig: {
-      //     ...prev.resourceConfig,
-      //     processedSchema: savedStepData.resourcePreviewRows,
-      //     sampleData: savedStepData.resourceSampleData,
-      //     uploadStatus: savedStepData.resourcePreviewRows ? 'success' : null
-      //   }
-      // }));
-
       setActiveStep((prevStep) => prevStep - 1);
-    };
-  const handleSkip = () => {
+  };
+  
+const handleSkip = () => {
     setSlideDirection('left');
     setPrevStep(activeStep);
     if (activeStep === 2) {
@@ -294,27 +265,32 @@ const ResourceWizard = () => {
       default:
         return 'Unknown step';
     }
-  };  return (
+  };
+  return (
     <Box sx={{ width: '100%', overflow: 'hidden' }}>
-<Stepper activeStep={activeStep}>
-  {steps.map((label, index) => (
-    <Step key={label} onClick={() => handleStepClick(index)} sx={{ cursor: 'pointer' }}>
-      <StepLabel
-        StepIconProps={{
-          sx: { cursor: 'pointer' },
-        }}
-        sx={{ userSelect: 'none' }} 
-      >
-        {label}
-      </StepLabel>
-    </Step>
-  ))}
-</Stepper>
-
+      {validationError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {validationError}
+        </Alert>
+      )}
+      <Stepper activeStep={activeStep}>
+        {steps.map((label, index) => (
+          <Step key={label} onClick={() => handleStepClick(index)} sx={{ cursor: 'pointer' }}>
+            <StepLabel
+              StepIconProps={{
+                sx: { cursor: 'pointer' },
+              }}
+              sx={{ userSelect: 'none' }} 
+            >
+              {label}
+            </StepLabel>
+          </Step>
+        ))}
+      </Stepper>
       <Box sx={{ mt: 2, position: 'relative' }}>
         <Slide
           direction={slideDirection} 
-          in={true} // Ensure it's always in when the step changes
+          in={true} //  always in when the step changes
           mountOnEnter
           unmountOnExit
           key={activeStep} 

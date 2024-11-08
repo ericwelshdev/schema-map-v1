@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Radio,
   RadioGroup,
@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { FileText, Database, TextCursorInput } from "lucide-react";
+import { useView } from './../contexts/ViewContext';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
@@ -26,6 +27,8 @@ const StyledCard = styled(Card)(({ theme }) => ({
 }));
 
 const ResourceDataDictionaryTypeSelection = ({ savedState, onStateChange, existingSourceNames }) => {
+  const { setFooterAlert } = useView();
+
   const [ddResourceSetup, setddResourceSetup] = useState(() => {
     return savedState || {
       resourceName: '',
@@ -69,32 +72,38 @@ const ResourceDataDictionaryTypeSelection = ({ savedState, onStateChange, existi
   ]);
 
   // Form validation
-  const validateForm = () => {
+      const validateForm = useCallback(() => {
     const newErrors = {};
-    if (!ddResourceSetup.resourceName) {
-      newErrors.resourceName = "Resource name is required";
-    } else if (
-      existingSourceNames &&
-      existingSourceNames.includes(ddResourceSetup.resourceName)
-    ) {
-      newErrors.resourceName = "This source name already exists";
+        if (!ddResourceSetup.resourceName) {
+      newErrors.resourceName = "Data Dictionary name is required";
     }
-    if (!ddResourceSetup.resourceType) {
-      newErrors.resourceType = "Resource type is required";
+
+        if (!ddResourceSetup.resourceType) {
+      newErrors.resourceType = "Data Dictionary type is required";
     }
+
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+        const isValid = Object.keys(newErrors).length === 0;
+        onStateChange({ ...ddResourceSetup, isValid });
+        return isValid;
+      }, [ddResourceSetup, onStateChange]);
 
   useEffect(() => {
-    onStateChange({ ...ddResourceSetup, isValid: validateForm() });
-  }, [onStateChange, ddResourceSetup, validateForm]);
+        validateForm();
+      }, [validateForm]);
+  
+
+
 
   const handleInputChange = (field, value) => {
     setddResourceSetup((prevState) => ({
       ...prevState,
       [field]: value,
     }));
+    setFooterAlert({
+      type: errors[field] ? 'error' : 'info',
+      message: errors[field] || `Updated ${field}`
+    });
   };
 
   return (
@@ -128,7 +137,8 @@ const ResourceDataDictionaryTypeSelection = ({ savedState, onStateChange, existi
               onChange={(e) =>
                 handleInputChange("standardizedSourceName", e.target.value)
               }
-              placeholder="Enter standardized source name"
+              placeholder="Enter a Standardized Data Dictionary Name"
+              helperText={errors.standardizedSourceName}
             />
           </Grid>
           <Grid item xs={12} md={4}>

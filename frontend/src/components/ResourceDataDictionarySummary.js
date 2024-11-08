@@ -13,6 +13,7 @@ import { initDB, getData } from '../utils/storageUtils';
 import { postResource, postBulkResource } from '../services/resourceService';
 import { postBulkResourceAttribute } from '../services/resourceAttributeService';
 import { postResourceProfile } from '../services/resourceProfileService';
+import { postBulkResourceGroupAttributeAssociation } from '../services/resourceGroupAssociationService';
 import PIIIcon from '@mui/icons-material/Security';
 import PHIIcon from '@mui/icons-material/HealthAndSafety';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -454,6 +455,51 @@ const ResourceDataDictionarySummary = ({ wizardState, onFinish }) => {
         isSaved: true
         }));
         console.log('-- Step 5. Data Dictionary Resource Attributes Prior Saved Info :', savedDDResourceAttributes); 
+
+        // ---------------------------------------------------------------
+
+
+
+
+        console.log('-- Step 6. ')
+        // 5. Save Schema Config
+        console.log('Data Dictionary Assc:', savedDDResources);
+          // Log the resource data being sent
+    
+        const ddResourceGroupAsscData = savedDDResources.flatMap(table => ({
+          ds_id: 0, 
+          dsstrc_attr_grp_id: savedDDResourceSchema.dsstrc_attr_grp_id,
+          stdiz_abrvd_attr_grp_nm: savedDDResourceSchema.stdiz_abrvd_attr_grp_nm,
+          assct_ds_id: 0,
+          assct_dsstrc_attr_grp_id: table.dsstrc_attr_grp_id,
+          assct_stdiz_abrvd_attr_grp_nm: table.stdiz_abrvd_attr_grp_nm,
+          techncl_rule_nm: null,
+          dsstrc_attr_grp_assc_typ_cd: 'Data Dictionary -> Data Dictionary Data',
+          ai_tag_cmplx: null,
+          user_tag_cmplx: null,
+          usr_cmt_txt: null,
+          oprtnl_stat_cd: 'Active',
+          cre_by_nm: 'System',
+          cre_ts: new Date().toISOString(),
+          updt_by_nm: 'System',
+          updt_ts: new Date().toISOString()
+        }));
+
+        console.log('Sending Resource Association data:', ddResourceGroupAsscData);
+        const savedResourceGroupAsscData = await postBulkResourceGroupAttributeAssociation(ddResourceGroupAsscData);
+    
+        const savedResourceGroupAssc = {
+          dsstrc_attr_grp_assc_id: savedResourceGroupAsscData.dsstrc_attr_grp_assc_id,
+          dsstrc_attr_grp_id: savedResourceGroupAsscData.dsstrc_attr_grp_id,
+          stdiz_abrvd_attr_grp_nm: savedResourceGroupAsscData.stdiz_abrvd_attr_grp_nm,
+          assct_dsstrc_attr_grp_id: savedResourceGroupAsscData.assct_dsstrc_attr_grp_id,
+          assct_stdiz_abrvd_attr_grp_nm: savedResourceGroupAsscData.assct_stdiz_abrvd_attr_grp_nm,
+          dsstrc_attr_grp_assc_typ_cd: savedResourceGroupAsscData.dsstrc_attr_grp_assc_typ_cd,      
+          isSaved: true
+        };  
+        console.log('--> Step 7. Resource Association Prior Saved Info :', savedResourceGroupAssc);
+    
+    
 
     //     //   // ---------------------------------------------------------------
           

@@ -101,7 +101,6 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
   const persistRows = async (updatedRows) => {
     setRows(updatedRows);
     console.log('persistRows: setData ->ddResourcePreviewRows', updatedRows);
-
     await setData('ddResourcePreviewRows', updatedRows);
     
     onDataChange?.({
@@ -246,7 +245,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
       group: 'Optional',
       options: [
         { value: 'dsstrc_attr_grp_nm', label: 'Logical Table Name' },
-        { value: 'dsstrc_attr_grp_desc', label: 'Logical Table Description' },
+        { value: 'dsstrc_attr_grp_desc', label: 'Table Description' },
         { value: 'dsstrc_attr_nm', label: 'Logical Column Name' },
         { value: 'dsstrc_attr_desc', label: 'Column Description' },
         { value: 'physcl_data_typ_nm', label: 'Data Type' },

@@ -6,55 +6,84 @@ import ResourceDataDictionaryAssignment from './ResourceDataDictionaryAssignment
 import ResourceApiIngestionSetup from './ResourceApiIngestionSetup';
 import ResourceIngestionSettings from './ResourceIngestionSettings';
 import ResourceDataDictionaryDataPreview from './ResourceDataDictionaryDataPreview';
+import { setData } from '../utils/storageUtils';
 
 const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
-  // console.log('ResourceDataDictionaryConfiguration-> Incoming savedState:', savedState);
-
   const [ddResourceConfig, setResourceConfig] = useState(() => {
     const saved = localStorage.getItem('ddResourceGeneralConfig');
-    console.log("savedState:", savedState);
-    return saved ? JSON.parse(saved) : {
-    expandedAccordion: 'ingestionSetup',
-    activeTab: 0,
-    sourceInfo: null,
-    schema: null,
-    fullData: null,
-    sampleData: null,
-    rawData: null,
-    ingestionSettings: {},
-    ingestionConfig: {},
-    uploadStatus: null,
-    error: null,
-    resourceType: savedState?.ddResourceSetup?.resourceType
-      };
-    });
+    const parsedSaved = saved ? JSON.parse(saved) : null;
+    
+    return {
+      expandedAccordion: 'ingestionSetup',
+      activeTab: 0,
+      sourceInfo: null,
+      schema: null,
+      fullData: null,
+      sampleData: null,
+      rawData: null,
+      ingestionSettings: {},
+      ingestionConfig: {},
+      uploadStatus: null,
+      error: null,
+      resourceType: savedState?.ddResourceSetup?.resourceType,
+      ...parsedSaved
+    };
+  });
 
-  const handleConfigChange = useCallback(
-    (updates) => {
-      setResourceConfig(prevConfig => {
-        const newConfig = { 
-          ...prevConfig, 
-          ...updates,
-          // Initially open data accordion when schema first becomes available
-          expandedAccordion: updates.schema && !prevConfig.schema ? 'data' : updates.expandedAccordion || prevConfig.expandedAccordion
-        };
-        return newConfig;
-      });
-    },
-    []
-  );
-  
-  
-  
+  const handleConfigChange = useCallback((updates) => {
+    setResourceConfig(prevConfig => ({
+      ...prevConfig,
+      ...updates,
+      
+      expandedAccordion: updates.schema && !prevConfig.schema ? 'data' : updates.expandedAccordion || prevConfig.expandedAccordion
+    }));
+    console.log("!! Updated Config:", updates);
+  }, []);
 
+  // Storage effect
   useEffect(() => {
-    if (ddResourceConfig) {
+    const configToStore = {
+      ...ddResourceConfig,
+      resourceType: savedState?.ddResourceSetup?.resourceType
+    };
+    localStorage.setItem('ddResourceGeneralConfig', JSON.stringify(configToStore));
+    console.log("Saved -> ddResourceConfig:", ddResourceConfig);
+    setData('ddResourceFullData', ddResourceConfig.fullData);
+  }, [ddResourceConfig, savedState?.ddResourceSetup?.resourceType]);
+
+  // Parent state sync effect
+  useEffect(() => {
+    const shouldUpdate = savedState && 
+      savedState?.ddResourceSetup?.resourceType !== ddResourceConfig.resourceType;
+      
+    
+    if (shouldUpdate) {
       onStateChange(ddResourceConfig);
-      localStorage.setItem('ddResourceGeneralConfig', JSON.stringify(ddResourceConfig));
     }
-  }, [ddResourceConfig, onStateChange]);
+  }, [savedState?.ddResourceSetup?.resourceType, ddResourceConfig, onStateChange]);
 
+  const handleDataChange = useCallback((resourceData) => {
+    if (!resourceData?.schema) return;
 
+    const enhancedSchema = resourceData.schema.map((col, index) => ({
+      ...col,
+      id: index,
+      mapping_state: 'unaltered',
+      source_type: 'source',
+      order: index + 1,
+      isChanged: false,
+      isUnsaved: false
+    }));
+
+    handleConfigChange({
+      processedSchema: enhancedSchema,
+      schema: resourceData.schema,
+      fullData: resourceData.fullData,
+      sampleData: resourceData.sampleData,
+      resourceInfo: resourceData.resourceInfo,
+      ingestionSettings: resourceData.ingestionSettings
+    });
+  }, [handleConfigChange]);
 
   const handleAccordionChange = useCallback(
     (panel) => (event, isExpanded) => {
@@ -69,39 +98,6 @@ const ResourceDataDictionaryConfiguration = ({ savedState, onStateChange }) => {
     },
     [handleConfigChange]
   );
-
-  
-  const handleDataChange = (resourceData) => {
-    if (!resourceData?.schema) {
-      return;
-    }
-  
-    const enhancedSchema = resourceData.schema.map((col, index) => ({
-      ...col,
-      id: index,
-      mapping_state: 'unaltered',
-      source_type: 'source',
-      order: index + 1,
-      isChanged: false,
-      isUnsaved: false
-    }));
-  
-    const enhancedFullData = resourceData.fullData.map(row => ({
-      ...row,
-      mapping_state: 'unaltered',
-      source_type: 'source',
-      isChanged: false,
-      isUnsaved: false
-    }));
-  
-    handleConfigChange({
-      processedSchema: enhancedSchema,
-      schema: resourceData.schema,
-      fullData: enhancedFullData,
-      sampleData: resourceData.sampleData,
-      resourceInfo: resourceData.resourceInfo
-    });
-  };
 
 
   // useEffect(() => {

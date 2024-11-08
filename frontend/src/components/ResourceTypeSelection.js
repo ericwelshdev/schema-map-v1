@@ -55,28 +55,33 @@ const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames 
     "resource",
   ]);
 
-  // Form validation
-  const validateForm = useCallback(() => {
-    const newErrors = {};
-    if (!resourceSetup.resourceName) {
-      newErrors.resourceName = "Resource name is required";
-    } else if (
-      existingSourceNames &&
-      existingSourceNames.includes(resourceSetup.resourceName)
-    ) {
-      newErrors.resourceName = "This source name already exists";
-    }
-    if (!resourceSetup.resourceType) {
-      newErrors.resourceType = "Resource type is required";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [resourceSetup.resourceName, resourceSetup.resourceType, existingSourceNames]);
+      // Form validation
+      const validateForm = useCallback(() => {
+        const newErrors = {};
+        if (!resourceSetup.resourceName) {
+          newErrors.resourceName = "Resource name is required";
+        }
+        if (!resourceSetup.standardizedSourceName) {
+          newErrors.standardizedSourceName = "Standardized name is required";
+        }
+        if (!resourceSetup.resourceType) {
+          newErrors.resourceType = "Resource type is required";
+        }
+
+        setErrors(newErrors);
+        const isValid = Object.keys(newErrors).length === 0;
+        onStateChange({ ...resourceSetup, isValid });
+        return isValid;
+      }, [resourceSetup, onStateChange]);
+
+      useEffect(() => {
+        validateForm();
+      }, [validateForm]);
   
 
-  useEffect(() => {
-    onStateChange({ ...resourceSetup, isValid: validateForm() });
-  }, [onStateChange, resourceSetup, validateForm]);
+  // useEffect(() => {
+  //   onStateChange({ ...resourceSetup, isValid: validateForm() });
+  // }, [onStateChange, resourceSetup, validateForm]);
 
   const handleInputChange = (field, value) => {
     setResourceSetup((prevState) => ({
@@ -99,13 +104,13 @@ const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames 
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
-              label="Source Name"
+              label="Resource Name"
               variant="outlined"
               value={resourceSetup.resourceName}
               onChange={(e) =>
                 handleInputChange("resourceName", e.target.value)
               }
-              placeholder="Enter source name"
+              placeholder="Enter Resource name"
               required
               error={!!errors.resourceName}
               helperText={errors.resourceName}
@@ -114,13 +119,16 @@ const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames 
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
-              label="Standardized Source Name"
+              label="Standardized Resource Name"
               variant="outlined"
               value={resourceSetup.standardizedSourceName}
               onChange={(e) =>
                 handleInputChange("standardizedSourceName", e.target.value)
               }
-              placeholder="Enter standardized source name"
+              placeholder="Enter a Standardized Resource Name"
+              required
+              error={!!errors.standardizedSourceName}
+              helperText={errors.standardizedSourceName}
             />
           </Grid>
           <Grid item xs={12} md={4}>
@@ -277,3 +285,5 @@ const ResourceTypeSelection = ({ savedState, onStateChange, existingSourceNames 
 };
 
 export default ResourceTypeSelection;
+
+

@@ -69,6 +69,7 @@ const detectXMLSettings = async (file) => {
 
 // Detects settings for Excel files
 export const detectExcelSettings = async (file) => {
+  console.log('detectExcelSettings was called file: ,args:',file);
   const data = await file.arrayBuffer();
   const workbook = XLSX.read(data, { type: 'array' });
   const sheetNames = workbook.SheetNames;
@@ -142,6 +143,7 @@ const mapUiFieldsToCallArgFields = (settings, config) => {
 
 
 const generateCSVSchema = async (file, settings) => {
+  console.log('generateCSVSchema was called file: ,args:',file, settings);
   console.log('settings', settings); // Debugging log for settings
   return new Promise((resolve, reject) => {
 
@@ -234,6 +236,7 @@ const generateJSONSchema = async (file, settings) => {
 
 // Generate schema for XML files
 const generateXMLSchema = async (file, settings) => {
+  console.log('generateXMLSchema was called file: ,args:',file, settings);
   const text = await file.text();
   const result = parse(text);  // Parse XML using fast-xml-parser
   const rootElement = settings.rootElement;
@@ -244,46 +247,110 @@ const generateXMLSchema = async (file, settings) => {
 
 // Generate schema for Excel files
 export const generateExcelSchema = async (file, settings) => {
-  const data = await file.arrayBuffer();
-  console.log('Standardized args:', settings);
-  const workbook = XLSX.read(data, { type: 'array' });
-  const sheetName = settings.sheetSelection === 'firstSheet' ? workbook.SheetNames[0] : settings.sheetSelection;
-  const worksheet = workbook.Sheets[sheetName];
-  
-  const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-    header: settings.header ? 1 : undefined,
-    range: settings.skipFirstNRows,
-    blankrows: !settings.skipEmptyLines,
-    raw: !settings.dateParsing,
-    defval: null  // Use null for empty cells instead of empty string
-  });
+  try {
+    console.log('generateExcelSchema was called file: ,args:', file, settings);
 
-  const headerRow = settings.includeHeader ? jsonData[0] : jsonData[0].map((_, index) => `Column${index + 1}`);
-  const dataRows = settings.includeHeader ? jsonData.slice(1) : jsonData;
+    if (!file) {
+      throw new Error('No file provided');
+    }
 
-  const schema = headerRow.map((header, index) => ({
-    name: header,
-    type: inferDataType(dataRows.slice(0, 5).map(row => row[index])),
-    comment: ''
-  }));
+    const data = await file.arrayBuffer();
+    console.log('Standardized args:', settings);
 
-  const sampleData = dataRows.slice(0, settings.previewNRows).map(row => 
-    headerRow.reduce((acc, header, index) => {
-      acc[header] = row[index] !== undefined ? row[index] : null;
-      return acc;
-    }, {})
-  );
+    let workbook;
+    try {
+      workbook = XLSX.read(data, { type: 'array' });
+    } catch (error) {
+      throw new Error(`Failed to read Excel file: ${error.message}`);
+    }
 
-  const warnings = [];
-  if (jsonData.length > 1000000) {
-    warnings.push('Large file detected. Only a sample of the data was processed.');
+    if (!workbook.SheetNames.length) {
+      throw new Error('Excel file contains no sheets');
+    }
+
+    
+    // Use the sheet selection logic from excelConfig
+    const sheetName = settings.sheetSelection === 'firstSheet' 
+      ? workbook.SheetNames[0] 
+      : workbook.SheetNames[settings.sheetSelection] || workbook.SheetNames[0];
+
+    const worksheet = workbook.Sheets[sheetName];
+    
+
+    if (!worksheet) {
+      throw new Error(`Sheet "${sheetName}" not found in workbook`);
+    }
+
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+      header: settings.includeHeader ? settings.header : 1,
+      range: settings.skipFirstNRows,
+      blankrows: !settings.skipEmptyLines,
+      raw: !settings.dateParsing,
+      defval: null
+    });
+
+    if (!jsonData.length) {
+      throw new Error('No data found in selected sheet');
+    }
+
+    const warnings = [];
+    
+    // Data validation and warnings
+    if (jsonData.length > 1000000) {
+      warnings.push('Large file detected. Only a sample of the data was processed.');
+    }
+
+    if (Object.keys(jsonData[0]).length === 0) {
+      warnings.push('First row contains no data');
+    }
+
+    const headerRow = settings.includeHeader ? 
+      jsonData[0] : 
+      Object.keys(jsonData[0]).map((_, index) => `Column${index + 1}`);
+
+    const dataRows = settings.includeHeader ? jsonData.slice(1) : jsonData;
+
+    const schema = headerRow.map((header, index) => {
+      const columnData = dataRows.slice(0, 5).map(row => row[index]);
+      return {
+        name: header || `Column${index + 1}`,
+        type: inferDataType(columnData),
+        comment: ''
+      };
+    });
+
+    const sampleData = dataRows
+      .slice(0, settings.previewNRows)
+      .map(row => headerRow.reduce((acc, header, index) => {
+        acc[header] = row[index] !== undefined ? row[index] : null;
+        return acc;
+      }, {}));
+
+    const rawData = XLSX.utils.sheet_to_csv(worksheet, { 
+      FS: '\t', 
+      RS: '\n' 
+    }).slice(0, 1000);
+
+    console.log('generateExcelSchema Result:', schema, sampleData, warnings, rawData);
+
+    return {
+      schema,
+      sampleData,
+      warnings,
+      rawData,
+      metadata: {
+        totalRows: jsonData.length,
+        processedRows: sampleData.length,
+        sheetName,
+        hasHeaders: settings.includeHeader ? settings.header : 1
+      }
+    };
+
+  } catch (error) {
+    console.error('Excel Schema Generation Error:', error);
+    throw new Error(`Failed to generate Excel schema: ${error.message}`);
   }
-
-  const rawData = XLSX.utils.sheet_to_csv(worksheet, { FS: '\t', RS: '\n' }).slice(0, 1000);
-
-  return { schema, sampleData, warnings, rawData };
 };
-
 // Infer schema from JSON objects
 const inferJSONSchema = (sample) => {
   return Object.keys(sample).map(key => ({
@@ -350,6 +417,7 @@ const calculateFileChecksum = async (file) => {
 
 export const processFile = async (file, settings = {}, isInitialIngestion = true, progressCallback = () => {}) => {
   try {
+    console.log('processFile was called file: ,args, isInitialIngestion:',file, settings, isInitialIngestion);
     console.log('fileUtil-> Uploading file:', file);
     console.log('fileUtil-> Ingestion Settings:', settings);
 
@@ -368,11 +436,11 @@ export const processFile = async (file, settings = {}, isInitialIngestion = true
     
     let formattedSettings;
     if (Object.keys(settings).length === 0) {
-      formattedSettings = { ...getDefaultIngestionSettings(fileType, autoDetectedSettings), includeHeader: hasHeader };
+      formattedSettings = { ...getDefaultIngestionSettings(fileType, autoDetectedSettings), includeHeader: hasHeader || true };
     } else {
       formattedSettings = { ...getIngestionedValueSettings(fileType, autoDetectedSettings), ...settings };
     }
-    console.log('Formatted settings:', formattedSettings);
+    console.log('processFile -->Formatted settings:',settings,  formattedSettings);
 
     progressCallback(80);
     const schemaResult = await generateSchema(file, formattedSettings);

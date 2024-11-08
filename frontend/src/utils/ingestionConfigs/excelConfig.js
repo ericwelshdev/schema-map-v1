@@ -7,19 +7,19 @@ const sheetOptions = [
   { label: 'Custom', value: 'custom' },
 ];
   export const excelConfig = {
-    sheetSelection: {
+    header: {
       order: 1,
-      default: '',
-      uiField: 'sheetSelection',
-      uiDisplayName: 'Sheet Selection',
-      uiType: 'select',
-      options: [], // This will be populated dynamically
-      callArgField: 'sheetSelection',
+      default: 1,
+      uiField: 'rowHeaderIsRowNumber',
+      uiDisplayName: 'Header is in Row Number',
+      uiType: 'number',
+      callArgField: 'header',
       autoDetect: async (file) => {
-        const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
-        return workbook.SheetNames[0];
+        // Implement auto-detection logic
+        return 1;
       }
     },
+
     skipFirstNRows: {
     order: 2,
     default: 0,
@@ -44,18 +44,20 @@ const sheetOptions = [
       return 100;
     }
   },
-  header: {
+  sheetSelection: {
     order: 4,
-    default: true,
-    uiField: 'includeHeader',
-    uiDisplayName: 'Include Header',
-    uiType: 'boolean',
-    callArgField: 'header',
+    default: 0,
+    uiField: 'sheetSelection',
+    uiDisplayName: 'Sheet Selection',
+    uiType: 'select',
+    options: [], // This will be populated dynamically
+    callArgField: 'sheetSelection',
     autoDetect: async (file) => {
-      // Implement auto-detection logic
-      return true;
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      return workbook.SheetNames[0];
     }
   },
+
   encoding: {
     order: 5,
     default: 'UTF-8',
@@ -73,16 +75,16 @@ const sheetOptions = [
       return 'UTF-8';
     }
   },
-  dynamicTyping: {
+  includeHeader: {
     order: 6,
-    default: false,
-    uiField: 'dynamicTyping',
-    uiDisplayName: 'Dynamic Typing',
+    default: true,
+    uiField: 'includeHeader',
+    uiDisplayName: 'Include Header',
     uiType: 'boolean',
-    callArgField: 'dynamicTyping',
+    callArgField: 'includeHeader',
     autoDetect: async (file) => {
       // Implement auto-detection logic
-      return false;
+      return true;
     }
   },
   dateParsing: {
@@ -116,94 +118,94 @@ export const detectExcelSettings = async (file) => {
   return detectedSettings;
 };
 
-const standardizeExcelArguments = (ingestionSettings, detectedSettings) => {
-  const standardizedArgs = {};
-  const valueSourceDataGroups = {};
+// const standardizeExcelArguments = (ingestionSettings, detectedSettings) => {
+//   const standardizedArgs = {};
+//   const valueSourceDataGroups = {};
 
-  for (const [key, config] of Object.entries(excelConfig)) {
-    const uiValue = ingestionSettings[config.uiField];
-    const detectedValue = detectedSettings[config.uiField];
-    let finalValue;
-    let sourceDataGroup;
+//   for (const [key, config] of Object.entries(excelConfig)) {
+//     const uiValue = ingestionSettings[config.uiField];
+//     const detectedValue = detectedSettings[config.uiField];
+//     let finalValue;
+//     let sourceDataGroup;
 
-    if (uiValue !== undefined) {
-      finalValue = uiValue;
-      sourceDataGroup = 'user';
-    } else if (detectedValue !== undefined) {
-      finalValue = detectedValue;
-      sourceDataGroup = 'auto-detect';
-    } else {
-      finalValue = config.default;
-      sourceDataGroup = 'default';
-    }
+//     if (uiValue !== undefined) {
+//       finalValue = uiValue;
+//       sourceDataGroup = 'user';
+//     } else if (detectedValue !== undefined) {
+//       finalValue = detectedValue;
+//       sourceDataGroup = 'auto-detect';
+//     } else {
+//       finalValue = config.default;
+//       sourceDataGroup = 'default';
+//     }
 
-    if (config.uiType === 'boolean') {
-      finalValue = finalValue === 'Yes' || finalValue === true;
-    } else if (config.uiType === 'number') {
-      finalValue = parseInt(finalValue, 10);
-    } else if (config.uiType === 'select' && finalValue === 'custom') {
-      finalValue = ingestionSettings[`custom${config.uiField}`];
-    }
+//     if (config.uiType === 'boolean') {
+//       finalValue = finalValue === 'Yes' || finalValue === true;
+//     } else if (config.uiType === 'number') {
+//       finalValue = parseInt(finalValue, 10);
+//     } else if (config.uiType === 'select' && finalValue === 'custom') {
+//       finalValue = ingestionSettings[`custom${config.uiField}`];
+//     }
 
-    standardizedArgs[config.callArgField] = finalValue;
-    valueSourceDataGroups[config.uiField] = sourceDataGroup;
-  }
+//     standardizedArgs[config.callArgField] = finalValue;
+//     valueSourceDataGroups[config.uiField] = sourceDataGroup;
+//   }
 
-  return { args: standardizedArgs, sources: valueSourceDataGroups };
-};
+//   return { args: standardizedArgs, sources: valueSourceDataGroups };
+// };
 
-export const readExcel = (file, ingestionSettings, detectedSettings = {}) => {
-  return new Promise((resolve, reject) => {
-    const { args, sources } = standardizeExcelArguments(ingestionSettings, detectedSettings);
-    console.log('Standardized args:', args); // Log the standardized arguments
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      let sheetNames = workbook.SheetNames;
+// export const readExcel = (file, ingestionSettings, detectedSettings = {}) => {
+//   return new Promise((resolve, reject) => {
+//     const { args, sources } = standardizeExcelArguments(ingestionSettings, detectedSettings);
+//     console.log('Standardized args:', args); // Log the standardized arguments
+//     const reader = new FileReader();
+//     reader.onload = (e) => {
+//       const data = new Uint8Array(e.target.result);
+//       const workbook = XLSX.read(data, { type: 'array' });
+//       let sheetNames = workbook.SheetNames;
 
-      let parsedData = [];
-      if (args.sheetSelection === 'allSheets') {
-        sheetNames.forEach(sheet => {
-          parsedData.push(XLSX.utils.sheet_to_json(workbook.Sheets[sheet], {
-            header: args.header ? 1 : undefined,
-            raw: !args.dateParsing
-          }));
-        });
-      } else {
-        const selectedSheet = args.sheetSelection === 'firstSheet' ? sheetNames[0] : args.sheetSelection;
-        parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[selectedSheet], {
-          header: args.header ? 1 : undefined,
-          raw: !args.dateParsing
-        });
-      }
-      resolve({ data: parsedData, sources, args });
-    };
+//       let parsedData = [];
+//       if (args.sheetSelection === 'allSheets') {
+//         sheetNames.forEach(sheet => {
+//           parsedData.push(XLSX.utils.sheet_to_json(workbook.Sheets[sheet], {
+//             header: args.header ? 1 : undefined,
+//             raw: !args.dateParsing
+//           }));
+//         });
+//       } else {
+//         const selectedSheet = args.sheetSelection === 'firstSheet' ? sheetNames[0] : args.sheetSelection;
+//         parsedData = XLSX.utils.sheet_to_json(workbook.Sheets[selectedSheet], {
+//           header: args.header ? 1 : undefined,
+//           raw: !args.dateParsing
+//         });
+//       }
+//       resolve({ data: parsedData, sources, args });
+//     };
 
-    reader.onerror = (error) => reject(error);
-    reader.readAsArrayBuffer(file);
-  });
-};
+//     reader.onerror = (error) => reject(error);
+//     reader.readAsArrayBuffer(file);
+//   });
+// };
 
-export const getExcelIngestionSummary = (ingestionSettings, detectedSettings) => {
-  const summary = {};
-  for (const [key, config] of Object.entries(excelConfig)) {
-    const uiValue = ingestionSettings[config.uiField];
-    const detectedValue = detectedSettings[config.uiField];
-    const defaultValue = config.default;
+// export const getExcelIngestionSummary = (ingestionSettings, detectedSettings) => {
+//   const summary = {};
+//   for (const [key, config] of Object.entries(excelConfig)) {
+//     const uiValue = ingestionSettings[config.uiField];
+//     const detectedValue = detectedSettings[config.uiField];
+//     const defaultValue = config.default;
 
-    let finalValue = uiValue !== undefined ? uiValue : (detectedValue !== undefined ? detectedValue : defaultValue);
-    if (config.uiType === 'select' && finalValue === 'custom') {
-      finalValue = ingestionSettings[`custom${config.uiField}`];
-    }
+//     let finalValue = uiValue !== undefined ? uiValue : (detectedValue !== undefined ? detectedValue : defaultValue);
+//     if (config.uiType === 'select' && finalValue === 'custom') {
+//       finalValue = ingestionSettings[`custom${config.uiField}`];
+//     }
 
-    summary[config.uiField] = {
-      value: finalValue,
-      sourceDataGroup: uiValue !== undefined ? 'user' : (detectedValue !== undefined ? 'auto-detect' : 'default')
-    };
-  }
-  return summary;
-};
+//     summary[config.uiField] = {
+//       value: finalValue,
+//       sourceDataGroup: uiValue !== undefined ? 'user' : (detectedValue !== undefined ? 'auto-detect' : 'default')
+//     };
+//   }
+//   return summary;
+// };
 
 // Existing code...
 

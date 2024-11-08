@@ -6,15 +6,13 @@ import {
   Typography, Box, Breadcrumbs, Link, ToggleButtonGroup, ToggleButton,
   Card, CardContent, CardActions, IconButton, Grid, Divider, Dialog, DialogTitle,
   DialogContent, DialogActions, Button, Switch, FormControlLabel, List, ListItem,
-  Tooltip, Container
+  Tooltip, Container, Stack
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { ViewModule, ViewList, Edit, FileCopy, Share, Delete, Add } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useView } from '../contexts/ViewContext';
-
-
-
+import { clearData } from '../utils/storageUtils';
 
 const Sources = () => {
   const { projectsView, setProjectsView } = useView();
@@ -25,20 +23,22 @@ const Sources = () => {
   const [deleteAllDependents, setDeleteAllDependents] = useState(true);
   const navigate = useNavigate();
   const [sources, setSources] = useState([]);
-  const [isWizardOpen, setIsWizardOpen] = useState(false);
-
-  useEffect(() => {
-    fetchSources();
-  }, []);
 
   const fetchSources = async () => {
     try {
       const data = await getResources();
-      setSources(data);
+      const dataSources = data.filter(
+        resource => ['Source', 'Data Dictionary Schema'].includes(resource.dsstrc_attr_grp_src_typ_cd)
+      );      
+      setSources(dataSources);
     } catch (error) {
       console.error('Error fetching resources:', error);
     }
   };
+
+  useEffect(() => {
+    fetchSources();
+  }, []);
 
   const handleViewChange = (event, newView) => {
     if (newView !== null) {
@@ -75,6 +75,28 @@ const Sources = () => {
     navigate('/sources/new');
   };
 
+
+  const handleAddNewDataDictionary = async () => {
+    try {
+      await clearData([
+        'ddResourcePreviewRows',
+        'ddResourceFullData',
+        'ddResourceMappingRows',
+        'ddResourceSampleData',
+        'resourcePreviewRows',
+        'resourceSampleData'
+      ]);
+      
+      localStorage.removeItem('wizardStateEssential');
+      localStorage.removeItem('ddResourceGeneralConfig');
+      localStorage.removeItem('resourceGeneralConfig');
+      
+      navigate('/sources/new');
+    } catch (error) {
+      console.error('Error clearing data:', error);
+    }
+  };
+
   const columns = [
     { field: 'dsstrc_attr_grp_id', headerName: 'Source ID', flex: 1 },
     { field: 'dsstrc_attr_grp_nm', headerName: 'Source Name', flex: 1 },
@@ -88,12 +110,12 @@ const Sources = () => {
       width: 200,
       sortable: false,
       renderCell: (params) => (
-        <Box>
-          <IconButton onClick={() => handleEditClick(params.row)}><Edit /></IconButton>
-          <IconButton><FileCopy /></IconButton>
-          <IconButton><Share /></IconButton>
-          <IconButton onClick={() => handleDeleteClick(params.row)}><Delete /></IconButton>
-        </Box>
+        <Stack direction="row" spacing={1}>
+          <IconButton onClick={() => handleEditClick(params.row)} color="primary"><Edit /></IconButton>
+          <IconButton color="info"><FileCopy /></IconButton>
+          <IconButton color="success"><Share /></IconButton>
+          <IconButton onClick={() => handleDeleteClick(params.row)} color="error"><Delete /></IconButton>
+        </Stack>
       ),
     },
   ];
@@ -183,7 +205,20 @@ const Sources = () => {
           <Grid container spacing={3}>
             {sources.map((source) => (
               <Grid item xs={12} sm={6} md={4} lg={3} key={source.dsstrc_attr_grp_id}>
-                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Card 
+                  sx={{ 
+                    height: '100%', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: 8,
+                    }
+                  }}
+                  onClick={() => handleEditClick(source)}
+                >
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Typography variant="h6" gutterBottom>{source.dsstrc_attr_grp_nm}</Typography>
                     <Tooltip title={source.dsstrc_attr_desc} arrow>
@@ -191,17 +226,46 @@ const Sources = () => {
                         {source.dsstrc_attr_desc}
                       </Typography>
                     </Tooltip>
-                    <Typography variant="body2">Short Name: {source.dsstrc_attr_grp_shrt_nm}</Typography>
-                    <Typography variant="body2">Description: {source.dsstrc_attr_grp_shrt_nm}</Typography>
-                    <Typography variant="body2">Data Type: {source.dsstrc_attr_grp_desc}</Typography>
-                    <Typography variant="body2">Last Updated: {source.updt_ts}</Typography>
+                    <Stack spacing={1}>
+                      <Typography variant="body2">
+                        <strong>Short Name:</strong> {source.dsstrc_attr_grp_shrt_nm}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Type:</strong> {source.dsstrc_attr_grp_desc}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Last Updated:</strong> {source.updt_ts}
+                      </Typography>
+                    </Stack>
                   </CardContent>
                   <Divider />
-                  <CardActions>
-                    <IconButton onClick={() => handleEditClick(source)}><Edit /></IconButton>
-                    <IconButton><FileCopy /></IconButton>
-                    <IconButton><Share /></IconButton>
-                    <IconButton onClick={() => handleDeleteClick(source)}><Delete /></IconButton>
+                  <CardActions sx={{ justifyContent: 'flex-end', p: 1 }}>
+                    <IconButton 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditClick(source);
+                      }}
+                      color="primary"
+                      size="small"
+                    >
+                      <Edit />
+                    </IconButton>
+                    <IconButton color="info" size="small">
+                      <FileCopy />
+                    </IconButton>
+                    <IconButton color="success" size="small">
+                      <Share />
+                    </IconButton>
+                    <IconButton 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(source);
+                      }}
+                      color="error"
+                      size="small"
+                    >
+                      <Delete />
+                    </IconButton>
                   </CardActions>
                 </Card>
               </Grid>              

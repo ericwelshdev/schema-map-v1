@@ -8,9 +8,11 @@ export const getResourceGroupAssociations = async () => {
 };
 
 export const postResourceGroupAssociation = async (sourceData) => {
+  console.log('postResourceGroupAssociation Input group data:', sourceData);
+
   const formattedData = {
-    ds_id: 0, 
-    dsstrc_attr_grp_assc_id: null,
+    ds_id: 0,
+    dsstrc_grp_assc_id: null,
     dsstrc_attr_grp_id: sourceData.dsstrc_attr_grp_id,
     stdiz_abrvd_attr_grp_nm: sourceData.stdiz_abrvd_attr_grp_nm,
     assct_ds_id: sourceData.assct_ds_id,
@@ -28,22 +30,28 @@ export const postResourceGroupAssociation = async (sourceData) => {
     updt_ts: new Date().toISOString()
   };
 
-
+  console.log('postBulkResourceGroupAttributeAssociation Sending group data:', formattedData);
 try {
     const response = await axios.post(`${API_URL}/resource-associations`, formattedData);
     console.log('response.data', response.data);
-    const { dsstrc_attr_grp_assc_id } = response.data;
+    const { dsstrc_grp_assc_id } = response.data;
 
     return {
     ...response.data,
-    id: dsstrc_attr_grp_assc_id // Ensure we have a standard id field
+    id: dsstrc_grp_assc_id // we have a standard id field
   };
     
-  } catch (error) {
-    // Extract the detailed error message from the AxiosError
-    const errorMessage = error.response?.data?.message || error.message;
-    throw new Error(errorMessage);
-  }
+} catch (error) {
+  console.log('Received error response:', error.response?.data);
+  const errorDetails = error.response?.data?.error;
+  const enhancedError = new Error();
+  enhancedError.name = errorDetails?.name;
+  enhancedError.message = errorDetails?.message;
+  enhancedError.details = errorDetails?.errors;
+  enhancedError.sql = errorDetails?.sql;
+  enhancedError.code = errorDetails?.code;
+  throw enhancedError;
+}
 };
 
 export const putResourceGroupAssociation = async (id, sourceData) => {
@@ -55,3 +63,49 @@ export const deleteResourceGroupAssociation = async (id) => {
   await axios.delete(`${API_URL}/resource-associations/${id}`);
 };
 
+// Bulk create source groups
+export const postBulkResourceGroupAttributeAssociation = async (sourceGroups) => {
+  // console.log('postBulkResourceGroupAttributeAssociation Input group data:', sourceGroups);
+  try {
+    const formattedData = sourceGroups.map(row => ({
+      ds_id: 0, 
+      dsstrc_grp_assc_id: null,
+      dsstrc_attr_grp_id: row.dsstrc_attr_grp_id,
+      stdiz_abrvd_attr_grp_nm: row.stdiz_abrvd_attr_grp_nm,
+      assct_ds_id: row.assct_ds_id,
+      assct_dsstrc_attr_grp_id: row.assct_dsstrc_attr_grp_id,
+      assct_stdiz_abrvd_attr_grp_nm: row.assct_stdiz_abrvd_attr_grp_nm,
+      techncl_rule_nm: row.techncl_rule_nm,
+      dsstrc_attr_grp_assc_typ_cd: row.dsstrc_attr_grp_assc_typ_cd,
+      ai_tag_cmplx: row.ai_tag_cmplx,
+      user_tag_cmplx: row.user_tag_cmplx,
+      usr_cmt_txt: row.usr_cmt_txt,
+      oprtnl_stat_cd: 'Active',
+      cre_by_nm: 'System',
+      cre_ts: new Date().toISOString(),
+      updt_by_nm: 'System',
+      updt_ts: new Date().toISOString()
+    }));
+    
+    if(formattedData.length === 0) {
+      return {
+        message: 'No data to save'
+      };
+    }
+    // console.log('postBulkResourceGroupAttributeAssociation Sending group data:', formattedData); // to verify the array
+    const response = await axios.post(`${API_URL}/resource-associations/bulk`, formattedData);
+    console.log('response.data', response.data);
+    return response.data;    
+
+  } catch (error) {
+    console.log('Received error response:', error.response?.data);
+    const errorDetails = error.response?.data?.error;
+    const enhancedError = new Error();
+    enhancedError.name = errorDetails?.name;
+    enhancedError.message = errorDetails?.message;
+    enhancedError.details = errorDetails?.errors;
+    enhancedError.sql = errorDetails?.sql;
+    enhancedError.code = errorDetails?.code;
+    throw enhancedError;
+  }
+};

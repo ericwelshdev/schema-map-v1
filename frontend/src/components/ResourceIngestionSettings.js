@@ -22,10 +22,11 @@ const ResourceIngestionSettings = ({ ingestionConfig, onConfigChange, onApplyCha
   };
 
   const handleApply = () => {
-    onConfigChange({
+    const updatedConfig = {
       ...ingestionConfig,
       ingestionAppliedProperties: localSettings
-    });
+    };
+    onConfigChange(updatedConfig);
     onApplyChanges();
   };
 

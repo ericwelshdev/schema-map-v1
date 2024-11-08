@@ -20,6 +20,7 @@ import NewDataDictionary from './pages/NewDataDictionary';
 import NewSource from './pages/NewSource';
 import SourceDetail from './pages/SourceDetail';
 import Targets from './pages/Targets';
+import NewTarget from './pages/NewTarget';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -68,8 +69,9 @@ import { WorkspaceProvider } from './contexts/WorkspaceContext';
                               <Route path="/data-dictionaries" element={<DataDictionaries />} />
                               <Route path="/data-dictionaries/new" element={<NewDataDictionary />} />
                               <Route path="/source/:id" element={<SourceDetail />} />
-                              <Route path="/sources/new" element={<NewSource />} />
+                              <Route path="/sources/new" element={<NewSource />} />                              
                               <Route path="/targets" element={<Targets />} />
+                              <Route path="/targets/new" element={<NewTarget />} />                              
                               <Route path="/admin" element={<Admin />} />
                             </Routes>
                           </Box>

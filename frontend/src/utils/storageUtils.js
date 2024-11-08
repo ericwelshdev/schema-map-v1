@@ -76,3 +76,13 @@ export const initDB = () => {
 //   const data = await getData(STORES.RESOURCE_PREVIEW);
 //   console.log(data);
 // })();
+
+export const clearData = async (keys) => {
+  const db = await openDB(DB_NAME, 1);
+  const tx = db.transaction(DB_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(DB_STORE_NAME);
+  
+  for (const key of keys) {
+    await store.delete(key);
+  }
+};

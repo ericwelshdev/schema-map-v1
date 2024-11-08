@@ -1,6 +1,5 @@
-// frontend/src/components/ResourceDataDictionaryWizard.js
-import React, { useState, useEffect, useCallback } from 'react';
-import { Stepper, Step, StepLabel, Button, Box, Slide } from '@mui/material';
+import React, { useState, useEffect ,useMemo, useCallback} from 'react';
+import { Stepper, Step, StepLabel, Button, Box, Slide, Alert } from '@mui/material';
 import ResourceDataDictionaryTypeSelection from './ResourceDataDictionaryTypeSelection';
 import ResourceDataDictionaryConfiguration from './ResourceDataDictionaryConfiguration';
 import ResourceDataDictionaryClassificationSummary from './ResourceDataDictionaryClassificationSummary';
@@ -11,6 +10,7 @@ const ResourceDataDictionaryWizard = () => {
     const [activeStep, setActiveStep] = useState(0);
     const [slideDirection, setSlideDirection] = useState('left');
     const [prevStep, setPrevStep] = useState(0);
+    const [validationError, setValidationError] = useState(null);
     const [wizardState, setWizardState] = useState({
         ddResourceSetup: {
             resourceName: '',
@@ -50,12 +50,29 @@ const ResourceDataDictionaryWizard = () => {
     }, [wizardState]);
 
     const handleNext = () => {
+  switch (activeStep) {
+    case 0:
+      const typeSelectionValid = wizardState.ddResourceSetup?.isValid;
+      if (!typeSelectionValid) {
+        setValidationError('Please complete all required fields');
+        return;
+      }
+      break;
+  }
         setSlideDirection('left');
+        setValidationError(null);
         setPrevStep(activeStep);
         setActiveStep((prevStep) => prevStep + 1);
     };
 
-    const handleBack = () => {
+const validateTypeSelection = (setup) => {
+      return setup.resourceType && 
+             setup.standardizedSourceName && 
+             setup.resourceDescription;
+};
+    
+
+const handleBack = async () => {
         setSlideDirection('right');
         setPrevStep(activeStep);
         setActiveStep((prevStep) => prevStep - 1);
@@ -87,7 +104,7 @@ const ResourceDataDictionaryWizard = () => {
             case 2:
                 return (
                     <ResourceDataDictionaryClassificationSummary
-                        classificationData={wizardState.dataDictionaryConfig.processedSchema}
+                        classificationData={wizardState.dataDictionaryConfig?.processedSchema}
                         onStateChange={(newState) => updateWizardState('classificationSummary', newState)}
                     />
                 );
@@ -100,6 +117,11 @@ const ResourceDataDictionaryWizard = () => {
 
     return (
         <Box sx={{ width: '100%', overflow: 'hidden' }}>
+      {validationError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {validationError}
+        </Alert>
+      )}
             <Stepper activeStep={activeStep}>
                 {steps.map((label, index) => (
                     <Step key={label}>

@@ -771,25 +771,25 @@ useEffect(() => {
             <Typography variant="h6" noWrap>{stats?.tableName}</Typography>
           </Grid>
           <Grid item xs={1.5}>
-            <Typography variant="subtitle2" color="textSecondary">Overall</Typography>
+            <Typography variant="subtitle2" color="textSecondary">Match Overall</Typography>
             <Typography variant="h6" color={stats?.confidenceScore >= 60 ? 'success.main' : 'error.main'}>
               {stats?.confidenceScore?.toFixed(1)}%
             </Typography>
           </Grid>
           <Grid item xs={1.5}>
-            <Typography variant="subtitle2" color="textSecondary">Name Match</Typography>
+            <Typography variant="subtitle2" color="textSecondary">Table Match</Typography>
             <Typography variant="h6" color={stats?.tableNameSimilarity >= 60 ? 'success.main' : 'error.main'}>
               {stats?.tableNameSimilarity?.toFixed(1)}%
             </Typography>
           </Grid>
           <Grid item xs={1.5}>
-            <Typography variant="subtitle2" color="textSecondary">Column Match</Typography>
+            <Typography variant="subtitle2" color="textSecondary">Columns Match</Typography>
             <Typography variant="h6" color={stats?.columnMatchConfidence >= 60 ? 'success.main' : 'error.main'}>
               {stats?.columnMatchConfidence?.toFixed(1)}%
             </Typography>
           </Grid>
           <Grid item xs={1.5}>
-            <Typography variant="subtitle2" color="textSecondary">Quality</Typography>
+            <Typography variant="subtitle2" color="textSecondary">Match Quality</Typography>
             <Typography variant="h6" color={stats?.matchQuality >= 60 ? 'success.main' : 'error.main'}>
               {stats?.matchQuality?.toFixed(1)}%
             </Typography>
