@@ -11,12 +11,17 @@ import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import UndoIcon from '@mui/icons-material/Undo';
 import WarningIcon from '@mui/icons-material/Warning';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
+import AutoFixHigh from '@mui/icons-material/AutoFixHigh';
 import KeyIcon from '@mui/icons-material/Key';
 import KeyOffIcon from '@mui/icons-material/KeyOff';
 import { styled, lighten, darken, maxWidth } from '@mui/system';
 import { SquareChartGanttIcon, TablePropertiesIcon, Grid3X3Icon, LetterTextIcon } from "lucide-react";
 import { debounce } from 'lodash';
 import { initDB,  getData, setData } from '../utils/storageUtils';
+import { schemaClassificationOptions } from '../schemas/dataDictionarySchemaClassification.js';
+import { getMLPredictions } from '../services/mlService';
+
+
 
 const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo, sampleData, rawData, onDataChange }) => {
   const [tabValue, setTabValue] = useState(() => {
@@ -110,6 +115,28 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
     });
     console.log('Saved Updated rows:', updatedRows);
   };
+
+  const handleAutoClassify = async () => {
+    const classifiedRows = await Promise.all(rows.map(async (row) => {
+      const mlPrediction = await getMLPredictions({
+        name: row.name,
+        type: row.type,
+        sampleValues: sampleData?.map(d => d[row.name])
+      });
+  
+      return {
+        ...row,
+        schemaClassification: mlPrediction?.suggestedClassification || null,
+        mlConfidence: mlPrediction?.confidence,
+        isChanged: true,
+        isUnsaved: true
+      };
+    }));
+  
+    persistRows(classifiedRows);
+  };
+
+  
 
   const handleEditClick = (id) => {
     persistRows(rows.map(row => row.id === id ? { ...row, isEditing: true, isUnsaved: true } : row));
@@ -233,35 +260,8 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
     fontSize: 12    
   });
   
-  const schemaClassificationOptions = [
-    { 
-      group: 'Mandatory',
-      options: [
-        { value: 'stdiz_abrvd_attr_grp_nm', label: 'Physical Table Name' },
-        { value: 'stdiz_abrvd_attr_nm', label: 'Physical Column Name' }
-      ]
-    },
-    {
-      group: 'Optional',
-      options: [
-        { value: 'dsstrc_attr_grp_nm', label: 'Logical Table Name' },
-        { value: 'dsstrc_attr_grp_desc', label: 'Table Description' },
-        { value: 'dsstrc_attr_nm', label: 'Logical Column Name' },
-        { value: 'dsstrc_attr_desc', label: 'Column Description' },
-        { value: 'physcl_data_typ_nm', label: 'Data Type' },
-        { value: 'dsstrc_attr_seq_nbr', label: 'Column Sequence' },
-        { value: 'len_nbr', label: 'Length' },
-        { value: 'prscn_nbr', label: 'Precision' },
-        { value: 'scale_nbr', label: 'Scale' },
-        { value: 'mand_ind', label: 'Nullable Indicator' },
-        { value: 'pk_ind', label: 'Primary Key' },
-        { value: 'fk_ind', label: 'Foreign Key' },
-        { value: 'phi_ind', label: 'PHI Indicator' },
-        { value: 'pii_ind', label: 'Foreign Indicator' },
-        { value: 'encrypt_ind', label: 'Encryption Indicator' }
-      ]
-    }
-  ];
+  
+  console.log('Imported classifications:', schemaClassificationOptions);
 
   const schemaColumns = [
     {
@@ -308,42 +308,49 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
       field: 'schemaClassification',
       headerName: 'Schema Classification',
       flex: 1,
-      renderCell: (params) => (
-        <Autocomplete
-          size="small"
-          options={schemaClassificationOptions.flatMap(group => group.options)}
-          groupBy={(option) => option.label.includes('Physical') ? 'Mandatory' : 'Optional'}
-          getOptionLabel={(option) => option.label}
-          value={params.value || null}
-          onChange={(event, newValue) => {
-            handleCellChange({
-              id: params.id,
-              field: 'schemaClassification',
-              value: newValue
-            });
-          }}
+      renderCell: (params) => {
+        // Guard against undefined options
+        const options = Array.isArray(schemaClassificationOptions) ? 
+          schemaClassificationOptions.flatMap(group => group.options) : 
+          [];
+    
+        return (
+          <Autocomplete
+            size="small"
+            options={options}
+            groupBy={(option) => option.tags?.includes('mandatory') ? 'Mandatory' : 'Optional'}
+            getOptionLabel={(option) => option?.label || ''}
+            value={params.value || null}
+            onChange={(event, newValue) => {
+              handleCellChange({
+                id: params.id,
+                field: 'schemaClassification',
+                value: newValue
+              });
+            }}
           renderGroup={(params) => (
             <li key={params.key}>
               <GroupHeader>{params.group}</GroupHeader>
               <GroupItems>{params.children}</GroupItems>
             </li>
           )}
-          renderInput={(params) => (
-            <TextField 
-              {...params} 
-              variant="outlined"
-              placeholder="No Classification"
-              sx={{ 
-                '& .MuiInputBase-root': {
-                  height: 25,
-                  fontSize: 12,
-                }
-              }}
-            />
-          )}
-          isOptionEqualToValue={(option, value) => option.value === value.value}
-        />
-      )
+            renderInput={(params) => (
+              <TextField 
+                {...params} 
+                variant="outlined"
+                placeholder="No Classification"
+                sx={{ 
+                  '& .MuiInputBase-root': {
+                    height: 25,
+                    fontSize: 12,
+                  }
+                }}
+              />
+            )}
+            isOptionEqualToValue={(option, value) => option?.value === value?.value}
+          />
+        );
+      }
     }    
     ,    
     {
@@ -399,8 +406,10 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
     schema && schema.length > 0 ? (
       <Box sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
         <Box sx={{ mb:-1, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button startIcon={<AutoFixHigh />} onClick={handleAutoClassify}sx={{ mr: 1 }}>Auto Classify</Button>
           <Button startIcon={<SaveIcon/>} onClick={handleSaveAll} disabled={!rows.some(row => row.isUnsaved)}>Save All</Button>
           <Button startIcon={<CancelIcon />} onClick={handleCancelAll} disabled={!rows.some(row => row.isUnsaved)}>Cancel All</Button>
+          
         </Box>
         <Box sx={{ height: 400, width: '100%', overflow: 'auto' }}>
         <DataGrid

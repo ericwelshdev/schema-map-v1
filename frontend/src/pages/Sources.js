@@ -71,12 +71,12 @@ const Sources = () => {
     }
   };
 
-  const handleAddNewSource = () => {
-    navigate('/sources/new');
-  };
+  // const handleAddNewSource = () => {
+  //   navigate('/sources/new');
+  // };
 
 
-  const handleAddNewDataDictionary = async () => {
+  const handleAddNewSource = async () => {
     try {
       await clearData([
         'ddResourcePreviewRows',
