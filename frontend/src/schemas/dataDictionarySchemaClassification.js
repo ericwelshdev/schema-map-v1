@@ -87,8 +87,8 @@ export const schemaClassificationOptions = [
           properties: {
             numeric_range: 'Expected numeric range for sequence numbers',
           },
-          tags: ['column', 'sequence', 'order', 'optional'],
-          classification_description: 'Denotes the order of columns within a table.'
+          tags: ['column', 'sequence', 'seq', 'order', 'ord', 'optional'],
+          classification_description: 'Denotes the order of columns within a table. '
         },
         { 
           value: 'len_nbr', 
@@ -174,3 +174,12 @@ export const schemaClassificationOptions = [
       ]
     }
   ];
+
+export const mlConfig = {
+    confidenceThresholds: {
+        minimum: 0.4,  // Below this, no classification is applied
+        low: 0.5,      // Show warning for low confidence
+        medium: 0.6,   // Show neutral confidence
+        high: 0.8      // Show high confidence
+    }
+};

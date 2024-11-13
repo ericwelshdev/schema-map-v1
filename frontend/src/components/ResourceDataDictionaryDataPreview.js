@@ -18,7 +18,7 @@ import { styled, lighten, darken, maxWidth } from '@mui/system';
 import { SquareChartGanttIcon, TablePropertiesIcon, Grid3X3Icon, LetterTextIcon } from "lucide-react";
 import { debounce } from 'lodash';
 import { initDB,  getData, setData } from '../utils/storageUtils';
-import { schemaClassificationOptions } from '../schemas/dataDictionarySchemaClassification.js';
+import { schemaClassificationOptions, mlConfig } from '../schemas/dataDictionarySchemaClassification';
 import { getMLPredictions } from '../services/mlService';
 
 
@@ -116,41 +116,43 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
     console.log('Saved Updated rows:', updatedRows);
   };
 
+
   const [isProcessing, setIsProcessing] = useState(false);
 
 
-const handleAutoClassify = async () => {
-    try {
-        setIsProcessing(true);
-        const classifiedRows = await Promise.all(
-            rows.map(async row => {
-                const prediction = await getMLPredictions({
-                    name: row.name,
-                    type: row.type,
-                    sampleValues: sampleData?.map(d => d[row.name])
-                });
-                return prediction;
-            })
-        );
+  const handleAutoClassify = async () => {
+      try {
+          setIsProcessing(true);
+          const classifiedRows = await Promise.all(
+              rows.map(async row => {
+                  const prediction = await getMLPredictions({
+                      name: row.name,
+                      type: row.type,
+                      sampleValues: sampleData?.map(d => d[row.name])
+                  });
+                  return prediction;
+              })
+          );
 
-        const updatedRows = rows.map((row, index) => ({
-            ...row,
-            schemaClassification: classifiedRows[index]?.confidence > 0.2 ? 
-                classifiedRows[index]?.suggestedClassification : 
-                null,
-            mlConfidence: classifiedRows[index]?.confidence || 0,
-            debugScores: classifiedRows[index]?.debugScores,
-            isChanged: true,
-            isUnsaved: true
-        }));
+          const updatedRows = rows.map((row, index) => ({
+              ...row,
+              schemaClassification: classifiedRows[index]?.confidence > mlConfig.confidenceThresholds.minimum ? 
+                  classifiedRows[index]?.suggestedClassification : 
+                  null,
+              mlConfidence: classifiedRows[index]?.confidence || 0,
+              scoring_weights: classifiedRows[index]?.scoring_weights,
+              scoring_components: classifiedRows[index]?.scoring_components,
+              isChanged: true,
+              isUnsaved: true
+          }));
     
-        persistRows(updatedRows);
-    } catch (error) {
-        console.error('Auto classification failed:', error);
-    } finally {
-        setIsProcessing(false);
-    }
-};
+          persistRows(updatedRows);
+      } catch (error) {
+          console.error('Auto classification failed:', error);
+      } finally {
+          setIsProcessing(false);
+      }
+  };
   
 
   const handleEditClick = (id) => {
@@ -333,18 +335,25 @@ const handleAutoClassify = async () => {
           const confidence = params.row.mlConfidence;
           const isManuallySet = params.row.isChanged && !params.row.mlConfidence;
 
-          console.log('Classification Cell Debug:', {
-            value: params.value,
-            confidence,
-            isManuallySet,
-            rowData: params.row,
-            debugScores: params.row.debugScores || 'No debug scores available',
-            matchDetails: {
-                inputColumn: params.row.name,
-                matchedClassification: params.value?.label,
-                confidenceBreakdown: params.row.debugScores
-            }
-        });
+        console.log('Classification Cell Debug:', {
+          value: params.value,
+          confidence,
+          isManuallySet,
+          rowData: params.row,
+          scoringAnalysis: {
+              weights: params.row.scoring_weights,
+              components: params.row.scoring_components,
+              finalConfidence: confidence,
+              inputColumn: params.row.name,
+              matchedClassification: params.value?.label,
+              detailedScores: {
+                  wordMatch: params.row.scoring_components?.word_match,
+                  patternMatch: params.row.scoring_components?.pattern_match,
+                  semanticMatch: params.row.scoring_components?.semantic_match,
+                  baseProbability: params.row.scoring_components?.base_probability
+              }
+          }
+      });
         
   
           return (
@@ -384,20 +393,28 @@ const handleAutoClassify = async () => {
                       isOptionEqualToValue={(option, value) => option?.value === value?.value}
                       sx={{ flex: 1 }}
                   />
-                  {params.value && (
-                      <Chip
-                          size="small"
-                          label={isManuallySet ? 'Manual' : `${(confidence * 100).toFixed(1)}%`}
-                          color={isManuallySet ? 'success' : confidence > 0.6 ? 'success' : 'warning'}
-                          variant="outlined"
-                          sx={{ ml: 1, minWidth: 30 }}
-                      />
-                  )}
+                  {/* Always render the chip */}
+                  <Chip
+                      size="small"
+                      label={isManuallySet ? 'Manual' : params.value ? `${(confidence * 100).toFixed(1)}%` : '0.00%'}
+                      color={
+                          isManuallySet ? 'success' : 
+                          confidence >= mlConfig.confidenceThresholds.high ? 'success' :
+                          confidence >= mlConfig.confidenceThresholds.medium ? 'info' :
+                          confidence >= mlConfig.confidenceThresholds.low ? 'warning' :
+                          'default'
+                      }
+                      variant="outlined"
+                      sx={{ 
+                          ml: 1, 
+                          minWidth: 30,
+                          opacity: !params.value ? 0.5 : 1
+                      }}
+                  />
               </Box>
           );
       }
-  }
-    
+  }    
     ,    
     {
       field: 'actions',

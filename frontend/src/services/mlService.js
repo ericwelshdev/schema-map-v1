@@ -40,29 +40,29 @@ const API_URL = 'http://localhost:8001/api';
               });
           });
 
-          // Train model with enhanced data
+          // Keep existing training data setup
           const trainResponse = await axios.post('http://localhost:8001/train', {
               model_name: "schema_classifier",
               model_type: "string",
               training_data: {
                   texts: trainingExamples,
                   labels: trainingLabels
-              }
+              },
+              schema_data: schemaClassificationOptions
           });
 
-          // Get prediction
-          const predictResponse = await axios.post('http://localhost:8001/predict', {
+          // Add predict payload definition
+          const predictPayload = {
               model_name: "schema_classifier",
               texts: [columnData.name.toLowerCase()]
-          });
+          };
 
-                const prediction = predictResponse.data.predictions[0];
-                console.log('ML Service Response:', {
-                    rawResponse: predictResponse.data,
-                    prediction: prediction,
-                    debugScores: prediction.debug_scores
-                });
-        
+          const predictResponse = await axios.post('http://localhost:8001/predict', predictPayload);
+          console.log('Raw Prediction Response:', predictResponse.data);
+
+          const prediction = predictResponse.data.predictions[0];
+          console.log('Prediction with Scoring Details:', prediction);
+
           // Find matching classification
           const matchingOption = schemaClassificationOptions
               .flatMap(group => group.options)
@@ -70,7 +70,9 @@ const API_URL = 'http://localhost:8001/api';
 
           return {
               suggestedClassification: matchingOption,
-              confidence: prediction.confidence
+              confidence: prediction.confidence,
+              scoring_weights: prediction.scoring_weights,
+              scoring_components: prediction.scoring_components
           };
       } catch (error) {
           console.error('ML prediction failed:', error);
