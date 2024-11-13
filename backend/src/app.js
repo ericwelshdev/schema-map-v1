@@ -12,7 +12,8 @@ const resourceGroupAssociationRoutes = require('./routes/resourceGroupAssociatio
 const resourceAttributeAssociationRoutes = require('./routes/resourceAttributeAssociationRoutes');
 const resourceProfileRoutes = require('./routes/resourceProfileRoutes');
 const adminRoutes = require('./routes/adminRoutes');
-const aiTrainingRoutes = require('./routes/aiTrainingRoutes');
+const aiRoutes = require('./routes/aiRoutes');
+const aiAuthRoutes = require('./routes/aiAuth');
 const logger = require('./utils/logger');
 const morgan = require('morgan');
 
@@ -122,25 +123,38 @@ app.use('/api/resource-profiles', (req, res, next) => {
   next();
 }, resourceProfileRoutes);
 
-// ai apis
 
 app.use('/api/ai', (req, res, next) => {
+  console.log('2. Request reaching /api/ai in app.js');
   console.log('AI route hit:', {
       method: req.method,
       path: req.path,
       body: req.body
   });
   next();
-}, aiTrainingRoutes);
+}, aiRoutes);
 
 
+// app.use('/api/ai', (req, res, next) => {
+//   console.log('2. Request reaching /api/ai in app.js');
+//   console.log('AI Route Debug:', {
+//     timestamp: new Date().toISOString(),
+//     method: req.method,
+//     path: req.path,
+//     body: req.body,
+//     headers: req.headers
+//   })
+//   next();
+// }, aiRoutes);
+
+// ;
 
 
+// Move the catch-all route to the end
 app.use('*', (req, res) => {
   console.log('Unmatched route:', req.originalUrl);
   res.status(404).send('Route not found');
 });
-
 
 // 
 // app.use('/api/ai/suggest-mappings', (req, res, next) => {

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Typography, Container, Box, Breadcrumbs, Card, Tabs, Tab, Divider } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
-import { analyzeSource } from '../services/aiService';
+// import { analyzeSource } from '../services/aiService';
 
 const SourceDetail = () => {
   const { id } = useParams();
@@ -19,13 +19,13 @@ const SourceDetail = () => {
   }, [id]);
 
   useEffect(() => {
-    const fetchAiAnalysis = async () => {
-      if (item) {
-        const analysis = await analyzeSource(item);
-        setAiAnalysis(analysis);
-      }
-    };
-    fetchAiAnalysis();
+    // const fetchAiAnalysis = async () => {
+    //   if (item) {
+    //     const analysis = await analyzeSource(item);
+    //     setAiAnalysis(analysis);
+    //   }
+    // };
+    // fetchAiAnalysis();
   }, [item]);
 
   const renderTabContent = () => {

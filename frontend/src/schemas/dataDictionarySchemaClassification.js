@@ -5,8 +5,11 @@ export const schemaClassificationOptions = [
         { 
           value: 'stdiz_abrvd_attr_grp_nm', 
           label: 'Physical Table Name',
+          anti_patterns: {
+            terms: ['logical', 'entity'],
+        },
           properties: {
-            prefix: 'Common prefixes like tbl_, dim_',
+            prefix: 'Common prefixes like table, tbl_, dim_',
             suffix: 'Common suffixes like _tbl, _base',
             character_pattern: 'Regular expression patterns',
             word_count: 'Expected number of words',
@@ -17,8 +20,11 @@ export const schemaClassificationOptions = [
         { 
           value: 'stdiz_abrvd_attr_nm', 
           label: 'Physical Column Name',
+          anti_patterns: {
+            terms: ['logical', 'attribute'],
+        },          
           properties: {
-            prefix: 'Common prefixes like col_, attr_',
+            prefix: 'Common prefixes like column, col_, attr_',
             suffix: 'Common suffixes like _id, _key',
             character_pattern: 'Regular expression patterns',
             word_count: 'Expected number of words',
@@ -34,6 +40,10 @@ export const schemaClassificationOptions = [
         { 
           value: 'dsstrc_attr_grp_nm', 
           label: 'Logical Table Name',
+          anti_patterns: {
+            terms: ['physical', 'actual', 'raw'],
+            patterns: ['phy_*', 'tbl_*', 'raw_*', 'physical_*', 'table_*', 'actual_*', 'raw_*'],
+        },
           properties: {
             description_similarity: 'Measure of similarity to known logical table descriptions',
             semantic_meaning: 'Words with business logic relevance',
@@ -44,6 +54,10 @@ export const schemaClassificationOptions = [
         { 
           value: 'dsstrc_attr_nm', 
           label: 'Logical Column Name',
+          anti_patterns: {
+            terms: ['physical', 'actual', 'raw'],
+            patterns: ['phy_*', 'col_*', 'raw_*', 'physical_*', 'column_*', 'actual_*', 'raw_*'],
+        },
           properties: {
             description_similarity: 'Measure of similarity to known logical column descriptions',
             semantic_meaning: 'Words with business logic relevance',
@@ -120,10 +134,12 @@ export const schemaClassificationOptions = [
         { 
           value: 'mand_ind', 
           label: 'Nullable Indicator',
+          // prefix: 'Common prefixes like allow , nulls , nullabltiy , manditory',
+          // suffix: 'Common suffixes like flag, ind, indicator, null, nullability',
           properties: {
             boolean_value: 'Expected boolean values (e.g., Y, N)',
           },
-          tags: ['nullable', 'indicator', 'null', 'optional'],
+          tags: ['nullable', 'indicator', 'null', 'manditory', 'optional'],
           classification_description: 'Indicates whether a column can contain null values.'
         },
         { 
@@ -178,8 +194,8 @@ export const schemaClassificationOptions = [
 export const mlConfig = {
     confidenceThresholds: {
         minimum: 0.4,  // Below this, no classification is applied
-        low: 0.5,      // Show warning for low confidence
-        medium: 0.6,   // Show neutral confidence
+        low: 0.41,      // Show warning for low confidence
+        medium: 0.5,   // Show neutral confidence
         high: 0.8      // Show high confidence
     }
 };

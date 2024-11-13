@@ -1,24 +1,49 @@
-
 import axios from 'axios';
+import { PROMPT_TEMPLATES } from '../config/ai/aiColumnClassificationConfig';
+const API_URL = 'http://localhost:5000/api';
 
-const API_URL = 'http://localhost:5000/api/ai';
+class AIService {
+  async getCompletion(messages) {
+    console.log('Frontend AI Service Debug:', {
+      timestamp: new Date().toISOString(),
+      endpoint: `${API_URL}/ai/completions`,
+      messages
+    });
 
-export const analyzeSource = async (sourceData) => {
-  const response = await axios.post(`${API_URL}/analyze-source`, sourceData);
-  return response.data;
-};
+    const response = await axios.post(`${API_URL}/ai/completions`, { messages });
+    return response.data;
+  }
 
-export const analyzeTarget = async (targetData) => {
-  const response = await axios.post(`${API_URL}/analyze-target`, targetData);
-  return response.data;
-};
+  async classifyColumn(columnData, schemaOptions) {
+    const messages = [
+      {
+        role: 'system',
+        content: PROMPT_TEMPLATES.columnClassification.system
+      },
+      {
+        role: 'user',
+        content: PROMPT_TEMPLATES.columnClassification.user(columnData, schemaOptions)
+      }
+    ];
 
-export const generateDataDictionary = async (data) => {
-  const response = await axios.post(`${API_URL}/generate-data-dictionary`, data);
-  return response.data;
-};
+    const completion = await this.getCompletion(messages);
+    return this.parseClassificationResponse(completion);
+  }
 
-export const profileData = async (data) => {
-  const response = await axios.post(`${API_URL}/profile-data`, data);
-  return response.data;
-};
+  parseClassificationResponse(completion) {
+    try {
+      const content = completion.choices[0].message.content;
+      return {
+        suggestedClassification: content.classification,
+        confidence: content.confidence,
+        scoring_weights: content.weights,
+        scoring_components: content.analysis
+      };
+    } catch (error) {
+      console.error('Error parsing AI response:', error);
+      return null;
+    }
+  }
+}
+
+export const aiService = new AIService();
