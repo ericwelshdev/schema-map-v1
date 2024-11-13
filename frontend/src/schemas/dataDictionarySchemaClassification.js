@@ -38,7 +38,7 @@ export const schemaClassificationOptions = [
             description_similarity: 'Measure of similarity to known logical table descriptions',
             semantic_meaning: 'Words with business logic relevance',
           },
-          tags: ['table', 'logical', 'name', 'optional'],
+          tags: ['table', 'logical', 'name', 'entity', 'optional'],
           classification_description: 'Represents the logical name of a table, often used in business contexts.'
         },
         { 
@@ -48,7 +48,7 @@ export const schemaClassificationOptions = [
             description_similarity: 'Measure of similarity to known logical column descriptions',
             semantic_meaning: 'Words with business logic relevance',
           },
-          tags: ['column', 'logical', 'name', 'optional'],
+        tags: ['column', 'logical', 'name',  'attribute', 'optional'],
           classification_description: 'Represents the logical name of a column, reflecting its business significance.'
         },
         { 
@@ -58,7 +58,7 @@ export const schemaClassificationOptions = [
             word_count: 'Range of expected word count',
             semantic_density: 'Ratio of words carrying semantic meaning to total words',
           },
-          tags: ['table', 'description', 'optional'],
+          tags: ['table', 'description',  'desc', 'optional'],
           classification_description: 'Provides a detailed description of the purpose and content of the table.'
         },
         { 
@@ -78,7 +78,7 @@ export const schemaClassificationOptions = [
             data_category: 'Categorization of data type (e.g., numeric, string, date)',
             size_range: 'Expected size range for the data type',
           },
-          tags: ['data', 'type', 'optional'],
+        tags: ['data', 'type', 'data_type', 'data type', 'optional'],
           classification_description: 'Specifies the type of data stored in a column (e.g., integer, varchar).'
         },
         { 
@@ -87,7 +87,7 @@ export const schemaClassificationOptions = [
           properties: {
             numeric_range: 'Expected numeric range for sequence numbers',
           },
-          tags: ['column', 'sequence', 'optional'],
+          tags: ['column', 'sequence', 'order', 'optional'],
           classification_description: 'Denotes the order of columns within a table.'
         },
         { 
@@ -96,7 +96,7 @@ export const schemaClassificationOptions = [
           properties: {
             numeric_range: 'Expected numeric range for length values',
           },
-          tags: ['length', 'optional'],
+          tags: ['length', 'len', 'optional'],
           classification_description: 'Defines the maximum length of data stored in a column.'
         },
         { 
@@ -123,7 +123,7 @@ export const schemaClassificationOptions = [
           properties: {
             boolean_value: 'Expected boolean values (e.g., Y, N)',
           },
-          tags: ['nullable', 'indicator', 'optional'],
+          tags: ['nullable', 'indicator', 'null', 'optional'],
           classification_description: 'Indicates whether a column can contain null values.'
         },
         { 
@@ -132,7 +132,7 @@ export const schemaClassificationOptions = [
           properties: {
             boolean_value: 'Expected boolean values (e.g., Y, N)',
           },
-          tags: ['primary', 'key', 'optional'],
+          tags: ['primary', 'key', 'pk', 'optional'],
           classification_description: 'Denotes if a column is part of the table\'s primary key.'
         },
         { 
@@ -141,7 +141,7 @@ export const schemaClassificationOptions = [
           properties: {
             boolean_value: 'Expected boolean values (e.g., Y, N)',
           },
-          tags: ['foreign', 'key', 'optional'],
+        tags: ['foreign', 'key', 'fk', 'optional'],
           classification_description: 'Indicates if a column is a foreign key, linking to another table.'
         },
         { 
@@ -150,7 +150,7 @@ export const schemaClassificationOptions = [
           properties: {
             boolean_value: 'Expected boolean values (e.g., Y, N)',
           },
-          tags: ['PHI', 'indicator', 'optional'],
+          tags: ['PHI', 'indicator', 'personal health', 'optional'],
           classification_description: 'Marks if a column contains Protected Health Information.'
         },
         { 
@@ -159,7 +159,7 @@ export const schemaClassificationOptions = [
           properties: {
             boolean_value: 'Expected boolean values (e.g., Y, N)',
           },
-          tags: ['PII', 'indicator', 'optional'],
+          tags: ['PII', 'indicator', 'personal identification', 'optional'],
           classification_description: 'Identifies if a column holds Personally Identifiable Information.'
         },
         { 

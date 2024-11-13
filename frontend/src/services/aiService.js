@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 
-const API_URL = 'http://your-ai-service-url.com/api';
+const API_URL = 'http://localhost:5000/api/ai';
 
 export const analyzeSource = async (sourceData) => {
   const response = await axios.post(`${API_URL}/analyze-source`, sourceData);

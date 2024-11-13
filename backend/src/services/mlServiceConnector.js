@@ -1,46 +1,26 @@
-// backend/src/services/mlServiceConnector.js
 const axios = require('axios');
 
 class MLServiceConnector {
     constructor() {
-        this.baseUrl = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+        this.baseUrl = process.env.ML_SERVICE_URL || 'http://localhost:8001';
     }
 
-    async processTrainingData(data) {
-        try {
-            const response = await axios.post(
-                `${this.baseUrl}/process-training-data`,
-                data
-            );
-            return response.data;
-        } catch (error) {
-            throw new Error(`ML Service processing error: ${error.message}`);
-        }
+    async trainSchemaClassifier(trainingData) {
+        const response = await axios.post(`${this.baseUrl}/train`, {
+            model_name: "schema_classifier",
+            model_type: "string",
+            training_data: trainingData
+        });
+        return response.data;
     }
 
-    async trainModel(data) {
-        try {
-            const response = await axios.post(
-                `${this.baseUrl}/train-model`,
-                data
-            );
-            return response.data;
-        } catch (error) {
-            throw new Error(`ML Service training error: ${error.message}`);
-        }
-    }
-
-    async getMappingSuggestions(data) {
-        try {
-            const response = await axios.post(
-                `${this.baseUrl}/suggest-mappings`,
-                data
-            );
-            return response.data;
-        } catch (error) {
-            throw new Error(`ML Service suggestion error: ${error.message}`);
-        }
+    async classifyColumns(columnNames) {
+        const response = await axios.post(`${this.baseUrl}/predict`, {
+            model_name: "schema_classifier",
+            texts: columnNames
+        });
+        return response.data;
     }
 }
 
-module.exports = MLServiceConnector;
+module.exports = new MLServiceConnector();

@@ -12,6 +12,7 @@ const resourceGroupAssociationRoutes = require('./routes/resourceGroupAssociatio
 const resourceAttributeAssociationRoutes = require('./routes/resourceAttributeAssociationRoutes');
 const resourceProfileRoutes = require('./routes/resourceProfileRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const aiTrainingRoutes = require('./routes/aiTrainingRoutes');
 const logger = require('./utils/logger');
 const morgan = require('morgan');
 
@@ -48,8 +49,16 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
+// const cors = require('cors');
 
-app.use(cors());
+// Add CORS configuration before routes
+app.use(cors({
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// app.use(cors());
 PORT = process.env.PORT || 5000;
 app.use(express.json({limit: '50mb'}));
 app.use(express.urlencoded({limit: '50mb', extended: true}));
@@ -113,10 +122,32 @@ app.use('/api/resource-profiles', (req, res, next) => {
   next();
 }, resourceProfileRoutes);
 
+// ai apis
+
+app.use('/api/ai', (req, res, next) => {
+  console.log('AI route hit:', {
+      method: req.method,
+      path: req.path,
+      body: req.body
+  });
+  next();
+}, aiTrainingRoutes);
+
+
+
+
 app.use('*', (req, res) => {
   console.log('Unmatched route:', req.originalUrl);
   res.status(404).send('Route not found');
 });
+
+
+// 
+// app.use('/api/ai/suggest-mappings', (req, res, next) => {
+//   console.log('2. Request reaching /api/ai/suggest-mappings in app.js');
+//   next();
+// }, aiTrainingRoutes);
+
 
 
 // // Error Handling Middleware

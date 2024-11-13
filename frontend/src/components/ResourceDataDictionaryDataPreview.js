@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Box, Tabs, Tab, Typography, TextField, Button, Autocomplete, Chip } from '@mui/material';
+import { Box, Tabs, Tab, Typography, TextField, Button, Autocomplete, Chip, LinearProgress } from '@mui/material';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
@@ -116,26 +116,41 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
     console.log('Saved Updated rows:', updatedRows);
   };
 
-  const handleAutoClassify = async () => {
-    const classifiedRows = await Promise.all(rows.map(async (row) => {
-      const mlPrediction = await getMLPredictions({
-        name: row.name,
-        type: row.type,
-        sampleValues: sampleData?.map(d => d[row.name])
-      });
-  
-      return {
-        ...row,
-        schemaClassification: mlPrediction?.suggestedClassification || null,
-        mlConfidence: mlPrediction?.confidence,
-        isChanged: true,
-        isUnsaved: true
-      };
-    }));
-  
-    persistRows(classifiedRows);
-  };
+  const [isProcessing, setIsProcessing] = useState(false);
 
+
+const handleAutoClassify = async () => {
+    try {
+        setIsProcessing(true);
+        const classifiedRows = await Promise.all(
+            rows.map(async row => {
+                const prediction = await getMLPredictions({
+                    name: row.name,
+                    type: row.type,
+                    sampleValues: sampleData?.map(d => d[row.name])
+                });
+                return prediction;
+            })
+        );
+
+        const updatedRows = rows.map((row, index) => ({
+            ...row,
+            schemaClassification: classifiedRows[index]?.confidence > 0.2 ? 
+                classifiedRows[index]?.suggestedClassification : 
+                null,
+            mlConfidence: classifiedRows[index]?.confidence || 0,
+            debugScores: classifiedRows[index]?.debugScores,
+            isChanged: true,
+            isUnsaved: true
+        }));
+    
+        persistRows(updatedRows);
+    } catch (error) {
+        console.error('Auto classification failed:', error);
+    } finally {
+        setIsProcessing(false);
+    }
+};
   
 
   const handleEditClick = (id) => {
@@ -274,11 +289,12 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
           : null
       ),
     },
-    { field: 'order', headerName: 'ID',  width:50},
+    { field: 'order', headerName: 'ID',  width:30},
     { 
       field: 'name', 
       headerName: 'Column Name', 
       flex: 1, 
+        minWidth: 200,
       editable: true,
       cellClassName: (params) => params.row.isDisabled ? 'disabled-cell' : '',
     },
@@ -293,6 +309,7 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
       field: 'type', 
       headerName: 'Data Type', 
       flex: 1, 
+      width: 80,
       editable: true,
       cellClassName: (params) => params.row.isDisabled ? 'disabled-cell' : '',
     },
@@ -307,57 +324,88 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
     {
       field: 'schemaClassification',
       headerName: 'Schema Classification',
-      flex: 1,
+      flex: 2,
+      minWidth: 300,
       renderCell: (params) => {
-        // Guard against undefined options
-        const options = Array.isArray(schemaClassificationOptions) ? 
-          schemaClassificationOptions.flatMap(group => group.options) : 
-          [];
-    
-        return (
-          <Autocomplete
-            size="small"
-            options={options}
-            groupBy={(option) => option.tags?.includes('mandatory') ? 'Mandatory' : 'Optional'}
-            getOptionLabel={(option) => option?.label || ''}
-            value={params.value || null}
-            onChange={(event, newValue) => {
-              handleCellChange({
-                id: params.id,
-                field: 'schemaClassification',
-                value: newValue
-              });
-            }}
-          renderGroup={(params) => (
-            <li key={params.key}>
-              <GroupHeader>{params.group}</GroupHeader>
-              <GroupItems>{params.children}</GroupItems>
-            </li>
-          )}
-            renderInput={(params) => (
-              <TextField 
-                {...params} 
-                variant="outlined"
-                placeholder="No Classification"
-                sx={{ 
-                  '& .MuiInputBase-root': {
-                    height: 25,
-                    fontSize: 12,
-                  }
-                }}
-              />
-            )}
-            isOptionEqualToValue={(option, value) => option?.value === value?.value}
-          />
-        );
+          const options = Array.isArray(schemaClassificationOptions) ? 
+              schemaClassificationOptions.flatMap(group => group.options) : 
+              [];
+          const confidence = params.row.mlConfidence;
+          const isManuallySet = params.row.isChanged && !params.row.mlConfidence;
+
+          console.log('Classification Cell Debug:', {
+            value: params.value,
+            confidence,
+            isManuallySet,
+            rowData: params.row,
+            debugScores: params.row.debugScores || 'No debug scores available',
+            matchDetails: {
+                inputColumn: params.row.name,
+                matchedClassification: params.value?.label,
+                confidenceBreakdown: params.row.debugScores
+            }
+        });
+        
+  
+          return (
+              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                  <Autocomplete
+                      size="small"
+                      options={options}
+                      groupBy={(option) => option.tags?.includes('mandatory') ? 'Mandatory' : 'Optional'}
+                      getOptionLabel={(option) => option?.label || ''}
+                      value={params.value || null}
+                      onChange={(event, newValue) => {
+                          handleCellChange({
+                              id: params.id,
+                              field: 'schemaClassification',
+                              value: newValue
+                          });
+                      }}
+                      renderGroup={(params) => (
+                          <li key={params.key}>
+                              <GroupHeader>{params.group}</GroupHeader>
+                              <GroupItems>{params.children}</GroupItems>
+                          </li>
+                      )}
+                      renderInput={(params) => (
+                          <TextField 
+                              {...params} 
+                              variant="outlined"
+                              placeholder="No Classification"
+                              sx={{ 
+                                  '& .MuiInputBase-root': {
+                                      height: 25,
+                                      fontSize: 12,
+                                  }
+                              }}
+                          />
+                      )}
+                      isOptionEqualToValue={(option, value) => option?.value === value?.value}
+                      sx={{ flex: 1 }}
+                  />
+                  {params.value && (
+                      <Chip
+                          size="small"
+                          label={isManuallySet ? 'Manual' : `${(confidence * 100).toFixed(1)}%`}
+                          color={isManuallySet ? 'success' : confidence > 0.6 ? 'success' : 'warning'}
+                          variant="outlined"
+                          sx={{ ml: 1, minWidth: 30 }}
+                      />
+                  )}
+              </Box>
+          );
       }
-    }    
+  }
+    
     ,    
     {
       field: 'actions',
       type: 'actions',
       headerName: 'Actions',
-      width: 150,
+      width: 120,
+      align: 'right',
+      headerAlign: 'right',
       cellClassName: 'actions',
       getActions: ({ id }) => {
         const row = rows.find(r => r.id === id);
@@ -429,7 +477,9 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
             return newRow;
           }}
           isCellEditable={(params) => !params.row.isDisabled}
+          loading={isProcessing}
           components={{
+              LoadingOverlay: LinearProgress,
             ColumnUnsortedIcon: CheckCircleOutlineIcon,
           }}
           componentsProps={{

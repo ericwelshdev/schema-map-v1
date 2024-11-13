@@ -1,36 +1,88 @@
-export const getMLPredictions = async (columnData) => {
-  // For initial testing, return mock predictions based on column patterns
-  const mockPredictions = {
-    // Physical table/column patterns
-    physical: {
-      pattern: /(tbl_|_id$|_pk$|_fk$)/i,
-      classification: { 
-        value: 'stdiz_abrvd_attr_nm', 
-        label: 'Physical Column Name' 
+import axios from 'axios';
+import { schemaClassificationOptions } from '../schemas/dataDictionarySchemaClassification';
+
+const API_URL = 'http://localhost:8001/api';
+  export const getMLPredictions = async (columnData) => {
+      try {
+          // Create more comprehensive training data from schema classifications
+          const trainingExamples = [];
+          const trainingLabels = [];
+
+          schemaClassificationOptions.forEach(group => {
+              group.options.forEach(option => {
+                  // Add label as example
+                  trainingExamples.push(option.label.toLowerCase());
+                  trainingLabels.push(option.value);
+
+                  // Add property patterns as examples
+                  if (option.properties) {
+                      if (option.properties.prefix) {
+                          trainingExamples.push(option.properties.prefix.toLowerCase());
+                          trainingLabels.push(option.value);
+                      }
+                      if (option.properties.suffix) {
+                          trainingExamples.push(option.properties.suffix.toLowerCase());
+                          trainingLabels.push(option.value);
+                      }
+                      if (option.properties.character_pattern) {
+                          trainingExamples.push(option.properties.character_pattern.toLowerCase());
+                          trainingLabels.push(option.value);
+                      }
+                  }
+
+                  // Add tags as examples
+                  if (option.tags) {
+                      option.tags.forEach(tag => {
+                          trainingExamples.push(tag.toLowerCase());
+                          trainingLabels.push(option.value);
+                      });
+                  }
+              });
+          });
+
+          // Train model with enhanced data
+          const trainResponse = await axios.post('http://localhost:8001/train', {
+              model_name: "schema_classifier",
+              model_type: "string",
+              training_data: {
+                  texts: trainingExamples,
+                  labels: trainingLabels
+              }
+          });
+
+          // Get prediction
+          const predictResponse = await axios.post('http://localhost:8001/predict', {
+              model_name: "schema_classifier",
+              texts: [columnData.name.toLowerCase()]
+          });
+
+                const prediction = predictResponse.data.predictions[0];
+                console.log('ML Service Response:', {
+                    rawResponse: predictResponse.data,
+                    prediction: prediction,
+                    debugScores: prediction.debug_scores
+                });
+        
+          // Find matching classification
+          const matchingOption = schemaClassificationOptions
+              .flatMap(group => group.options)
+              .find(option => option.value === prediction.prediction);
+
+          return {
+              suggestedClassification: matchingOption,
+              confidence: prediction.confidence
+          };
+      } catch (error) {
+          console.error('ML prediction failed:', error);
+          return {
+              suggestedClassification: schemaClassificationOptions[0].options[0],
+              confidence: 0.5
+          };
       }
-    },
-    // Logical patterns
-    logical: {
-      pattern: /(name|description|code|date|amount)/i,
-      classification: { 
-        value: 'dsstrc_attr_nm', 
-        label: 'Logical Column Name' 
-      }
-    }
   };
 
-  // Simple pattern matching logic
-  const confidence = Math.floor(Math.random() * 30) + 70; // Random confidence 70-99%
-  let suggestedClassification = null;
 
-  if (mockPredictions.physical.pattern.test(columnData.name)) {
-    suggestedClassification = mockPredictions.physical.classification;
-  } else if (mockPredictions.logical.pattern.test(columnData.name)) {
-    suggestedClassification = mockPredictions.logical.classification;
-  }
-
-  return {
-    suggestedClassification,
-    confidence
-  };
+export const trainModel = async (trainingData) => {
+    const response = await axios.post(`${API_URL}/ml/train`, trainingData);
+    return response.data;
 };

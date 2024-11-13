@@ -53,3 +53,37 @@ exports.prepareTraining = async (req, res) => {
         });
     }
 };
+
+exports.processTrainingData = async (req, res) => {
+    const mlService = new MLServiceConnector();
+    try {
+        const processedData = await mlService.processTrainingData(req.body);
+        res.status(200).json(processedData);
+    } catch (error) {
+        res.status(400).json({
+            error: {
+                name: error.name,
+                message: error.message
+            }
+        });
+    }
+};
+
+exports.getMappingSuggestions = async (req, res) => {
+    console.log('Controller: getMappingSuggestions called');
+    const mlService = new MLServiceConnector();
+    try {
+        console.log('Calling ML service with data:', req.body);
+        const suggestions = await mlService.getMappingSuggestions(req.body);
+        console.log('ML service response:', suggestions);
+        res.status(200).json(suggestions);
+    } catch (error) {
+        console.log('ML service error:', error);
+        res.status(400).json({
+            error: {
+                name: error.name,
+                message: error.message
+            }
+        });
+    }
+};
