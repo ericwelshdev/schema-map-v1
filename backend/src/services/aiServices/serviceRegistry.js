@@ -1,28 +1,16 @@
-  const serviceRegistry = {
-      schemas: new Map(),
-      prompts: new Map(),
-    
-      registerSchema(key, schema) {
-          this.schemas.set(key, schema);
-      },
-    
-      registerPrompt(key, prompt) {
-          this.prompts.set(key, prompt);
-      },
-    
-      getSchema(key) {
-          return this.schemas.get(key);
-      },
-    
-      getPrompt(key) {
-          return this.prompts.get(key);
+  const langChainService = require('./langChainService');
+
+  class ServiceRegistry {
+      constructor() {
+          this.services = {
+              'default': langChainService,
+              'classification': langChainService
+          };
       }
-  };
 
-  // Register default prompts
-  serviceRegistry.registerPrompt('columnClassification', {
-      role: 'system',
-      content: 'You are a data dictionary expert. Your task is to classify column names according to these definitions:'
-  });
+      getService(task = 'default') {
+          return this.services[task] || this.services.default;
+      }
+  }
 
-  module.exports = serviceRegistry;
+  module.exports = new ServiceRegistry();

@@ -8,6 +8,10 @@
     "dev": "nodemon src/app.js"
   },
   "dependencies": {
+    "@azure/identity": "^4.5.0",
+    "@azure/msal-browser": "^3.27.0",
+    "@langchain/core": "^0.3.18",
+    "@langchain/openai": "^0.3.13",
     "axios": "^1.7.7",
     "backend": "file:",
     "bcryptjs": "^2.4.3",
@@ -16,6 +20,7 @@
     "express": "^4.18.2",
     "express-validator": "^7.2.0",
     "jsonwebtoken": "^9.0.0",
+    "langchain": "^0.3.5",
     "morgan": "^1.10.0",
     "mysql2": "^3.2.0",
     "node-fetch": "^2.7.0",

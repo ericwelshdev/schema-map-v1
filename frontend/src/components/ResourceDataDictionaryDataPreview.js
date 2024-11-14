@@ -122,72 +122,72 @@ const ResourceDataDictionaryDataPreview = ({ schema, resourceData, resourceInfo,
   const [isProcessing, setIsProcessing] = useState(false);
 
 
-  // const handleAutoClassify = async () => {
-  //     try {
-  //         setIsProcessing(true);
-  //         const classifiedRows = await Promise.all(
-  //             rows.map(async row => {
-  //                 const prediction = await getMLPredictions({
-  //                     name: row.name,
-  //                     type: row.type,
-  //                     sampleValues: sampleData?.map(d => d[row.name])
-  //                 });
-  //                 return prediction;
-  //             })
-  //         );
+  const handleAutoClassify = async () => {
+      try {
+          setIsProcessing(true);
+          const classifiedRows = await Promise.all(
+              rows.map(async row => {
+                  const prediction = await getMLPredictions({
+                      name: row.name,
+                      type: row.type,
+                      sampleValues: sampleData?.map(d => d[row.name])
+                  });
+                  return prediction;
+              })
+          );
 
-  //         const updatedRows = rows.map((row, index) => ({
-  //             ...row,
-  //             schemaClassification: classifiedRows[index]?.confidence > mlConfig.confidenceThresholds.minimum ? 
-  //                 classifiedRows[index]?.suggestedClassification : 
-  //                 null,
-  //             mlConfidence: classifiedRows[index]?.confidence || 0,
-  //             scoring_weights: classifiedRows[index]?.scoring_weights,
-  //             scoring_components: classifiedRows[index]?.scoring_components,
-  //             isChanged: true,
-  //             isUnsaved: true
-  //         }));
+          const updatedRows = rows.map((row, index) => ({
+              ...row,
+              schemaClassification: classifiedRows[index]?.confidence > mlConfig.confidenceThresholds.minimum ? 
+                  classifiedRows[index]?.suggestedClassification : 
+                  null,
+              mlConfidence: classifiedRows[index]?.confidence || 0,
+              scoring_weights: classifiedRows[index]?.scoring_weights,
+              scoring_components: classifiedRows[index]?.scoring_components,
+              isChanged: true,
+              isUnsaved: true
+          }));
     
-  //         persistRows(updatedRows);
-  //     } catch (error) {
-  //         console.error('Auto classification failed:', error);
-  //     } finally {
-  //         setIsProcessing(false);
-  //     }
-  // };
+          persistRows(updatedRows);
+      } catch (error) {
+          console.error('Auto classification failed:', error);
+      } finally {
+          setIsProcessing(false);
+      }
+  };
   
 
-  const handleAutoClassify = async () => {
-    try {
-        setIsProcessing(true);
-        const classifiedRows = await Promise.all(
-            rows.map(async row => {
-                const columnData = {
-                    name: row.name,
-                    type: row.type,
-                    sampleValues: sampleData?.map(d => d[row.name])
-                };
-                return await getAIColumnClassification(columnData);
-            })
-        );
+//   const handleAutoClassify = async () => {
+//     try {
+//         setIsProcessing(true);
+//         const classifiedRows = await Promise.all(
+//             rows.map(async row => {
+//                 const columnData = {
+//                     name: row.name,
+//                     type: row.type,
+//                     sampleValues: sampleData?.map(d => d[row.name])
+//                 };
+//                 return await getAIColumnClassification(columnData);
+//             })
+//         );
 
-        const updatedRows = rows.map((row, index) => ({
-            ...row,
-            schemaClassification: classifiedRows[index]?.suggestedClassification,
-            mlConfidence: classifiedRows[index]?.confidence || 0,
-            scoring_weights: classifiedRows[index]?.scoring_weights,
-            scoring_components: classifiedRows[index]?.scoring_components,
-            isChanged: true,
-            isUnsaved: true
-        }));
+//         const updatedRows = rows.map((row, index) => ({
+//             ...row,
+//             schemaClassification: classifiedRows[index]?.suggestedClassification,
+//             mlConfidence: classifiedRows[index]?.confidence || 0,
+//             scoring_weights: classifiedRows[index]?.scoring_weights,
+//             scoring_components: classifiedRows[index]?.scoring_components,
+//             isChanged: true,
+//             isUnsaved: true
+//         }));
 
-        persistRows(updatedRows);
-    } catch (error) {
-        console.error('Auto classification failed:', error);
-    } finally {
-        setIsProcessing(false);
-    }
-};
+//         persistRows(updatedRows);
+//     } catch (error) {
+//         console.error('Auto classification failed:', error);
+//     } finally {
+//         setIsProcessing(false);
+//     }
+// };
 
   const handleEditClick = (id) => {
     persistRows(rows.map(row => row.id === id ? { ...row, isEditing: true, isUnsaved: true } : row));

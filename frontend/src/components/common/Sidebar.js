@@ -14,6 +14,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import PushPinIcon from '@mui/icons-material/PushPin';
+import HubIcon from '@mui/icons-material/Hub';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Dashboard as DashboardIcon,
@@ -126,6 +127,7 @@ const Sidebar = () => {
     { text: 'Sources', icon: <BookKeyIcon />, path: '/sources' },
     { text: 'Targets', icon: <AdsClickIcon />, path: '/targets' },
     { text: 'Data Dictionaries', icon: <BookAIcon />, path: '/data-dictionaries' },
+    { text: 'Mapping', icon: <HubIcon />, path: '/mappings' },
     { text: 'Admin', icon: <AdminIcon />, path: '/admin' },
   ];
 
