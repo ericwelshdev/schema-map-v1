@@ -49,22 +49,28 @@ const SchemaMapping = () => {
     });
     setActiveDialog('suggestions');
   };
-
-  return (
-    <Container maxWidth={false} sx={{ height: '100vh', p: 0, m: 0 , mt:3 }}>
-      <Grid container sx={{ height: '100%' }}>
-        {/* Main Content Area - Full Width */}
-        <Grid >
-        <Box sx={{ flex: 1, p: 1 }}>
+    return (
+      <Container maxWidth={false} disableGutters sx={{ mt:3, height: '100vh', width: '100vw' , pr:15}}>
+        <Box sx={{ 
+          display: 'flex', 
+          height: '100%',
+          width: '100%',
+          position: 'relative',
+          paddingRight: '60px'
+        }}>
+          {/* Main Content */}
+          <Box sx={{ 
+            flex: 1,
+            width: '100%',
+            zIndex: 2  // Higher than collapsed sidebar
+          }}>
             <ToolbarContainer 
               onSearch={handleSearch}
               onAutoMap={handleAutoMap}
               onValidate={() => setActiveDialog('validation')}
               selectedCount={mappings.size}
             />
-            
-            {/* Grid View */}
-            <Box sx={{ flex: 1, p: 1 }}>
+            <Box sx={{ flex: 1, width: '100%' }}>
               <MappingGrid
                 sourceSchema={mockSourceSchema}
                 targetSchema={mockTargetSchema}
@@ -72,9 +78,7 @@ const SchemaMapping = () => {
               />
             </Box>
           </Box>
-        </Grid>
-      </Grid>
-
+        </Box>
       {/* Floating Sidebar Panel */}
       <SidebarPanel />
 

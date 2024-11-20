@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import { 
   Box, 
-  Chip, 
   IconButton, 
   Tooltip, 
   Autocomplete,
@@ -17,6 +16,20 @@ import UndoIcon from '@mui/icons-material/Undo';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import MappingSuggestionsDialog from '../Dialogs/MappingSuggestionsDialog';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faTable,
+  faFont,
+  faHashtag,
+  faCalendar,
+  faClock,
+  faPercent,
+  faDatabase,
+  faToggleOn,
+  faToggleOff,
+} from '@fortawesome/free-solid-svg-icons';
+
 
 const MappingGrid = ({ 
   sourceSchema = [], 
@@ -60,38 +73,107 @@ const MappingGrid = ({
     onUndo(row);
   };
 
+  const handleShowMappingSuggestions = (row) => {
+    setSelectedRow(row);
+    setMappingDialogOpen(true);
+  };
+
+  const getDataTypeIcon = (dataType) => {
+    const baseType = dataType?.split('(')[0]?.toUpperCase();
+    const typeMap = {
+      // numbers
+      'INT': faHashtag,
+      'INTEGER': faHashtag,
+      'BIGINT': faHashtag,
+      'SMALLINT': faHashtag,
+      'DECIMAL': faPercent,
+      'NUMERIC': faPercent,
+      'FLOAT': faPercent,
+      'DOUBLE': faPercent,
+      'REAL': faPercent,
+      'DEC': faPercent,
+      'DOUBLE PRECISION': faPercent,
+      'FLOAT4': faPercent,
+      'FLOAT8': faPercent,
+      'LONGVARBINARY': faPercent,
+
+      // strings
+      'CHAR': faFont,
+      'VARCHAR': faFont,
+      'STRING': faFont,
+      'TEXT': faFont,
+      'NVARCHAR': faFont,
+      'NCHAR': faFont,
+      'NVARCHAR2': faFont,
+      'CLOB': faFont,
+      'NCLOB': faFont,
+
+      // dates and times
+      'DATE': faCalendar,
+      'DATETIME': faClock,
+      'TIMESTAMP': faClock,
+      'TIME': faClock,
+
+      // binary
+      'BINARY': faDatabase,
+      'VARBINARY': faDatabase,
+      'BLOB': faDatabase,
+      'STRUCT': faDatabase,
+      'ARRAY': faDatabase,
+      'MAP': faDatabase,
+
+      // boolean
+      'BOOLEAN': faToggleOn,
+      'BOOL': faToggleOn,
+
+      'DEFAULT': faDatabase
+    };
+
+    return typeMap[baseType] || typeMap.DEFAULT;
+  };
+
   const columns = [
     {
       field: 'modifiedStatus',
       headerName: '',
-      width: 50,
+      width: 40,
       renderCell: (params) => (
-        changedRows.has(params.row.id) && (
-          <Tooltip title="Modified">
-            <EditIcon color="primary" fontSize="small" />
-          </Tooltip>
-        )
+        changedRows.has(params.row.id) && <EditIcon color="primary" fontSize="small" />
       )
     },
     {
       field: 'status',
-      headerName: 'Status',
-      width: 120,
+      headerName: '',
+      width: 40,
       renderCell: (params) => (
-        <Chip
-          size="small"
-          label={params.row.isMapped ? 'Mapped' : 'Unmapped'}
-          color={params.row.isMapped ? 'success' : 'default'}
-          variant="outlined"
-        />
+        <WorkspacePremiumIcon isMapped={params.row.isMapped} />
       )
     },
-    { field: 'sourceColumn', headerName: 'Source Column', flex: 1 },
-    { field: 'sourceType', headerName: 'Source Type', width: 120 },
+    { 
+      field: 'sourceColumn', 
+      headerName: 'Source', 
+      flex: 1 
+    },
+    {
+      field: 'sourceType',
+      headerName: '',
+      width: 40,
+      renderCell: (params) => (
+        <Tooltip title={params.row.sourceType}>
+          <Box>
+            <FontAwesomeIcon 
+              icon={getDataTypeIcon(params.row.sourceType)} 
+              size="sm"
+              color={params.row.isMapped ? "#1976d2" : "#666"}
+            />
+          </Box>
+        </Tooltip>
+      )
+    },
     {
       field: 'targetColumn',
-      headerName: 'Target Column',
-      flex: 1,
+      headerName: 'Target',
+      flex: 2,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%' }}>
           <Autocomplete
@@ -101,40 +183,21 @@ const MappingGrid = ({
             value={pendingChanges[params.row.id]?.targetMapping || params.row.targetMapping || null}
             onChange={(_, newValue) => handleMappingChange(params.row, newValue)}
             renderInput={(params) => <TextField {...params} variant="outlined" size="small" />}
-            sx={{ minWidth: 200 }}
+            sx={{ width: '100%' }}
           />
           <Tooltip title="Show Mapping Suggestions">
-            <IconButton 
-              size="small" 
-              onClick={() => {
-                setSelectedRow(params.row);
-                setMappingDialogOpen(true);
-              }}
-            >
-              <LinkIcon />
+            <IconButton size="small" onClick={() => handleShowMappingSuggestions(params.row)}>
+              <LinkIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Box>
-      )
-    },
-    { field: 'targetType', headerName: 'Target Type', width: 120 },
-    {
-      field: 'confidence',
-      headerName: 'Confidence',
-      width: 120,
-      renderCell: (params) => params.row.isMapped && (
-        <Chip
-          size="small"
-          label={`${(params.row.confidence * 100).toFixed()}%`}
-          color={params.row.confidence > 0.7 ? 'success' : 'warning'}
-        />
       )
     },
     {
       field: 'actions',
       type: 'actions',
       headerName: 'Actions',
-      width: 250,
+      width: 300,
       getActions: (params) => [
         <GridActionsCellItem
           icon={<AutoFixHighIcon />}
@@ -190,15 +253,20 @@ const MappingGrid = ({
   });
 
   return (
-    <Box sx={{ height: '100%', width: '100%' }}>
+    <Box sx={{ width: '100%', height: '100%' }}>
       <DataGrid
         rows={rows}
         columns={columns}
-        pageSize={10}
-        rowsPerPageOptions={[10, 25, 50]}
-        checkboxSelection
-        disableSelectionOnClick
         density="compact"
+        sx={{
+          '& .MuiDataGrid-root': {
+            fontSize: '0.75rem',
+          },
+          '& .MuiDataGrid-row': {
+            minHeight: '40px !important',
+            maxHeight: '40px !important',
+          }
+        }}
       />
       <MappingSuggestionsDialog 
         open={mappingDialogOpen}
@@ -209,5 +277,4 @@ const MappingGrid = ({
     </Box>
   );
 };
-
 export default MappingGrid;
