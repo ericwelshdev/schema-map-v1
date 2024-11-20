@@ -253,10 +253,11 @@ const MappingGrid = ({
   });
 
   return (
-    <Box sx={{ width: '100%', height: '100%' }}>
+    <Box sx={{ width: '100%' }}>
       <DataGrid
         rows={rows}
         columns={columns}
+        rowsPerPageOptions={[10, 25, 50]}
         density="compact"
         sx={{
           '& .MuiDataGrid-root': {
