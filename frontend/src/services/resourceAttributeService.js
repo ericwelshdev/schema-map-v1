@@ -123,3 +123,34 @@ export const postBulkResourceAttribute = async (sourceAttributes) => {
     throw enhancedError;
 }
 };
+
+// Add new function to get columns by group ID
+export const getResourceAttributesByGroupId = async (dsstrc_attr_grp_id) => {
+  const response = await axios.get(`${API_URL}/resource-attributes/group/${dsstrc_attr_grp_id}`);
+  
+  // Transform API response to match our schema structure
+  const columns = response.data.map(attr => ({
+    id: attr.dsstrc_attr_id,
+    name: attr.dsstrc_attr_nm,
+    alternativeName: attr.stdiz_abrvd_alt_attr_nm,
+    table: attr.stdiz_abrvd_attr_grp_nm,
+    dataType: attr.physcl_data_typ_nm,
+    description: attr.dsstrc_attr_desc,
+    attributes: {
+      isPrimaryKey: attr.pk_ind === 'Y',
+      isForeignKey: attr.fk_ind === 'Y',
+      isPII: attr.pii_ind === 'Y',
+      isPHI: attr.phi_ind === 'Y',
+      isNullable: attr.mand_ind !== 'Y',
+      isEncrypted: attr.encrypt_ind === 'Y'
+    },
+    tags: {
+      user: JSON.parse(attr.user_tag_cmplx || '[]'),
+      ai: JSON.parse(attr.ai_tag_cmplx || '[]'),
+      meta: JSON.parse(attr.meta_tag_cmplx || '[]')
+    },
+    comments: JSON.parse(attr.usr_cmt_txt || '[]')
+  }));
+
+  return columns;
+};

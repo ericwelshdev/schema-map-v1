@@ -16,7 +16,9 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import UndoIcon from '@mui/icons-material/Undo';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import MappingSuggestionsDialog from '../Dialogs/MappingSuggestionsDialog';
+import MappingDetails from '../Details/MappingDetails';
 import CommentsDialog from '../Dialogs/CommentsDialog';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -44,6 +46,7 @@ import Badge from '@mui/material/Badge';
     onCompare = () => {},
     onShowProfile = () => {},
     onMappingUpdate = () => {},
+    onRowSelect = () => {},
     onUndo = () => {}
   }) => {
     const [changedRows, setChangedRows] = useState(new Set());
@@ -53,6 +56,9 @@ import Badge from '@mui/material/Badge';
     const [selectedRow, setSelectedRow] = useState(null);
     const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
     const [selectedColumn, setSelectedColumn] = useState(null);
+    const [selectedMapping, setSelectedMapping] = useState(null);
+    const [isEditingDetails, setIsEditingDetails] = useState(false);
+    const [isViewingDetails, setIsViewingDetails] = useState(false);
     const [commentType, setCommentType] = useState(null);
 
     const handleMappingChange = (row, newTarget) => {
@@ -61,6 +67,16 @@ import Badge from '@mui/material/Badge';
         ...prev,
         [row.id]: { ...row, targetMapping: newTarget }
       }));
+    };
+
+    const handleEdit = (row) => {
+      setIsEditingDetails(true);  
+      onRowSelect(row); 
+    };
+
+    const handleView = (row) => {
+      setIsViewingDetails(true);  
+      onRowSelect(row); 
     };
 
     const handleSaveMapping = (row) => {
@@ -87,9 +103,9 @@ import Badge from '@mui/material/Badge';
       setMappingDialogOpen(true);
     };
 
-    const handleEdit = (row) => {
-      setChangedRows(prev => new Set(prev).add(row.id));
-    };
+    // const handleEdit = (row) => {
+    //   setChangedRows(prev => new Set(prev).add(row.id));
+    // };
 
     const handleOpenComments = (row, type) => {
       setSelectedColumn(row);
@@ -161,6 +177,7 @@ import Badge from '@mui/material/Badge';
         {
           field: 'modifiedStatus',
           headerName: '',
+          editable: false,
           width: 20,
           renderCell: (params) => {
             if (!changedRows.has(params.row.id)) return null;
@@ -235,7 +252,9 @@ import Badge from '@mui/material/Badge';
         {
           field: 'sourceColumn',
           headerName: 'Source',
+          editable: false,
           flex: 1,
+        
           renderCell: (params) => (
             <Typography sx={{ fontSize: '0.7rem' }}>
               {params.row.sourceColumn}
@@ -295,6 +314,11 @@ import Badge from '@mui/material/Badge';
           align: 'right',
           getActions: (params) => [
             <GridActionsCellItem
+            icon={<VisibilityIcon />}
+            label="View"
+            onClick={() => handleView(params.row)}
+          />,
+            <GridActionsCellItem
               icon={<EditIcon />}
               label="Edit"
               onClick={() => handleEdit(params.row)}
@@ -335,72 +359,114 @@ import Badge from '@mui/material/Badge';
             ] : [])
           ]
         }
-      ];
-    const rows = sourceSchema.map((source, index) => {
-      const mapping = mappings.find(m => m.sourceId === source.id);
-      const target = mapping ? targetSchema.find(t => t.id === mapping.targetId) : null;
+              ];
+        const rows = sourceSchema.map((source, index) => {
+          const mapping = mappings.find(m => m.sourceId === source.id);
+          const target = mapping ? targetSchema.find(t => t.id === mapping.targetId) : null;
 
-      return {
-        id: index,
-        sourceId: source.id,
-        sourceColumn: source.name,
-        sourceType: source.type,
-        targetColumn: source.targetColumn || '-',
-        targetType: source.targetType || '-',
-        isMapped: source.isMapped,
-        confidence: source.confidence || 0,
-        aiComments: source.aiComments || [],
-        userComments: source.userComments || [],
-        isModified: source.isModified,
-        isSaved: source.isSaved
-      };
-    });
+          return {
+            id: index,
+            sourceId: source.id,
+            sourceColumn: source.name,
+            sourceType: source.type,
+            targetColumn: source.targetColumn || '-',
+            targetType: source.targetType || '-',
+            isMapped: source.isMapped,
+            confidence: source.confidence || 0,
+            aiComments: source.aiComments || [],
+            userComments: source.userComments || [],
+            isModified: source.isModified,
+            isSaved: source.isSaved
+          };
+        });
 
-    return (
-      <Box sx={{ height: 'calc(100vh - 64px)', width: '100%' }}>
-        <DataGrid
-          rows={rows}
-          columns={columns}
-          density="compact"
-          sx={{
-            '& .MuiDataGrid-root': {
-              fontSize: '0.7rem',
-            },
-            '& .MuiDataGrid-row': {
-              minHeight: '35px !important',
-              maxHeight: '35px !important',
-            },
-            '& .MuiDataGrid-cell': {
-              py: 0.5,
-            },
-            '& .MuiAutocomplete-root': {
-              '& .MuiInputBase-root': {
-                fontSize: '0.7rem',
-                py: 0.25,
-              }
-            },
-            '& .MuiChip-root': {
-              height: '20px',
-              fontSize: '0.65rem',
-            },
-            '& .MuiIconButton-root': {
-              padding: '4px',
-            },
-            '& .MuiSvgIcon-root': {
-              fontSize: '1rem',
-            }
-          }}
-        />
-        {selectedColumn && (
-          <CommentsDialog
-          open={commentsDialogOpen}
-          onClose={() => setCommentsDialogOpen(false)}
-          columnData={selectedColumn}
-          onUpdate={handleCommentUpdate}
-        />
-        )}
-      </Box>
-    );
-  };
+        const getTargetColumn = (selectedMapping) => {
+          // Implement this function to return the target column based on the selected mapping
+        };
+
+        const handleMappingUpdate = (updatedMapping) => {
+          // Implement this function to handle mapping updates
+        };
+            return (
+              <Box sx={{ 
+                width: '100%',
+                height: '100%',
+                bgcolor: 'background.paper'
+              }}>
+                <DataGrid
+                  rows={rows}
+                  columns={columns}
+                  density="compact"
+                  disableSelectionOnClick
+                  initialState={{
+                    pagination: {
+                      paginationModel: {
+                        pageSize: 5,
+                      },
+                    },
+                  }}
+                  pageSizeOptions={[5]}
+                  onRowClick={(params) => {
+                    setSelectedMapping(params.row);
+                    setIsEditingDetails(false);
+                  }}
+                  sx={{
+                    '& .MuiDataGrid-root': {
+                      fontSize: '0.7rem',
+                    },
+                    '& .MuiDataGrid-row': {
+                      minHeight: '35px !important',
+                      maxHeight: '35px !important',
+                    },
+                    '& .MuiDataGrid-cell': {
+                      py: 0.5,
+                    },
+                    '& .MuiDataGrid-columnHeaders': {
+                      minHeight: '30px !important',
+                      maxHeight: '30px !important',
+                    },
+                    '& .MuiDataGrid-footerContainer': {
+                      minHeight: '30px !important',
+                      maxHeight: '30px !important',
+                    },
+                    '& .MuiAutocomplete-root': {
+                      '& .MuiInputBase-root': {
+                        fontSize: '0.7rem',
+                        py: 0.25,
+                      }
+                    },
+                    '& .MuiChip-root': {
+                      height: '20px',
+                      fontSize: '0.65rem',
+                    },
+                    '& .MuiIconButton-root': {
+                      padding: '4px',
+                    },
+                    '& .MuiSvgIcon-root': {
+                      fontSize: '1rem',
+                    }
+                  }}
+                />
+        
+          {selectedMapping && (
+                  <MappingDetails
+                    sourceColumn={selectedMapping}
+                    targetColumn={targetSchema.find(t => t.id === selectedMapping.mapping?.targetId)}
+                    mapping={selectedMapping.mapping}
+                    isEditing={isEditingDetails}
+                    onEdit={() => setIsEditingDetails(true)}
+                    onUpdate={onMappingUpdate}
+                  />
+                )}
+
+                <CommentsDialog
+                  open={commentsDialogOpen}
+                  onClose={() => setCommentsDialogOpen(false)}
+                  columnData={selectedColumn}
+                  onUpdate={handleCommentUpdate}
+                />
+              </Box>
+            );
+          };
 
 export default MappingGrid;
