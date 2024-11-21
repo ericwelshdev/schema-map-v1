@@ -61,13 +61,13 @@ import Badge from '@mui/material/Badge';
       });
 
       const rows = sourceSchema.map((source, index) => {
-      console.log('Processing source row:', source);
+      // console.log('Processing source row:', source);
     
       const mapping = mappings.find(m => m.sourceId === source.id);
       const target = mapping ? targetSchema.find(t => t.id === mapping.targetId) : null;
     
-      console.log('Found mapping:', mapping);
-      console.log('Found target:', target);
+      // console.log('Found mapping:', mapping);
+      // console.log('Found target:', target);
 
 
       const row = {
@@ -88,7 +88,7 @@ import Badge from '@mui/material/Badge';
         isSaved: source.isSaved
       };
 
-      console.log('Generated row:', row);
+      // console.log('Generated row:', row);
       return row;
     });
 
@@ -105,37 +105,44 @@ import Badge from '@mui/material/Badge';
     const [isEditingDetails, setIsEditingDetails] = useState(false);
     const [isViewingDetails, setIsViewingDetails] = useState(false);
     const [commentType, setCommentType] = useState(null);
+    const [currentMappings, setCurrentMappings] = useState({});
 
     const handleMappingChange = (row, newValue) => {
-      console.log('Mapping change:', {
-        row,
-        newValue
-      });
+      console.log('Mapping change:', { row, newValue });
+      setChangedRows(prev => new Set(prev).add(row.id));
+      setCurrentMappings(prev => ({
+        ...prev,
+        [row.id]: {
+          sourceId: row.sourceId,
+          targetId: newValue.dsstrc_attr_id,
+          confidence: 1.0
+        }
+      }));
       if (onMappingChange) {
         onMappingChange(row, newValue);
       }
     };
   
     const handleShowSuggestions = (row) => {
-      console.log('Opening suggestions dialog with row:', row);
-      console.log('Current targetSchema:', targetSchema);
-      setSelectedRow(row);
-      setMappingDialogOpen(true);
-      if (onShowSuggestions) {
-        onShowSuggestions(row);
-      }
-    };
+        console.log('Opening suggestions dialog with row:', row);
+        console.log('Current targetSchema:', targetSchema);
+        setSelectedRow(row);
+        setMappingDialogOpen(true);
+        if (onShowSuggestions) {
+          onShowSuggestions(row);
+        }
+      };
+        const handleView = (row) => {
+  setIsViewingDetails(true);
+  setSelectedMapping(row);
+  onRowSelect(row);
+};
 
-    const handleEdit = (row) => {
-      setIsEditingDetails(true);  
-      onRowSelect(row); 
-    };
-
-    const handleView = (row) => {
-      setIsViewingDetails(true);  
-      onRowSelect(row); 
-    };
-
+const handleEdit = (row) => {
+  setIsEditingDetails(true);
+  setSelectedMapping(row);
+  onRowSelect(row);
+};
     const handleSaveMapping = (row) => {
       setSavedRows(prev => new Set(prev).add(row.id));
       onMappingUpdate(row);
@@ -245,6 +252,112 @@ import Badge from '@mui/material/Badge';
               <WarningIcon color="warning" fontSize="small" />;
           }
         },
+        
+        {
+          field: 'sourceColumn',
+          headerName: 'Source',
+          editable: false,
+          flex: 1,
+          renderCell: (params) => (
+            <Box sx={{ 
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}>
+              <FontAwesomeIcon 
+                icon={getDataTypeIcon(params.row.sourceType)} 
+                style={{ fontSize: '0.8rem', color: '#666' }}
+              />
+              <Typography sx={{ fontSize: '0.7rem' }}>
+                {params.row.sourceColumn}
+              </Typography>
+            </Box>
+          )
+        },
+        {          field: 'mappedStatus',
+          headerName: '',
+          width: 40,
+          renderCell: (params) => (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <WorkspacePremiumIcon 
+                sx={{ 
+                  color: params.row.isMapped ? 
+                    (params.row.mappedByAI ? '#e91e63' : '#1976d2') : 
+                    'grey.400'
+                }} 
+              />
+              <VerifiedIcon 
+                sx={{ 
+                  color: params.row.isValidated ? 
+                    (params.row.validatedByAI ? '#e91e63' : '#1976d2') : 
+                    'grey.400'
+                }} 
+              />
+            </Box>
+          )
+        },
+        {
+          field: 'targetColumn',
+          headerName: 'Target',
+          flex: 2,
+          alignItems: 'center',
+          renderCell: (params) => (
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%' }}>
+              <Autocomplete
+                size="small"
+                options={targetSchema || []}
+                getOptionLabel={(option) => 
+                  option ? `${option.dsstrc_attr_nm} (${option.stdiz_abrvd_attr_grp_nm}.${option.stdiz_abrvd_attr_nm})` : ''
+                }
+                value={targetSchema?.find(t => t.dsstrc_attr_id === currentMappings[params.row.id]?.targetId) || null}
+                onChange={(_, newValue) => handleMappingChange(params.row, newValue)}
+                renderOption={(props, option) => (
+                  <li {...props} style={{ fontSize: '0.7rem' }}>
+                    <strong>{option.dsstrc_attr_nm}</strong> - ({option.stdiz_abrvd_attr_grp_nm}.{option.stdiz_abrvd_attr_nm})
+
+                  </li>
+                )}
+                renderInput={(params) => (
+                  <TextField 
+                    {...params} 
+                    variant="outlined" 
+                    size="small"
+                    placeholder="Select target column"
+                    sx={{
+                      '& .MuiInputBase-input': {
+                        fontSize: '0.7rem',
+                        padding: '4px 4px !important',
+                        height: '20px'
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        padding: '0px 0px !important'
+                      }
+                    }}
+                  />
+                )}
+                sx={{ 
+                  width: '100%',
+                  paddingBottom: '2px !important',
+                  '& .MuiAutocomplete-listbox': {
+                    fontSize: '0.7rem'
+                  }
+                }}
+              />
+              <Tooltip title="Show Mapping Suggestions">
+              <IconButton                size="small" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleShowSuggestions(params.row);
+                }}
+              >
+                <LinkIcon fontSize="small" />
+              </IconButton>
+              </Tooltip>
+            </Box>
+          )
+        },
         {
           field: 'comments',
           headerName: '',
@@ -307,113 +420,6 @@ import Badge from '@mui/material/Badge';
               </Box>
             )
           }
-        },
-        {
-          field: 'sourceColumn',
-          headerName: 'Source',
-          editable: false,
-          flex: 1,
-          renderCell: (params) => (
-            <Box sx={{ 
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}>
-              <FontAwesomeIcon 
-                icon={getDataTypeIcon(params.row.sourceType)} 
-                style={{ fontSize: '0.8rem', color: '#666' }}
-              />
-              <Typography sx={{ fontSize: '0.7rem' }}>
-                {params.row.sourceColumn}
-              </Typography>
-            </Box>
-          )
-        },
-        {          field: 'mappedStatus',
-          headerName: '',
-          width: 40,
-          renderCell: (params) => (
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <WorkspacePremiumIcon 
-                sx={{ 
-                  color: params.row.isMapped ? 
-                    (params.row.mappedByAI ? '#e91e63' : '#1976d2') : 
-                    'grey.400'
-                }} 
-              />
-              <VerifiedIcon 
-                sx={{ 
-                  color: params.row.isValidated ? 
-                    (params.row.validatedByAI ? '#e91e63' : '#1976d2') : 
-                    'grey.400'
-                }} 
-              />
-            </Box>
-          )
-        },
-        {
-          field: 'targetColumn',
-          headerName: 'Target',
-          flex: 2,
-          renderCell: (params) => (
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%' }}>
-              <Autocomplete
-                size="small"
-                options={targetSchema || []}
-                getOptionLabel={(option) => 
-                  option ? `${option.dsstrc_attr_nm} (${option.stdiz_abrvd_attr_grp_nm})` : ''
-                }
-                value={targetSchema && params.row.mapping?.targetId ? 
-                  targetSchema.find(t => t.id === params.row.mapping?.targetId) || null 
-                  : null
-                }
-                onChange={(_, newValue) => handleMappingChange(params.row, newValue)}
-                renderOption={(props, option) => (
-                  <li {...props} style={{ fontSize: '0.7rem' }}>
-                    {option.dsstrc_attr_nm} - {option.stdiz_abrvd_attr_grp_nm}
-                  </li>
-                )}
-                renderInput={(params) => (
-                  <TextField 
-                    {...params} 
-                    variant="outlined" 
-                    size="small"
-                    placeholder="Select target column"
-                    sx={{
-                      '& .MuiInputBase-input': {
-                        fontSize: '0.7rem',
-                        // padding: '8px 8px !important',
-                        height: '20px'
-                      },
-                      '& .MuiOutlinedInput-root': {
-                        padding: '0px 4px !important'
-                      }
-                    }}
-                  />
-                )}
-                sx={{ 
-                  width: '100%',
-                  paddingBottom: '2px !important',
-                  '& .MuiAutocomplete-listbox': {
-                    fontSize: '0.7rem'
-                  }
-                }}
-              />
-              <Tooltip title="Show Mapping Suggestions">
-              <IconButton 
-                size="small" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleShowSuggestions(params.row);
-                }}
-              >
-                <LinkIcon fontSize="small" />
-              </IconButton>
-              </Tooltip>
-            </Box>
-          )
         },
         {
           field: 'actions',
@@ -545,17 +551,22 @@ import Badge from '@mui/material/Badge';
                     }
                   }}
                 />
-          {selectedMapping && (
+                {selectedMapping && (
                   <MappingDetails
-                    sourceColumn={selectedMapping}
-                    targetColumn={targetSchema.find(t => t.id === selectedMapping.mapping?.targetId)}
+                    sourceColumn={{
+                      name: selectedMapping.sourceColumn,
+                      table: selectedMapping.sourceTable,
+                      type: selectedMapping.sourceType,
+                      id: selectedMapping.sourceId
+                    }}
+                    targetColumn={targetSchema?.find(t => t.dsstrc_attr_id === selectedMapping.mapping?.targetId)}
                     mapping={selectedMapping.mapping}
                     isEditing={isEditingDetails}
+                    isViewing={isViewingDetails}
                     onEdit={() => setIsEditingDetails(true)}
-                    onUpdate={onMappingUpdate}
+                    onUpdate={handleMappingUpdate}
                   />
                 )}
-
                 <CommentsDialog
                   open={commentsDialogOpen}
                   onClose={() => setCommentsDialogOpen(false)}
