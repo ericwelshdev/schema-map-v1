@@ -116,7 +116,7 @@ exports.getByGroupId = async (req, res) => {
                 dsstrc_attr_grp_id: parseInt(req.params.id, 10)
             },
             order: [
-                ['dsstrc_attr_nm', 'ASC']
+                ['dsstrc_attr_seq_nbr', 'ASC']
             ]
         });
         

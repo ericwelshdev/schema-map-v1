@@ -37,7 +37,7 @@ const ColumnAttributes = ({ column, isEditing }) => (
 
 const EditableTags = ({ column = {}, isEditing, onAddTag, onDeleteTag }) => {
   const [newTag, setNewTag] = useState('');
-
+  const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
   const handleAddTag = (tag) => {
     onAddTag(tag);
     setNewTag('');
@@ -177,7 +177,14 @@ const MappingHeader = ({ mapping, isEditing, onEdit, onMappingChange, onSave, on
           <Typography variant="h6">{column?.name || ''}</Typography>
         </Box>
 
-        {type === 'source' && (
+        <Box>
+          <Typography variant="subtitle2" gutterBottom>
+            {type === 'source' ? 'Alternative Column Name' : 'Target Column'}
+          </Typography>
+          <Typography variant="h6">{column?.name || ''}</Typography>
+        </Box>
+
+        {/* {type === 'source' && (
           <TextField
             fullWidth
             size="small"
@@ -185,7 +192,7 @@ const MappingHeader = ({ mapping, isEditing, onEdit, onMappingChange, onSave, on
             value={column?.alternativeName || ''}
             disabled={!isEditing}
           />
-        )}
+        )} */}
 
         <Box>
           <Typography variant="subtitle2" gutterBottom>Data Type</Typography>
@@ -210,35 +217,74 @@ const MappingHeader = ({ mapping, isEditing, onEdit, onMappingChange, onSave, on
       </Stack>
     </Card>
   );
+    const MappingDetails = ({ 
+      sourceColumn, 
+      targetColumn, 
+      mapping,
+      targetSchema,
+      ...props 
+    }) => {
+      console.log('MappingDetails Props:', {
+        sourceColumn,
+        targetColumn,
+        mapping,
+        targetSchema
+      });
 
-  const MappingDetails = ({ 
-    sourceColumn, 
-    targetColumn, 
-    mapping, 
-    targetSchema,
-    ...props 
-  }) => {
-      const [mappingSuggestionsOpen, setMappingSuggestionsOpen] = useState(false);
-
-      if (!sourceColumn) {
+      const ColumnDetails = ({ column = {}, type, isEditing }) => {
+        console.log(`${type} Column Data:`, column);
         return (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography variant="h6">No Column Selected</Typography>
-            <Typography color="text.secondary">Please select a column from the grid to view details</Typography>
-          </Box>
-        );
-      }
+          <Card variant="outlined" sx={{ p: 2, height: '100%' }}>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  {type === 'source' ? 'Source Column' : 'Target Column'}
+                </Typography>
+                <Typography variant="h6">{column?.name || ''}</Typography>
+              </Box>
 
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  {type === 'source' ? 'Alternative Column Name' : 'Target Column'}
+                </Typography>
+                <Typography variant="h6">{column?.name || ''}</Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Data Type</Typography>
+                <Typography>{column?.dataType || ''}</Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>Description</Typography>
+                <Typography>{column?.description || ''}</Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                {column?.isPrimaryKey && <Tooltip title="Primary Key"><KeyIcon color="primary" /></Tooltip>}
+                {column?.isForeignKey && <Tooltip title="Foreign Key"><LinkIcon color="secondary" /></Tooltip>}
+                {column?.isPII && <Tooltip title="PII"><SecurityIcon color="warning" /></Tooltip>}
+                {column?.isPHI && <Tooltip title="PHI"><HealthAndSafetyIcon color="error" /></Tooltip>}
+                {column?.isNullable && <Tooltip title="Nullable"><RadioButtonUncheckedIcon /></Tooltip>}
+              </Box>
+
+              <EditableTags column={column} isEditing={isEditing} />
+              <EditableComments column={column} isEditing={isEditing} />
+            </Stack>
+          </Card>
+        );
+      };
       const isUnmapped = !targetColumn || mapping?.type === 'unmapped';
 
       const handleMappingChange = (mapping) => {
-        setMappingSuggestionsOpen(true);
+        props.setMappingSuggestionsOpen(true);
       };
 
       const handleMappingSuggestionApply = (newMapping) => {
         props.onMappingChange(newMapping);
-        setMappingSuggestionsOpen(false);
+        props.setMappingSuggestionsOpen(false);
       };
+
 
       return (
         <Box sx={{ p: 2, height: '100%' }}>
@@ -262,24 +308,24 @@ const MappingHeader = ({ mapping, isEditing, onEdit, onMappingChange, onSave, on
                   <Typography color="text.secondary">No mapping selected</Typography>
                   <Button 
                     startIcon={<LinkIcon />}
-                    onClick={() => setMappingSuggestionsOpen(true)}
+                    onClick={() => props.setMappingSuggestionsOpen(true)}
                   >
                     Select Mapping
                   </Button>
                 </Box>
               ) : (
-                <ColumnDetails 
-                  column={targetColumn}
-                  type="target"
-                  {...props}
-                />
+              <ColumnDetails 
+                column={targetColumn}
+                type="target"
+                {...props}
+              />
               )}
             </Grid>
           </Grid>
 
           <MappingSuggestionsDialog
-            open={mappingSuggestionsOpen}
-            onClose={() => setMappingSuggestionsOpen(false)}
+            open={props.mappingSuggestionsOpen}
+            onClose={() => props.setMappingSuggestionsOpen(false)}
             sourceColumn={sourceColumn}
             targetSchema={targetSchema}
             suggestions={mockMappingSuggestions}

@@ -113,6 +113,11 @@ app.use('/api/resource-attribute-associations', (req, res, next) => {
   next();
 }, resourceAttributeAssociationRoutes);
 
+app.use('/api/resource-attribute-associations/group/:groupId', (req, res, next) => {
+  console.log('Request reaching /api/resource-attribute-associations/group/:groupId in app.js');
+  next();
+}, resourceAttributeAssociationRoutes);
+
 app.use('/api/resource-attribute-associations/bulk', (req, res, next) => {
   console.log('2. Request reaching /api/resource-attribute-associations/bulk in app.js');
   next();

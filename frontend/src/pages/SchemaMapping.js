@@ -13,16 +13,16 @@ import { useMappingState } from '../components/SchemaMapping/hooks/useMappingSta
 import { useValidation } from '../components/SchemaMapping/hooks/useValidation';
 import { useTransformation } from '../components/SchemaMapping/hooks/useTransformation';
 import { getResourceAttributesByGroupId } from '../services/resourceAttributeService';
-
+import { getResourceAttributeAssociationsByGroupId } from '../services/resourceAttributeAssociationService';
 import { createSearchIndex, searchColumns } from '../components/SchemaMapping/utils/searchUtils';
 
-import {
-  mockTargetSchema,
-  mockMappingSuggestions,
-  mockValidationResults,
-  mockSampleData,
-  mockColumnProfile
-} from '../components/SchemaMapping/mockData/schemaMappingData';
+// import {
+//   mockTargetSchema,
+//   mockMappingSuggestions,
+//   mockValidationResults,
+//   mockSampleData,
+//   mockColumnProfile
+// } from '../components/SchemaMapping/mockData/schemaMappingData';
 
 const SchemaMapping = () => {
   const { mappings, updateMapping } = useMappingState();
@@ -31,8 +31,10 @@ const SchemaMapping = () => {
   
   const [sourceColumns, setSourceColumns] = useState([]);
   const [targetColumns, setTargetColumns] = useState([]);
+  const [mappingColumns, setMappingColumns] = useState(null);
   const [filteredSourceColumns, setFilteredSourceColumns] = useState([]);
   const [filteredTargetColumns, setFilteredTargetColumns] = useState(null);
+  const [filteredMappingColumns, setFilteredMappingColumns] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMapping, setSelectedMapping] = useState(null);
@@ -41,7 +43,7 @@ const SchemaMapping = () => {
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   
   const [searchIndex] = useState(() => 
-    createSearchIndex([...sourceColumns, ...mockTargetSchema])
+    createSearchIndex([...sourceColumns, ...targetColumns])
   );
 
   useEffect(() => {
@@ -73,8 +75,23 @@ const SchemaMapping = () => {
       }
     };
 
+    const fetchMappingColumns = async () => {
+      setIsLoading(true);
+      try {
+        const columns = await getResourceAttributeAssociationsByGroupId('7850');
+        console.log('Fetched Mapping Columns:', columns);
+        setMappingColumns(columns);
+        setFilteredMappingColumns(columns);
+      } catch (error) {
+        console.error('Error fetching mapping columns:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchSourceColumns();
     fetchTargetColumns();
+    fetchMappingColumns();
   }, []);
 
   const handleSearch = (term) => {
@@ -84,11 +101,23 @@ const SchemaMapping = () => {
   };
 
   const handleAutoMap = () => {
-    mockMappingSuggestions.forEach(suggestion => {
-      updateMapping(suggestion.sourceId, suggestion.targetId, suggestion.confidence);
-    });
+    // mockMappingSuggestions.forEach(suggestion => {
+    //   updateMapping(suggestion.sourceId, suggestion.targetId, suggestion.confidence);
+    // });
     setActiveDialog('suggestions');
   };
+
+
+  // const handleMappingChange = (row, newMapping) => {
+  //   setMappings(prev => [...prev, newMapping]);
+  // };
+  
+  // const handleMappingUpdate = (mapping) => {
+  //   // Update the mappings in your state/backend
+  //   setMappings(prev => prev.map(m => 
+  //     m.sourceId === mapping.sourceId ? mapping : m
+  //   ));
+  // };
 
   const handleDetailsSave = (updatedMapping) => {
     updateMapping(updatedMapping);
@@ -121,7 +150,7 @@ const SchemaMapping = () => {
             <MappingGrid
               sourceSchema={filteredSourceColumns}
               targetSchema={filteredTargetColumns}
-              mappings={mockMappingSuggestions}
+              mappings={filteredMappingColumns}
               onRowSelect={(row) => {
                 setSelectedMapping(row);
                 setActiveView('details');
@@ -130,7 +159,7 @@ const SchemaMapping = () => {
           ) : (
             <MappingDetails
               sourceColumn={selectedMapping}
-              targetColumn={mockTargetSchema.find(t => t.id === selectedMapping?.mapping?.targetId)}
+              targetColumn={filteredTargetColumns.find(t => t.id === selectedMapping?.mapping?.targetId)}
               mapping={selectedMapping?.mapping}
               isEditing={isEditingDetails}
               onEdit={() => setIsEditingDetails(true)}
@@ -144,26 +173,26 @@ const SchemaMapping = () => {
         <DataPreviewDialog 
           open={activeDialog === 'preview'}
           onClose={() => setActiveDialog(null)}
-          columnData={mockSampleData}
+          // columnData={mockSampleData}
         />
         
         <MappingSuggestionsDialog 
           open={activeDialog === 'suggestions'}
           onClose={() => setActiveDialog(null)}
-          suggestions={mockMappingSuggestions}
+          // suggestions={mockMappingSuggestions}
           onApply={updateMapping}
         />
         
         <ValidationResultsDialog 
           open={activeDialog === 'validation'}
           onClose={() => setActiveDialog(null)}
-          validationResults={mockValidationResults}
+          // validationResults={mockValidationResults}
         />
         
         <DataProfileDialog 
           open={activeDialog === 'profile'}
           onClose={() => setActiveDialog(null)}
-          columnProfile={mockColumnProfile}
+          // columnProfile={mockColumnProfile}
         />
       </Box>
     </Container>

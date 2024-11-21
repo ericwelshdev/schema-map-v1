@@ -60,38 +60,45 @@ import Badge from '@mui/material/Badge';
         mappings
       });
 
-      const rows = sourceSchema.map((source, index) => {
-      // console.log('Processing source row:', source);
-    
-      const mapping = mappings.find(m => m.sourceId === source.id);
-      const target = mapping ? targetSchema.find(t => t.id === mapping.targetId) : null;
-    
-      // console.log('Found mapping:', mapping);
-      // console.log('Found target:', target);
+        const rows = sourceSchema.map((source, index) => {
+          const mapping = mappings?.find(m => m.dsstrc_attr_id === source.dsstrc_attr_id);
+          console.log('Mapping:', mapping);
+          const target = mapping ? targetSchema.find(t => t.dsstrc_attr_id === mapping.targetId) : null;
 
+          const row = {
+            id: index,
+            sourceId: source.dsstrc_attr_id,
+            sourceTable: source.stdiz_abrvd_attr_grp_nm,
+            sourceColumn: source.stdiz_abrvd_attr_nm,
+            sourceType: source.physcl_data_typ_nm,
+            targetTable: target?.stdiz_abrvd_attr_grp_nm,
+            targetColumn: target?.stdiz_abrvd_attr_nm || '-',
+            targetType: target?.physcl_data_typ_nm || '-',
+            confidence: mapping?.confidence || 0,
+            mapping: mapping,
+            aiComments: source?.comments?.ai || [],
+            userComments: source?.comments?.user || [],
+            isMapped: !!mapping,
+            isModified: source.isModified,
+            isSaved: source.isSaved,
+            // Add these properties
+            attributes: {
+              isPrimaryKey: source.pk_ind === 'Y',
+              isForeignKey: source.fk_ind === 'Y',
+              isPII: source.pii_ind === 'Y',
+              isPHI: source.phi_ind === 'Y',
+              isNullable: source.mand_ind !== 'Y',
+              isEncrypted: source.encrypt_ind === 'Y'
+            },
+            tags: {
+              user: source.usr_tag_cmplx ? JSON.parse(source.usr_tag_cmplx) : [],
+              ai: source.ai_tag_cmplx ? JSON.parse(source.ai_tag_cmplx) : [],
+              meta: source.meta_tag_cmplx ? JSON.parse(source.meta_tag_cmplx) : []
+            }
+          };
 
-      const row = {
-        id: index,
-        sourceId: source.dsstrc_attr_id,
-        sourceTable: source.stdiz_abrvd_attr_grp_nm,
-        sourceColumn: source.stdiz_abrvd_attr_nm,
-        sourceType: source.physcl_data_typ_nm,
-        targetTable: target?.stdiz_abrvd_attr_grp_nm,
-        targetColumn: target?.stdiz_abrvd_attr_nm || '-',
-        targetType: target?.physcl_data_typ_nm || '-',
-        confidence: mapping?.confidence || 0,
-        mapping: mapping,
-        aiComments: source?.comments?.ai || [],
-        userComments: source?.comments?.user || [],
-        isMapped: !!mapping,
-        isModified: source.isModified,
-        isSaved: source.isSaved
-      };
-
-      // console.log('Generated row:', row);
-      return row;
-    });
-
+          return row;
+        });
     console.log('Final rows array:', rows);
 
     const [changedRows, setChangedRows] = useState(new Set());
@@ -106,28 +113,41 @@ import Badge from '@mui/material/Badge';
     const [isViewingDetails, setIsViewingDetails] = useState(false);
     const [commentType, setCommentType] = useState(null);
     const [currentMappings, setCurrentMappings] = useState({});
-
-    const handleMappingChange = (row, newValue) => {
-      console.log('Mapping change:', { row, newValue });
-      setChangedRows(prev => new Set(prev).add(row.id));
-      setCurrentMappings(prev => ({
-        ...prev,
-        [row.id]: {
+      const handleMappingChange = (row, newValue) => {
+        console.log('Mapping change:', {
+          row,
+          newValue
+        });
+        const newMapping = {
           sourceId: row.sourceId,
           targetId: newValue.dsstrc_attr_id,
           confidence: 1.0
+        };
+
+        setChangedRows(prev => new Set(prev).add(row.id));
+        setCurrentMappings(prev => ({
+          ...prev,
+          [row.id]: newMapping
+        }));
+
+        if (onMappingChange) {
+          onMappingChange(row, newMapping);
         }
-      }));
-      if (onMappingChange) {
-        onMappingChange(row, newValue);
-      }
-    };
+      };
+
+      const handleSaveMapping = (row) => {
+        const mapping = currentMappings[row.id];
+        setSavedRows(prev => new Set(prev).add(row.id));
+        if (mapping) {
+          onMappingUpdate(mapping);
+        }
+      };
   
-    const handleShowSuggestions = (row) => {
-        console.log('Opening suggestions dialog with row:', row);
-        console.log('Current targetSchema:', targetSchema);
-        setSelectedRow(row);
-        setMappingDialogOpen(true);
+      const handleShowSuggestions = (row) => {
+          console.log('Opening suggestions dialog with row:', row);
+          console.log('Current targetSchema:', targetSchema);
+          setSelectedRow(row);
+          setMappingDialogOpen(true);
         if (onShowSuggestions) {
           onShowSuggestions(row);
         }
@@ -143,10 +163,6 @@ const handleEdit = (row) => {
   setSelectedMapping(row);
   onRowSelect(row);
 };
-    const handleSaveMapping = (row) => {
-      setSavedRows(prev => new Set(prev).add(row.id));
-      onMappingUpdate(row);
-    };
 
     const handleUndoChanges = (row) => {
       setChangedRows(prev => {
@@ -252,7 +268,12 @@ const handleEdit = (row) => {
               <WarningIcon color="warning" fontSize="small" />;
           }
         },
-        
+        {
+          field: 'sourceColumnOrderId',
+          headerName: '#',
+          editable: false,
+          width: 5,
+        },
         {
           field: 'sourceColumn',
           headerName: 'Source',
@@ -304,7 +325,13 @@ const handleEdit = (row) => {
           flex: 2,
           alignItems: 'center',
           renderCell: (params) => (
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%' }}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 1, 
+              alignItems: 'center', 
+              width: '100%',
+              height: '100%'
+            }}>
               <Autocomplete
                 size="small"
                 options={targetSchema || []}
@@ -312,11 +339,13 @@ const handleEdit = (row) => {
                   option ? `${option.dsstrc_attr_nm} (${option.stdiz_abrvd_attr_grp_nm}.${option.stdiz_abrvd_attr_nm})` : ''
                 }
                 value={targetSchema?.find(t => t.dsstrc_attr_id === currentMappings[params.row.id]?.targetId) || null}
-                onChange={(_, newValue) => handleMappingChange(params.row, newValue)}
+                              onChange={(_, newValue) => {
+                                console.log('Selected value:', newValue)
+                                handleMappingChange(params.row, newValue)
+                              }}
                 renderOption={(props, option) => (
                   <li {...props} style={{ fontSize: '0.7rem' }}>
-                    <strong>{option.dsstrc_attr_nm}</strong> - ({option.stdiz_abrvd_attr_grp_nm}.{option.stdiz_abrvd_attr_nm})
-
+                    {option.dsstrc_attr_nm} ({option.stdiz_abrvd_attr_grp_nm}.{option.stdiz_abrvd_attr_nm})
                   </li>
                 )}
                 renderInput={(params) => (
@@ -326,27 +355,25 @@ const handleEdit = (row) => {
                     size="small"
                     placeholder="Select target column"
                     sx={{
-                      '& .MuiInputBase-input': {
-                        fontSize: '0.7rem',
-                        padding: '4px 4px !important',
-                        height: '20px'
+                      '& .MuiInputBase-root': {
+                        height: '32px',
+                        fontSize: '0.7rem'
                       },
                       '& .MuiOutlinedInput-root': {
-                        padding: '0px 0px !important'
+                        padding: '0 4px'
                       }
                     }}
                   />
                 )}
                 sx={{ 
                   width: '100%',
-                  paddingBottom: '2px !important',
                   '& .MuiAutocomplete-listbox': {
                     fontSize: '0.7rem'
                   }
                 }}
               />
-              <Tooltip title="Show Mapping Suggestions">
-              <IconButton                size="small" 
+              <IconButton 
+                size="small" 
                 onClick={(e) => {
                   e.stopPropagation();
                   handleShowSuggestions(params.row);
@@ -354,7 +381,6 @@ const handleEdit = (row) => {
               >
                 <LinkIcon fontSize="small" />
               </IconButton>
-              </Tooltip>
             </Box>
           )
         },

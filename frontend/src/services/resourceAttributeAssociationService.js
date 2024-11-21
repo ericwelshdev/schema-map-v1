@@ -121,3 +121,54 @@ export const postBulkResourceAttributeAssociation = async (sourceAttributes) => 
     throw enhancedError;
   }
 };
+
+
+
+// Add new function to get columns by group ID
+export const getResourceAttributeAssociationsByGroupId = async (dsstrc_attr_grp_id) => {
+  try {
+    const response = await axios.get(`${API_URL}/resource-attribute-associations/group/${dsstrc_attr_grp_id}`);
+    console.log('Fetching columns for group ID:', dsstrc_attr_grp_id);
+    console.log('API Response:', response.data); 
+    const columns = response.data.map(attr => ({
+      dsstrc_attr_assc_id: attr.dsstrc_attr_assc_id,
+      dsstrc_attr_grp_assc_id: attr.dsstrc_attr_grp_assc_id,
+      ds_id: 0, 
+      dsstrc_attr_grp_id: attr.dsstrc_attr_grp_id,
+      stdiz_abrvd_attr_grp_nm: attr.stdiz_abrvd_attr_grp_nm,
+      dsstrc_attr_id: attr.dsstrc_attr_id,
+      stdiz_abrvd_attr_nm: attr.stdiz_abrvd_attr_nm,
+      assct_ds_id: 0,
+      assct_dsstrc_attr_grp_id: attr.assct_dsstrc_attr_grp_id,
+      assct_stdiz_abrvd_attr_grp_nm: attr.assct_stdiz_abrvd_attr_grp_nm,
+      assct_dsstrc_attr_id: attr.assct_dsstrc_attr_id,
+      assct_stdiz_abrvd_attr_nm: attr.assct_stdiz_abrvd_attr_nm,
+      techncl_rule_nm: attr.techncl_rule_nm,
+      dsstrc_attr_assc_typ_cd: attr.dsstrc_attr_assc_typ_cd,
+      dsstrc_attr_assc_cnfdnc_pct: attr.dsstrc_attr_assc_cnfdnc_pct,
+    usr_cmt_txt: attr.usr_cmt_txt,
+      tags: {
+        user: JSON.parse(attr?.usr_tag_cmplx || '[]'),
+        ai: JSON.parse(attr?.ai_tag_cmplx || '[]'),
+        meta: JSON.parse(attr?.meta_tag_cmplx || '[]')
+      },
+      comments: {
+        ai: JSON.parse(attr?.ai_cmt_txt || '[]'),
+        user: JSON.parse(attr?.usr_cmt_txt || '[]')
+      }
+    }));
+    console.log('Transformed Columns:', columns); 
+    return columns;
+  } catch (error) {
+    console.log('Received error response:', error);
+    console.log('Received error response:', error.response?.data);
+    const errorDetails = error.response?.data?.error;
+    const enhancedError = new Error();
+    enhancedError.name = errorDetails?.name;
+    enhancedError.message = errorDetails?.message;
+    enhancedError.details = errorDetails?.errors;
+    enhancedError.sql = errorDetails?.sql;
+    enhancedError.code = errorDetails?.code;
+    throw enhancedError;
+  }
+};

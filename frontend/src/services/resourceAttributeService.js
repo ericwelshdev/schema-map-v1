@@ -135,6 +135,7 @@ export const getResourceAttributesByGroupId = async (dsstrc_attr_grp_id) => {
     const columns = response.data.map(attr => ({
       dsstrc_attr_id: attr.dsstrc_attr_id,
       dsstrc_attr_nm: attr.dsstrc_attr_nm,
+      dsstrc_attr_seq_nbr: attr.dsstrc_attr_seq_nbr,
       stdiz_abrvd_attr_nm: attr.stdiz_abrvd_attr_nm,
       dsstrc_attr_grp_id: attr.dsstrc_attr_grp_id,
       abrvd_attr_grp_nm: attr.abrvd_attr_grp_nm,

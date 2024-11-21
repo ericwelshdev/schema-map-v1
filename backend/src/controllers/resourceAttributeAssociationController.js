@@ -105,6 +105,41 @@ exports.getById = async (req, res) => {
     }
 };
 
+
+// Fetch a specific resource attribute by ID
+exports.getByGroupId = async (req, res) => {
+    try {
+        console.log('Controller Fetching columns for group ID:', req.params.id);
+        const columns = await SourceData.findAll({
+            where: {
+                dsstrc_attr_grp_id: parseInt(req.params.id, 10)
+            }
+        });
+        
+        if (!columns || columns.length === 0) {
+            return res.status(404).json({ 
+                error: { message: 'No columns found for this group ID' } 
+            });
+        }
+        
+        res.status(200).json(columns);
+        
+    } catch (error) {
+        console.error('Fetch by Group ID error:', error);
+        res.status(400).json({
+            error: {
+                name: error.name,
+                message: error.message,
+                details: error.errors?.map(e => ({
+                    field: e.path,
+                    type: e.type,
+                    message: e.message
+                }))
+            }
+        });
+    }
+};
+
 // Update an existing resource attribute
 exports.update = async (req, res) => {
     try {
