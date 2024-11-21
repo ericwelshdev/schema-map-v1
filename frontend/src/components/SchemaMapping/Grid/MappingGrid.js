@@ -1,3 +1,5 @@
+
+
 import React, { useState } from 'react';
 import { DataGrid, GridActionsCellItem } from '@mui/x-data-grid';
 import { 
@@ -47,8 +49,51 @@ import Badge from '@mui/material/Badge';
     onShowProfile = () => {},
     onMappingUpdate = () => {},
     onRowSelect = () => {},
-    onUndo = () => {}
+    onUndo = () => {},
+    onShowSuggestions = () => {},
+    onMappingChange  = () => {},
   }) => {
+  
+      console.log('MappingGrid Props:', {
+        sourceSchema,
+        targetSchema,
+        mappings
+      });
+
+      const rows = sourceSchema.map((source, index) => {
+      console.log('Processing source row:', source);
+    
+      const mapping = mappings.find(m => m.sourceId === source.id);
+      const target = mapping ? targetSchema.find(t => t.id === mapping.targetId) : null;
+    
+      console.log('Found mapping:', mapping);
+      console.log('Found target:', target);
+
+
+      const row = {
+        id: index,
+        sourceId: source.dsstrc_attr_id,
+        sourceTable: source.stdiz_abrvd_attr_grp_nm,
+        sourceColumn: source.stdiz_abrvd_attr_nm,
+        sourceType: source.physcl_data_typ_nm,
+        targetTable: target?.stdiz_abrvd_attr_grp_nm,
+        targetColumn: target?.stdiz_abrvd_attr_nm || '-',
+        targetType: target?.physcl_data_typ_nm || '-',
+        confidence: mapping?.confidence || 0,
+        mapping: mapping,
+        aiComments: source?.comments?.ai || [],
+        userComments: source?.comments?.user || [],
+        isMapped: !!mapping,
+        isModified: source.isModified,
+        isSaved: source.isSaved
+      };
+
+      console.log('Generated row:', row);
+      return row;
+    });
+
+    console.log('Final rows array:', rows);
+
     const [changedRows, setChangedRows] = useState(new Set());
     const [savedRows, setSavedRows] = useState(new Set());
     const [pendingChanges, setPendingChanges] = useState({});
@@ -61,12 +106,24 @@ import Badge from '@mui/material/Badge';
     const [isViewingDetails, setIsViewingDetails] = useState(false);
     const [commentType, setCommentType] = useState(null);
 
-    const handleMappingChange = (row, newTarget) => {
-      setChangedRows(prev => new Set(prev).add(row.id));
-      setPendingChanges(prev => ({
-        ...prev,
-        [row.id]: { ...row, targetMapping: newTarget }
-      }));
+    const handleMappingChange = (row, newValue) => {
+      console.log('Mapping change:', {
+        row,
+        newValue
+      });
+      if (onMappingChange) {
+        onMappingChange(row, newValue);
+      }
+    };
+  
+    const handleShowSuggestions = (row) => {
+      console.log('Opening suggestions dialog with row:', row);
+      console.log('Current targetSchema:', targetSchema);
+      setSelectedRow(row);
+      setMappingDialogOpen(true);
+      if (onShowSuggestions) {
+        onShowSuggestions(row);
+      }
     };
 
     const handleEdit = (row) => {
@@ -173,7 +230,9 @@ import Badge from '@mui/material/Badge';
 
       return typeMap[baseType] || typeMap.DEFAULT;
     };
-      const columns = [
+
+    
+    const columns = [
         {
           field: 'modifiedStatus',
           headerName: '',
@@ -194,7 +253,7 @@ import Badge from '@mui/material/Badge';
           renderCell: (params) => {
             const aiComments = params.row.aiComments || []
             const userComments = params.row.userComments || []
-            
+          
             return (
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Tooltip title={`${aiComments.filter(c => c.isNew).length} new AI comments`}>
@@ -254,15 +313,25 @@ import Badge from '@mui/material/Badge';
           headerName: 'Source',
           editable: false,
           flex: 1,
-        
           renderCell: (params) => (
-            <Typography sx={{ fontSize: '0.7rem' }}>
-              {params.row.sourceColumn}
-            </Typography>
+            <Box sx={{ 
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}>
+              <FontAwesomeIcon 
+                icon={getDataTypeIcon(params.row.sourceType)} 
+                style={{ fontSize: '0.8rem', color: '#666' }}
+              />
+              <Typography sx={{ fontSize: '0.7rem' }}>
+                {params.row.sourceColumn}
+              </Typography>
+            </Box>
           )
         },
-        {
-          field: 'mappedStatus',
+        {          field: 'mappedStatus',
           headerName: '',
           width: 40,
           renderCell: (params) => (
@@ -292,17 +361,56 @@ import Badge from '@mui/material/Badge';
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%' }}>
               <Autocomplete
                 size="small"
-                options={targetSchema}
-                getOptionLabel={(option) => option.name || ''}
-                value={pendingChanges[params.row.id]?.targetMapping || params.row.targetMapping || null}
+                options={targetSchema || []}
+                getOptionLabel={(option) => 
+                  option ? `${option.dsstrc_attr_nm} (${option.stdiz_abrvd_attr_grp_nm})` : ''
+                }
+                value={targetSchema && params.row.mapping?.targetId ? 
+                  targetSchema.find(t => t.id === params.row.mapping?.targetId) || null 
+                  : null
+                }
                 onChange={(_, newValue) => handleMappingChange(params.row, newValue)}
-                renderInput={(params) => <TextField {...params} variant="outlined" size="small" />}
-                sx={{ width: '100%' }}
+                renderOption={(props, option) => (
+                  <li {...props} style={{ fontSize: '0.7rem' }}>
+                    {option.dsstrc_attr_nm} - {option.stdiz_abrvd_attr_grp_nm}
+                  </li>
+                )}
+                renderInput={(params) => (
+                  <TextField 
+                    {...params} 
+                    variant="outlined" 
+                    size="small"
+                    placeholder="Select target column"
+                    sx={{
+                      '& .MuiInputBase-input': {
+                        fontSize: '0.7rem',
+                        // padding: '8px 8px !important',
+                        height: '20px'
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        padding: '0px 4px !important'
+                      }
+                    }}
+                  />
+                )}
+                sx={{ 
+                  width: '100%',
+                  paddingBottom: '2px !important',
+                  '& .MuiAutocomplete-listbox': {
+                    fontSize: '0.7rem'
+                  }
+                }}
               />
               <Tooltip title="Show Mapping Suggestions">
-                <IconButton size="small" onClick={() => handleShowMappingSuggestions(params.row)}>
-                  <LinkIcon fontSize="small" />
-                </IconButton>
+              <IconButton 
+                size="small" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleShowSuggestions(params.row);
+                }}
+              >
+                <LinkIcon fontSize="small" />
+              </IconButton>
               </Tooltip>
             </Box>
           )
@@ -360,26 +468,26 @@ import Badge from '@mui/material/Badge';
           ]
         }
               ];
-        const rows = sourceSchema.map((source, index) => {
-          const mapping = mappings.find(m => m.sourceId === source.id);
-          const target = mapping ? targetSchema.find(t => t.id === mapping.targetId) : null;
+        // const rows = sourceSchema.map((source, index) => {
+        //   const mapping = mappings.find(m => m.sourceId === source.id);
+        //   const target = mapping ? targetSchema.find(t => t.id === mapping.targetId) : null;
 
-          return {
-            id: index,
-            sourceId: source.id,
-            sourceColumn: source.name,
-            sourceType: source.type,
-            targetColumn: source.targetColumn || '-',
-            targetType: source.targetType || '-',
-            isMapped: source.isMapped,
-            confidence: source.confidence || 0,
-            aiComments: source.aiComments || [],
-            userComments: source.userComments || [],
-            isModified: source.isModified,
-            isSaved: source.isSaved
-          };
-        });
-
+        //   return {
+        //     id: index,
+        //     sourceId: source.id,
+        //     sourceColumn: source.name,
+        //     sourceType: source.type,
+        //     targetColumn: source.targetColumn || '-',
+        //     targetType: source.targetType || '-',
+        //     isMapped: source.isMapped,
+        //     confidence: source.confidence || 0,
+        //     aiComments: source.aiComments || [],
+        //     userComments: source.userComments || [],
+        //     isModified: source.isModified,
+        //     isSaved: source.isSaved
+        //   };
+        // });
+  
         const getTargetColumn = (selectedMapping) => {
           // Implement this function to return the target column based on the selected mapping
         };
@@ -387,47 +495,34 @@ import Badge from '@mui/material/Badge';
         const handleMappingUpdate = (updatedMapping) => {
           // Implement this function to handle mapping updates
         };
+        
             return (
-              <Box sx={{ 
-                width: '100%',
-                height: '100%',
-                bgcolor: 'background.paper'
-              }}>
+              <Box sx={{ height: 'calc(100vh - 180px)', width: '100%', bgcolor: 'background.paper' }}>
                 <DataGrid
                   rows={rows}
                   columns={columns}
                   density="compact"
-                  disableSelectionOnClick
+                  autoPageSize
+                  autoHeight={false}
                   initialState={{
-                    pagination: {
-                      paginationModel: {
-                        pageSize: 5,
-                      },
-                    },
+                    ...rows.initialState,
+                    pagination: { paginationModel: { pageSize: 5 } },
                   }}
-                  pageSizeOptions={[5]}
-                  onRowClick={(params) => {
-                    setSelectedMapping(params.row);
-                    setIsEditingDetails(false);
-                  }}
+
+                  rowsPerPageOptions={[10, 25, 50]}
+                  pageSizeOptions={[10, 100, { value: 1000, label: '1,000' }]}
+                  disableSelectionOnClick
                   sx={{
-                    '& .MuiDataGrid-root': {
-                      fontSize: '0.7rem',
-                    },
+                    height: '100%',
+                    '& .MuiDataGrid-root': { fontSize: '0.7rem' },
                     '& .MuiDataGrid-row': {
                       minHeight: '35px !important',
                       maxHeight: '35px !important',
                     },
-                    '& .MuiDataGrid-cell': {
-                      py: 0.5,
-                    },
                     '& .MuiDataGrid-columnHeaders': {
-                      minHeight: '30px !important',
-                      maxHeight: '30px !important',
-                    },
-                    '& .MuiDataGrid-footerContainer': {
-                      minHeight: '30px !important',
-                      maxHeight: '30px !important',
+                      minHeight: '35px !important',
+                      maxHeight: '35px !important',
+                      borderBottom: '2px solid rgba(224, 224, 224, 1)',
                     },
                     '& .MuiAutocomplete-root': {
                       '& .MuiInputBase-root': {
@@ -444,10 +539,12 @@ import Badge from '@mui/material/Badge';
                     },
                     '& .MuiSvgIcon-root': {
                       fontSize: '1rem',
+                    },                    
+                    '& .MuiDataGrid-cell': {
+                      padding: '8px',
                     }
                   }}
                 />
-        
           {selectedMapping && (
                   <MappingDetails
                     sourceColumn={selectedMapping}

@@ -30,5 +30,8 @@ router.put('/:id', resourceAttributeController.update);
 // Delete a sourceAttribute by id
 router.delete('/:id', resourceAttributeController.delete);
 
+// Add this route with existing routes
+router.get('/group/:id', resourceAttributeController.getByGroupId);
+
 
 module.exports = router;

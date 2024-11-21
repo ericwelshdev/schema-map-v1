@@ -114,10 +114,18 @@ DataStructureAttributeGroupInstanceProfile.init({
         type: DataTypes.STRING, // type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true
     },
-    user_tag_cmplx: {
+    usr_tag_cmplx: {
         type: DataTypes.STRING, // type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true
     },
+    meta_tag_cmplx: {
+        type: DataTypes.STRING, // type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true
+    },
+    ai_cmt_txt: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },    
     usr_cmt_txt: {
         type: DataTypes.STRING,
         allowNull: true

@@ -28,9 +28,10 @@ export const postResourceAttribute = async (sourceAttrbute) => {
       pii_ind: sourceAttrbute.pii_ind,
       phi_ind: sourceAttrbute.phi_ind,
       disabld_ind: sourceAttrbute.disabld_ind,
-      user_tag_cmplx: sourceAttrbute.user_tag_cmplx,
       ai_tag_cmplx: sourceAttrbute.ai_tag_cmplx,
+      usr_tag_cmplx: sourceAttrbute.usr_tag_cmplx,
       meta_tag_cmplx: sourceAttrbute.meta_tag_cmplx,
+      ai_cmt_txt: sourceAttrbute.ai_cmt_txt,
       usr_cmt_txt: sourceAttrbute.usr_cmt_txt,
       oprtnl_stat_cd: sourceAttrbute.oprtnl_stat_cd,
       cre_by_nm: 'System',
@@ -96,9 +97,10 @@ export const postBulkResourceAttribute = async (sourceAttributes) => {
       pii_ind: attr.pii_ind,
       phi_ind: attr.phi_ind,
       disabld_ind: attr.disabld_ind,
-      user_tag_cmplx: attr.user_tag_cmplx,
       ai_tag_cmplx: attr.ai_tag_cmplx,
+      usr_tag_cmplx: attr.usr_tag_cmplx,
       meta_tag_cmplx: attr.meta_tag_cmplx,
+      ai_cmt_txt: attr.ai_cmt_txt,
       usr_cmt_txt: attr.usr_cmt_txt,
       oprtnl_stat_cd: attr.oprtnl_stat_cd,
       cre_by_nm: 'System',
@@ -126,31 +128,50 @@ export const postBulkResourceAttribute = async (sourceAttributes) => {
 
 // Add new function to get columns by group ID
 export const getResourceAttributesByGroupId = async (dsstrc_attr_grp_id) => {
-  const response = await axios.get(`${API_URL}/resource-attributes/group/${dsstrc_attr_grp_id}`);
-  
-  // Transform API response to match our schema structure
-  const columns = response.data.map(attr => ({
-    id: attr.dsstrc_attr_id,
-    name: attr.dsstrc_attr_nm,
-    alternativeName: attr.stdiz_abrvd_alt_attr_nm,
-    table: attr.stdiz_abrvd_attr_grp_nm,
-    dataType: attr.physcl_data_typ_nm,
-    description: attr.dsstrc_attr_desc,
-    attributes: {
-      isPrimaryKey: attr.pk_ind === 'Y',
-      isForeignKey: attr.fk_ind === 'Y',
-      isPII: attr.pii_ind === 'Y',
-      isPHI: attr.phi_ind === 'Y',
-      isNullable: attr.mand_ind !== 'Y',
-      isEncrypted: attr.encrypt_ind === 'Y'
-    },
-    tags: {
-      user: JSON.parse(attr.user_tag_cmplx || '[]'),
-      ai: JSON.parse(attr.ai_tag_cmplx || '[]'),
-      meta: JSON.parse(attr.meta_tag_cmplx || '[]')
-    },
-    comments: JSON.parse(attr.usr_cmt_txt || '[]')
-  }));
-
-  return columns;
+  try {
+    const response = await axios.get(`${API_URL}/resource-attributes/group/${dsstrc_attr_grp_id}`);
+    console.log('Fetching columns for group ID:', dsstrc_attr_grp_id);
+    console.log('API Response:', response.data); 
+    const columns = response.data.map(attr => ({
+      dsstrc_attr_id: attr.dsstrc_attr_id,
+      dsstrc_attr_nm: attr.dsstrc_attr_nm,
+      stdiz_abrvd_attr_nm: attr.stdiz_abrvd_attr_nm,
+      dsstrc_attr_grp_id: attr.dsstrc_attr_grp_id,
+      abrvd_attr_grp_nm: attr.abrvd_attr_grp_nm,
+      stdiz_abrvd_attr_grp_nm: attr.stdiz_abrvd_attr_grp_nm,
+      stdiz_abrvd_alt_attr_nm: attr.stdiz_abrvd_alt_attr_nm,
+      physcl_data_typ_nm: attr.physcl_data_typ_nm,
+      dsstrc_attr_desc: attr.dsstrc_attr_desc,
+      attributes: {
+        isPrimaryKey: attr.pk_ind === 'Y',
+        isForeignKey: attr.fk_ind === 'Y',
+        isPII: attr.pii_ind === 'Y',
+        isPHI: attr.phi_ind === 'Y',
+        isNullable: attr.mand_ind !== 'Y',
+        isEncrypted: attr.encrypt_ind === 'Y'
+      },
+      tags: {
+        user: JSON.parse(attr?.usr_tag_cmplx || '[]'),
+        ai: JSON.parse(attr?.ai_tag_cmplx || '[]'),
+        meta: JSON.parse(attr?.meta_tag_cmplx || '[]')
+      },
+      comments: {
+        ai: JSON.parse(attr?.ai_cmt_txt || '[]'),
+        user: JSON.parse(attr?.usr_cmt_txt || '[]')
+      }
+    }));
+    console.log('Transformed Columns:', columns); 
+    return columns;
+  } catch (error) {
+    console.log('Received error response:', error);
+    console.log('Received error response:', error.response?.data);
+    const errorDetails = error.response?.data?.error;
+    const enhancedError = new Error();
+    enhancedError.name = errorDetails?.name;
+    enhancedError.message = errorDetails?.message;
+    enhancedError.details = errorDetails?.errors;
+    enhancedError.sql = errorDetails?.sql;
+    enhancedError.code = errorDetails?.code;
+    throw enhancedError;
+  }
 };

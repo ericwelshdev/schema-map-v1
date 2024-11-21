@@ -98,6 +98,11 @@ app.use('/api/resource-attributes', (req, res, next) => {
   next();
 }, resourceAttributeRoutes);
 
+app.use('/api/resource-attributes/group/:groupId', (req, res, next) => {
+  console.log('Request reaching /api/resource-attributes/group/:groupId in app.js');
+  next();
+}, resourceAttributeRoutes);
+
 app.use('/api/resource-associations', (req, res, next) => {
   console.log('2. Request reaching /api/resource-associations in app.js');
   next();
@@ -214,10 +219,4 @@ sequelize.sync({ force: overrideSchema })
   .catch((error) => {
     console.error('Error creating database tables:', error);
   });
-
-
-
-
-
-
 

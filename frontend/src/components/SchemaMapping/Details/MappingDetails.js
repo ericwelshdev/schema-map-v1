@@ -211,74 +211,80 @@ const MappingHeader = ({ mapping, isEditing, onEdit, onMappingChange, onSave, on
     </Card>
   );
 
-  const MappingDetails = ({ sourceColumn, targetColumn, mapping, ...props }) => {
-    const [mappingSuggestionsOpen, setMappingSuggestionsOpen] = useState(false);
+  const MappingDetails = ({ 
+    sourceColumn, 
+    targetColumn, 
+    mapping, 
+    targetSchema,
+    ...props 
+  }) => {
+      const [mappingSuggestionsOpen, setMappingSuggestionsOpen] = useState(false);
 
-    if (!sourceColumn) {
+      if (!sourceColumn) {
+        return (
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="h6">No Column Selected</Typography>
+            <Typography color="text.secondary">Please select a column from the grid to view details</Typography>
+          </Box>
+        );
+      }
+
+      const isUnmapped = !targetColumn || mapping?.type === 'unmapped';
+
+      const handleMappingChange = (mapping) => {
+        setMappingSuggestionsOpen(true);
+      };
+
+      const handleMappingSuggestionApply = (newMapping) => {
+        props.onMappingChange(newMapping);
+        setMappingSuggestionsOpen(false);
+      };
+
       return (
-        <Box sx={{ p: 3, textAlign: 'center' }}>
-          <Typography variant="h6">No Column Selected</Typography>
-          <Typography color="text.secondary">Please select a column from the grid to view details</Typography>
-        </Box>
-      );
-    }
-
-    const isUnmapped = !targetColumn || mapping?.type === 'unmapped';
-
-    const handleMappingChange = (mapping) => {
-      setMappingSuggestionsOpen(true);
-    };
-
-    const handleMappingSuggestionApply = (newMapping) => {
-      props.onMappingChange(newMapping);
-      setMappingSuggestionsOpen(false);
-    };
-
-    return (
-      <Box sx={{ p: 2, height: '100%' }}>
-        <MappingHeader 
-          mapping={mapping}
-          isUnmapped={isUnmapped}
-          {...props}
-        />
+        <Box sx={{ p: 2, height: '100%' }}>
+          <MappingHeader 
+            mapping={mapping}
+            isUnmapped={isUnmapped}
+            {...props}
+          />
       
-        <Grid container spacing={2}>
-          <Grid item xs={6}>
-            <ColumnDetails 
-              column={sourceColumn}
-              type="source"
-              {...props}
-            />
-          </Grid>
-          <Grid item xs={6}>
-            {isUnmapped ? (
-              <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography color="text.secondary">No mapping selected</Typography>
-                <Button 
-                  startIcon={<LinkIcon />}
-                  onClick={() => setMappingSuggestionsOpen(true)}
-                >
-                  Select Mapping
-                </Button>
-              </Box>
-            ) : (
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
               <ColumnDetails 
-                column={targetColumn}
-                type="target"
+                column={sourceColumn}
+                type="source"
                 {...props}
               />
-            )}
+            </Grid>
+            <Grid item xs={6}>
+              {isUnmapped ? (
+                <Box sx={{ p: 3, textAlign: 'center' }}>
+                  <Typography color="text.secondary">No mapping selected</Typography>
+                  <Button 
+                    startIcon={<LinkIcon />}
+                    onClick={() => setMappingSuggestionsOpen(true)}
+                  >
+                    Select Mapping
+                  </Button>
+                </Box>
+              ) : (
+                <ColumnDetails 
+                  column={targetColumn}
+                  type="target"
+                  {...props}
+                />
+              )}
+            </Grid>
           </Grid>
-        </Grid>
 
-        <MappingSuggestionsDialog
-          open={mappingSuggestionsOpen}
-          onClose={() => setMappingSuggestionsOpen(false)}
-          sourceColumn={sourceColumn}
-          suggestions={mockMappingSuggestions}
-          onApply={handleMappingSuggestionApply}
-        />
-      </Box>
-    );
-  };
-  export default MappingDetails;
+          <MappingSuggestionsDialog
+            open={mappingSuggestionsOpen}
+            onClose={() => setMappingSuggestionsOpen(false)}
+            sourceColumn={sourceColumn}
+            targetSchema={targetSchema}
+            suggestions={mockMappingSuggestions}
+            onApply={handleMappingSuggestionApply}
+          />
+        </Box>
+      );
+    };  export default MappingDetails;
