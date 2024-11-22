@@ -126,6 +126,7 @@ export const postBulkResourceAttributeAssociation = async (sourceAttributes) => 
 
 // Add new function to get columns by group ID
 export const getResourceAttributeAssociationsByGroupId = async (dsstrc_attr_grp_id) => {
+  console.log('getResourceAttributeAssociationsByGroupId | Fetching columns for group ID:', dsstrc_attr_grp_id);
   try {
     const response = await axios.get(`${API_URL}/resource-attribute-associations/group/${dsstrc_attr_grp_id}`);
     console.log('Fetching columns for group ID:', dsstrc_attr_grp_id);

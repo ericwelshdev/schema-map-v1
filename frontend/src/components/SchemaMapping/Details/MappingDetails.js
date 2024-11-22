@@ -146,7 +146,7 @@ const MappingHeader = ({ mapping, isEditing, onEdit, onMappingChange, onSave, on
     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Typography variant="h6">
-          {mapping?.sourceTable || ''}.{mapping?.sourceColumn || ''} → {mapping?.targetTable || ''}.{mapping?.targetColumn || ''}
+          {mapping?.sourceTable || ''}.{mapping?.sourceSchema || ''} → {mapping?.targetTable || ''}.{mapping?.targetSchema || ''}
         </Typography>
         <IconButton 
           onClick={() => onMappingChange(mapping)}
@@ -218,17 +218,15 @@ const MappingHeader = ({ mapping, isEditing, onEdit, onMappingChange, onSave, on
     </Card>
   );
     const MappingDetails = ({ 
-      sourceColumn, 
-      targetColumn, 
+      sourceSchema, 
+      targetSchema, 
       mapping,
-      targetSchema,
       ...props 
     }) => {
       console.log('MappingDetails Props:', {
-        sourceColumn,
-        targetColumn,
-        mapping,
-        targetSchema
+        sourceSchema,
+        targetSchema,
+        mapping
       });
 
       const ColumnDetails = ({ column = {}, type, isEditing }) => {
@@ -274,7 +272,7 @@ const MappingHeader = ({ mapping, isEditing, onEdit, onMappingChange, onSave, on
           </Card>
         );
       };
-      const isUnmapped = !targetColumn || mapping?.type === 'unmapped';
+      const isUnmapped = !targetSchema || mapping?.type === 'unmapped';
 
       const handleMappingChange = (mapping) => {
         props.setMappingSuggestionsOpen(true);
@@ -297,7 +295,7 @@ const MappingHeader = ({ mapping, isEditing, onEdit, onMappingChange, onSave, on
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <ColumnDetails 
-                column={sourceColumn}
+                column={sourceSchema}
                 type="source"
                 {...props}
               />
@@ -315,7 +313,7 @@ const MappingHeader = ({ mapping, isEditing, onEdit, onMappingChange, onSave, on
                 </Box>
               ) : (
               <ColumnDetails 
-                column={targetColumn}
+                column={targetSchema}
                 type="target"
                 {...props}
               />
@@ -326,7 +324,7 @@ const MappingHeader = ({ mapping, isEditing, onEdit, onMappingChange, onSave, on
           <MappingSuggestionsDialog
             open={props.mappingSuggestionsOpen}
             onClose={() => props.setMappingSuggestionsOpen(false)}
-            sourceColumn={sourceColumn}
+            sourceSchema={sourceSchema}
             targetSchema={targetSchema}
             suggestions={mockMappingSuggestions}
             onApply={handleMappingSuggestionApply}
