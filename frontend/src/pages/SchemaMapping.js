@@ -50,15 +50,77 @@ const SchemaMapping = () => {
   const [savedRows, setSavedRows] = useState(new Set());
   const [pendingChanges, setPendingChanges] = useState({});
 
-  // Add these handler functions
-  const handleMappingChange = (row, newMapping) => {
-    setChangedRows(prev => new Set(prev).add(row.id));
-    setPendingChanges(prev => ({
-      ...prev,
-      [row.id]: newMapping
-    }));
-  };
+  useEffect(() => {
+    const storedMappings = JSON.parse(localStorage.getItem('pendingMappings') || '{}');
+    setPendingChanges(storedMappings);
+    setChangedRows(new Set(Object.keys(storedMappings)));
+  }, []);
 
+    // Add these handler functions
+    const handleMappingChange = (row, newMapping) => {
+      // Create standardized mapping object
+      const mappingObject = {
+        // Core mapping fields
+        sourceAsscId: row.mapping?.dsstrc_attr_assc_id || null,
+        sourceId: newMapping.sourceId,
+        mapConfidenceScore: newMapping.dsstrc_attr_assc_cnfdnc_pct || 1,
+        isManualMap: newMapping.isManualMap || 'Y',
+        isAIOverrideMap: newMapping.isAIOverrideMap || false,
+      
+        // Source/Target details
+        source: {
+          sourceId: newMapping.sourceId,
+          table: row.sourceTable,
+          column: row.sourceColumn,
+          type: row.sourceType,
+          attributes: row.attributes
+        },
+        target: {
+          targetId: newMapping.targetId,
+          table: newMapping.targetTable,
+          column: newMapping.targetColumn,
+          type: row.targetType
+        },
+      
+        // Metadata
+        metadata: {
+          isModified: true,
+          lastModified: new Date().toISOString(),
+          modifiedBy: 'user',
+          version: 1,
+          status: 'pending'
+        },
+      
+        // Preserve existing comments and tags
+        comments: {
+          ai: row.aiComments || [],
+          user: row.userComments || []
+        },
+
+        tags: {
+          ai: row.aiComments || {},
+          user: row.userComments || {},
+          meta: row.metaComments || {}
+        }
+      };
+    console.log('--> Mapping Object:', mappingObject);
+
+      // Update changed rows tracking
+      setChangedRows(prev => new Set(prev).add(row.id));
+    
+      // Update pending changes
+      setPendingChanges(prev => ({
+        ...prev,
+        [row.id]: mappingObject
+      }));
+
+      // Persist to localStorage
+      const storedMappings = JSON.parse(localStorage.getItem('pendingMappings') || '{}');
+      localStorage.setItem('pendingMappings', JSON.stringify({
+        ...storedMappings,
+        [row.id]: mappingObject
+      }));
+    };
   const handleSaveMapping = (row) => {
     setSavedRows(prev => new Set(prev).add(row.id));
     updateMapping(pendingChanges[row.id]);

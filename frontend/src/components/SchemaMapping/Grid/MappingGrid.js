@@ -60,48 +60,61 @@ const MappingGrid = ({
 }) => {
   
   console.log('MappingGrid Props:', {
-    sourceSchema,
-    targetSchema,
     mappings,
-    persistentMappings
+    persistentMappings,
+    sourceSchema,
+    targetSchema
   });
 
   const rows = (sourceSchema || []).map((source, index) => {
-    const mapping = mappings?.find(m => m.sourceId === source.dsstrc_attr_id);
-    const target = mapping ? (targetSchema || []).find(t => t.dsstrc_attr_id === mapping.targetId) : null;
+    console.log('Processing source:', source);
+    console.log('Available mappings:', mappings);
+    
+    const mapping = Array.isArray(mappings) ? 
+      mappings.find(m => m?.sourceId === source?.dsstrc_attr_id) : 
+      null;
+      
+    console.log('Found mapping:', mapping);
+    
+    const target = mapping ? targetSchema.find(t => t.dsstrc_attr_id === mapping.targetId) : null;
 
     return {
       id: index,
-      sourceId: source.dsstrc_attr_id,
-      sourceTable: source.stdiz_abrvd_attr_grp_nm,
-      sourceColumn: source.stdiz_abrvd_attr_nm,
-      sourceColumnOrder: source.dsstrc_attr_seq_nbr,
-      sourceType: source.physcl_data_typ_nm,
+      sourceId: source?.dsstrc_attr_id,
+      sourceTable: source?.stdiz_abrvd_attr_grp_nm,
+      sourceColumn: source?.stdiz_abrvd_attr_nm,
+      sourceColumnOrder: source?.dsstrc_attr_seq_nbr,
+      sourceType: source?.physcl_data_typ_nm,
       targetTable: target?.stdiz_abrvd_attr_grp_nm || '-',
       targetColumn: target?.stdiz_abrvd_attr_nm || '-',
       targetType: target?.physcl_data_typ_nm || '-',
-      confidence: mapping?.confidence || 0,
-      mapping: mapping,
+      confidence:  Number(mapping?.dsstrc_attr_assc_cnfdnc_pct || 0) / 100,
+      mapping: mapping || null,
       aiComments: source?.comments?.ai || [],
       userComments: source?.comments?.user || [],
       isMapped: !!mapping,
-      isModified: source.isModified,
-      isSaved: source.isSaved,
+      isModified: source?.isModified,
+      isSaved: source?.isSaved,
       attributes: {
-        isPrimaryKey: source.pk_ind === 'Y',
-        isForeignKey: source.fk_ind === 'Y',
-        isPII: source.pii_ind === 'Y',
-        isPHI: source.phi_ind === 'Y',
-        isNullable: source.mand_ind !== 'Y',
-        isEncrypted: source.encrypt_ind === 'Y'
+        isPrimaryKey: source?.pk_ind === 'Y',
+        isForeignKey: source?.fk_ind === 'Y',
+        isPII: source?.pii_ind === 'Y',
+        isPHI: source?.phi_ind === 'Y',
+        isNullable: source?.mand_ind !== 'Y',
+        isEncrypted: source?.encrypt_ind === 'Y'
       },
       tags: {
-        user: source.usr_tag_cmplx ? JSON.parse(source.usr_tag_cmplx) : [],
-        ai: source.ai_tag_cmplx ? JSON.parse(source.ai_tag_cmplx) : [],
-        meta: source.meta_tag_cmplx ? JSON.parse(source.meta_tag_cmplx) : []
-      }
+        user: source?.usr_tag_cmplx ? JSON.parse(source.usr_tag_cmplx) : [],
+        ai: source?.ai_tag_cmplx ? JSON.parse(source.ai_tag_cmplx) : [],
+        meta: source?.meta_tag_cmplx ? JSON.parse(source.meta_tag_cmplx) : []
+      },
+      confidenceScore: mapping?.confidence || 0,
+      isManualMap: mapping?.isManualMap === 'Y',
+      isAIOverrideMap: mapping?.isAIOverrideMap === 'Y'
+
     };
-  });        
+  });
+  
   const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
   const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
@@ -115,13 +128,15 @@ const handleMappingChange = (row, newValue) => {
   const newMapping = {
     sourceId: row.sourceId,
     targetId: newValue.dsstrc_attr_id,
-    confidence: 1.0,
+    confidenceScore: 1,
+    aiOverrideMap: false,
+    isManualMap: true,
     targetColumn: newValue.stdiz_abrvd_attr_nm,
     targetTable: newValue.stdiz_abrvd_attr_grp_nm
   };
+  
   onMappingChange(row, newMapping);
-};  
-
+};
   const handleShowSuggestions = (row) => {
     console.log('Opening suggestions dialog with row:', row);
     console.log('Current targetSchema:', targetSchema);
@@ -360,6 +375,50 @@ const handleMappingChange = (row, newValue) => {
         </Box>
       )
     },
+    {
+      field: 'confidence',
+      headerName: '%',
+      width: 10,
+      renderCell: (params) => {
+        const confidenceScore = Number(params.row?.confidence || 0);
+        const isManualMapping = params.row.mapping?.is_manual_mapping === 'Y';
+        
+        const getChipStyle = (score, isManual) => {
+          if (isManual) return '#1976d2'; // Blue for manual mappings
+          if (score === 0) return '#9e9e9e'; // Grey for no mapping
+          if (score >= 80) return '#4caf50'; // Green for high AI confidence
+          if (score >= 60) return '#ff9800'; // Orange for medium AI confidence
+          return '#f44336'; // Red for low AI confidence
+        };
+
+        return (
+          <Box
+            sx={{
+              backgroundColor: getChipStyle(confidenceScore, isManualMapping),
+              borderRadius: '12px',
+              padding: '0 8px',
+              height: '24px',
+              width: '35px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '0.7rem',
+              fontWeight: 'bold',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                transform: 'scale(1.05)',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+              }
+            }}
+          >
+            {`${confidenceScore}%`}
+          </Box>
+        );
+      }
+    },
+    
     {
       field: 'comments',
       headerName: '',
