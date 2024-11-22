@@ -67,12 +67,22 @@ const MappingGrid = ({
   });
 
   const rows = (sourceSchema || []).map((source, index) => {
-    console.log('Processing source:', source);
-    console.log('Available mappings:', mappings);
-    
+    const pendingMapping = pendingChanges?.[index];
+    const existingMapping = Array.isArray(mappings) ? 
+    mappings.find(m => m?.sourceId === source?.dsstrc_attr_id) : 
+    null;
     const mapping = Array.isArray(mappings) ? 
-      mappings.find(m => m?.sourceId === source?.dsstrc_attr_id) : 
-      null;
+    mappings.find(m => m?.sourceId === source?.dsstrc_attr_id) : 
+    null;
+
+    console.log('Row Mapping Data:', {
+      index,
+      pendingMapping,
+      existingMapping,
+      finalMapping: mapping
+    });
+    
+    // const mapping = Array.isArray(mappings) ? mappings.find(m => m?.sourceId === source?.dsstrc_attr_id) :  null;
       
     console.log('Found mapping:', mapping);
     
@@ -96,12 +106,12 @@ const MappingGrid = ({
       isModified: source?.isModified,
       isSaved: source?.isSaved,
       attributes: {
-        isPrimaryKey: source?.pk_ind === 'Y',
-        isForeignKey: source?.fk_ind === 'Y',
-        isPII: source?.pii_ind === 'Y',
-        isPHI: source?.phi_ind === 'Y',
-        isNullable: source?.mand_ind !== 'Y',
-        isEncrypted: source?.encrypt_ind === 'Y'
+        isPrimaryKey: source?.pk_ind === true,
+        isForeignKey: source?.fk_ind === true,
+        isPII: source?.pii_ind === true,
+        isPHI: source?.phi_ind === true,
+        isNullable: source?.mand_ind !== true,
+        isEncrypted: source?.encrypt_ind === true
       },
       tags: {
         user: source?.usr_tag_cmplx ? JSON.parse(source.usr_tag_cmplx) : [],
@@ -109,8 +119,8 @@ const MappingGrid = ({
         meta: source?.meta_tag_cmplx ? JSON.parse(source.meta_tag_cmplx) : []
       },
       confidenceScore: mapping?.confidence || 0,
-      isManualMap: mapping?.isManualMap === 'Y',
-      isAIOverrideMap: mapping?.isAIOverrideMap === 'Y'
+      isManualMap: mapping?.isManualMap === true,
+      isAIOverrideMap: mapping?.isAIOverrideMap === true
 
     };
   });
@@ -125,18 +135,61 @@ const MappingGrid = ({
   const [commentType, setCommentType] = useState(null);
 
 const handleMappingChange = (row, newValue) => {
-  const newMapping = {
+ // Create standardized mapping object
+ const mappingObject = {
+  // Core mapping fields
+  sourceAsscId: row.mapping?.dsstrc_attr_assc_id || null,
+  sourceId: row.sourceId,
+  mapConfidenceScore: newValue.dsstrc_attr_assc_cnfdnc_pct || 1,
+  isManualMap: newValue.isManualMap || true,
+  isAIOverrideMap: newValue.isAIOverrideMap || false,
+
+  // Source/Target details
+  source: {
     sourceId: row.sourceId,
-    targetId: newValue.dsstrc_attr_id,
-    confidenceScore: 1,
-    aiOverrideMap: false,
-    isManualMap: true,
-    targetColumn: newValue.stdiz_abrvd_attr_nm,
-    targetTable: newValue.stdiz_abrvd_attr_grp_nm
-  };
-  
-  onMappingChange(row, newMapping);
+    table: row.sourceTable,
+    column: row.sourceColumn,
+    type: row.sourceType,
+    attributes: row.attributes
+  },
+  target: {
+    targetId: newValue.targetId,
+    table: newValue.targetTable,
+    column: newValue.targetColumn,
+    type: row.targetType
+  },
+
+  // Metadata
+  metadata: {
+    isModified: true,
+    lastModified: new Date().toISOString(),
+    modifiedBy: 'user',
+    version: 1,
+    status: 'pending'
+  },
+
+  // Preserve existing comments and tags
+  comments: {
+    ai: row.aiComments || [],
+    user: row.userComments || []
+  },
+
+  tags: {
+    ai: row.aiComments || {},
+    user: row.userComments || {},
+    meta: row.metaComments || {}
+  }
 };
+console.log('--> Mapping Object:', mappingObject);
+  
+  // onMappingChange(row, newMapping);
+
+  // Propagate changes up to parent
+  onMappingChange(row, mappingObject);
+
+};
+
+
   const handleShowSuggestions = (row) => {
     console.log('Opening suggestions dialog with row:', row);
     console.log('Current targetSchema:', targetSchema);
@@ -381,7 +434,7 @@ const handleMappingChange = (row, newValue) => {
       width: 10,
       renderCell: (params) => {
         const confidenceScore = Number(params.row?.confidence || 0);
-        const isManualMapping = params.row.mapping?.is_manual_mapping === 'Y';
+        const isManualMapping = params.row.mapping?.is_manual_mapping === true;
         
         const getChipStyle = (score, isManual) => {
           if (isManual) return '#1976d2'; // Blue for manual mappings

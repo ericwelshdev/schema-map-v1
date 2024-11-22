@@ -64,7 +64,7 @@ const SchemaMapping = () => {
         sourceAsscId: row.mapping?.dsstrc_attr_assc_id || null,
         sourceId: newMapping.sourceId,
         mapConfidenceScore: newMapping.dsstrc_attr_assc_cnfdnc_pct || 1,
-        isManualMap: newMapping.isManualMap || 'Y',
+        isManualMap: newMapping.isManualMap || true,
         isAIOverrideMap: newMapping.isAIOverrideMap || false,
       
         // Source/Target details
