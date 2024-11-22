@@ -46,6 +46,42 @@ const SchemaMapping = () => {
     createSearchIndex([...sourceColumns, ...targetColumns])
   );
 
+  const [changedRows, setChangedRows] = useState(new Set());
+  const [savedRows, setSavedRows] = useState(new Set());
+  const [pendingChanges, setPendingChanges] = useState({});
+
+  // Add these handler functions
+  const handleMappingChange = (row, newMapping) => {
+    setChangedRows(prev => new Set(prev).add(row.id));
+    setPendingChanges(prev => ({
+      ...prev,
+      [row.id]: newMapping
+    }));
+  };
+
+  const handleSaveMapping = (row) => {
+    setSavedRows(prev => new Set(prev).add(row.id));
+    updateMapping(pendingChanges[row.id]);
+  };
+
+  const handleUndoChanges = (row) => {
+    setChangedRows(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(row.id);
+      return newSet;
+    });
+    setSavedRows(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(row.id);
+      return newSet;
+    });
+    setPendingChanges(prev => {
+      const newChanges = {...prev};
+      delete newChanges[row.id];
+      return newChanges;
+    });
+  };
+
   useEffect(() => {
     const fetchSourceColumns = async () => {
       setIsLoading(true);
@@ -151,6 +187,12 @@ const SchemaMapping = () => {
               sourceSchema={filteredSourceColumns}
               targetSchema={filteredTargetColumns}
               mappings={filteredMappingColumns}
+              changedRows={changedRows}
+              savedRows={savedRows}
+              pendingChanges={pendingChanges}
+              onMappingChange={handleMappingChange}
+              onSaveMapping={handleSaveMapping}
+              onUndoChanges={handleUndoChanges}
               onRowSelect={(row) => {
                 setSelectedMapping(row);
                 setActiveView('details');

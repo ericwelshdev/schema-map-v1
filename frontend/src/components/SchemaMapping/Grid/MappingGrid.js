@@ -38,9 +38,9 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import Badge from '@mui/material/Badge';
 
-const MappingGrid = ({ 
-  sourceSchema = [], 
-  targetSchema = [], 
+const MappingGrid = ({
+  sourceSchema = [],
+  targetSchema = [],
   mappings = [],
   persistentMappings = {},
   onAutoMap = () => {},
@@ -52,6 +52,11 @@ const MappingGrid = ({
   onUndo = () => {},
   onShowSuggestions = () => {},
   onMappingChange = () => {},
+  changedRows,
+  savedRows,
+  pendingChanges,
+  onSaveMapping,
+  onUndoChanges
 }) => {
   
   console.log('MappingGrid Props:', {
@@ -61,22 +66,18 @@ const MappingGrid = ({
     persistentMappings
   });
 
-  const rows = sourceSchema?.map((source, index) => {
-    console.log('Processing source row:', source);
-    const mapping = mappings?.find(m => m?.sourceId === source?.dsstrc_attr_id);
-    const target = mapping ? targetSchema?.find(t => t?.dsstrc_attr_id === mapping?.targetId) : null;
-  
-    console.log('Found mapping:', mapping);
-    console.log('Found target:', target);
+  const rows = (sourceSchema || []).map((source, index) => {
+    const mapping = mappings?.find(m => m.sourceId === source.dsstrc_attr_id);
+    const target = mapping ? (targetSchema || []).find(t => t.dsstrc_attr_id === mapping.targetId) : null;
 
-    const row = {
+    return {
       id: index,
       sourceId: source.dsstrc_attr_id,
       sourceTable: source.stdiz_abrvd_attr_grp_nm,
       sourceColumn: source.stdiz_abrvd_attr_nm,
       sourceColumnOrder: source.dsstrc_attr_seq_nbr,
       sourceType: source.physcl_data_typ_nm,
-      targetTable: target?.stdiz_abrvd_attr_grp_nm,
+      targetTable: target?.stdiz_abrvd_attr_grp_nm || '-',
       targetColumn: target?.stdiz_abrvd_attr_nm || '-',
       targetType: target?.physcl_data_typ_nm || '-',
       confidence: mapping?.confidence || 0,
@@ -85,28 +86,22 @@ const MappingGrid = ({
       userComments: source?.comments?.user || [],
       isMapped: !!mapping,
       isModified: source.isModified,
-            isSaved: source.isSaved,
-            // Add these properties
-            attributes: {
-              isPrimaryKey: source.pk_ind === 'Y',
-              isForeignKey: source.fk_ind === 'Y',
-              isPII: source.pii_ind === 'Y',
-              isPHI: source.phi_ind === 'Y',
-              isNullable: source.mand_ind !== 'Y',
-              isEncrypted: source.encrypt_ind === 'Y'
-            },
-            tags: {
-              user: source.usr_tag_cmplx ? JSON.parse(source.usr_tag_cmplx) : [],
-              ai: source.ai_tag_cmplx ? JSON.parse(source.ai_tag_cmplx) : [],
-              meta: source.meta_tag_cmplx ? JSON.parse(source.meta_tag_cmplx) : []
-            }
-          };
-
-    return row;
-  }) || [];
-  const [changedRows, setChangedRows] = useState(new Set());
-  const [savedRows, setSavedRows] = useState(new Set());
-  const [pendingChanges, setPendingChanges] = useState({});
+      isSaved: source.isSaved,
+      attributes: {
+        isPrimaryKey: source.pk_ind === 'Y',
+        isForeignKey: source.fk_ind === 'Y',
+        isPII: source.pii_ind === 'Y',
+        isPHI: source.phi_ind === 'Y',
+        isNullable: source.mand_ind !== 'Y',
+        isEncrypted: source.encrypt_ind === 'Y'
+      },
+      tags: {
+        user: source.usr_tag_cmplx ? JSON.parse(source.usr_tag_cmplx) : [],
+        ai: source.ai_tag_cmplx ? JSON.parse(source.ai_tag_cmplx) : [],
+        meta: source.meta_tag_cmplx ? JSON.parse(source.meta_tag_cmplx) : []
+      }
+    };
+  });        
   const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
   const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
@@ -116,22 +111,17 @@ const MappingGrid = ({
   const [isViewingDetails, setIsViewingDetails] = useState(false);
   const [commentType, setCommentType] = useState(null);
 
-  const handleMappingChange = (row, newValue) => {
-    console.log('Mapping change:', {
-      row,
-      newValue
-    });
-    const newMapping = {
-      sourceId: row.sourceId,
-      targetId: newValue.dsstrc_attr_id,
-      confidence: 1.0
-    };
-    setChangedRows(prev => new Set(prev).add(row.id));
-    if (onMappingChange) {
-      onMappingChange(row, newMapping);
-    }
+const handleMappingChange = (row, newValue) => {
+  const newMapping = {
+    sourceId: row.sourceId,
+    targetId: newValue.dsstrc_attr_id,
+    confidence: 1.0,
+    targetColumn: newValue.stdiz_abrvd_attr_nm,
+    targetTable: newValue.stdiz_abrvd_attr_grp_nm
   };
-  
+  onMappingChange(row, newMapping);
+};  
+
   const handleShowSuggestions = (row) => {
     console.log('Opening suggestions dialog with row:', row);
     console.log('Current targetSchema:', targetSchema);
@@ -153,22 +143,11 @@ const MappingGrid = ({
   };
 
   const handleSaveMapping = (row) => {
-    setSavedRows(prev => new Set(prev).add(row.id));
-    onMappingUpdate(row);
+    onSaveMapping(row);
   };
 
   const handleUndoChanges = (row) => {
-    setChangedRows(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(row.id);
-      return newSet;
-    });
-    setSavedRows(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(row.id);
-      return newSet;
-    });
-    onUndo(row);
+    onUndoChanges(row);
   };
 
   const handleOpenComments = (row, type) => {
@@ -257,25 +236,23 @@ const MappingGrid = ({
       headerName: '#',
       editable: false,
       width: 5,
-      renderCell: (params) => ( <
-        Box sx = {
-          {
+      renderCell: (params) => (
+        <Box
+          sx={{
             display: 'flex',
-            alignItems: 'center'
-          }
-        } >
-        <
-        Typography sx = {
-          {
-            fontSize: '0.7rem',
-            color: '#666'
-          }
-        } > {
-          params.row.sourceColumnOrder
-        } <
-        /Typography> <
-        /Box>
-      )
+            alignItems: 'center',
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: '0.7rem',
+              color: '#666',
+            }}
+          >
+            {params.row.sourceColumnOrder}
+          </Typography>
+        </Box>
+      ),
     },
     {
       field: 'sourceColumn',
@@ -335,18 +312,11 @@ const MappingGrid = ({
             getOptionLabel={(option) => 
               option ? `${option.dsstrc_attr_nm} (${option.stdiz_abrvd_attr_grp_nm}.${option.stdiz_abrvd_attr_nm})` : ''
             }
-            value={(() => {
-              const currentValue = targetSchema?.find(t => 
-                t.dsstrc_attr_id === (persistentMappings[params.row.id]?.targetId || params.row.mapping?.targetId)
-              );
-              console.log('Autocomplete value calculation:', {
-                rowId: params.row.id,
-                persistentMapping: persistentMappings[params.row.id],
-                originalMapping: params.row.mapping,
-                foundValue: currentValue
-              });
-              return currentValue || null;
-            })()}
+            value={
+            pendingChanges?.[params.row.id] ? 
+            (targetSchema || [])?.find(t => t.dsstrc_attr_id === pendingChanges[params.row.id].targetId) :
+            (targetSchema || [])?.find(t => t.dsstrc_attr_id === params.row.mapping?.targetId) || null
+            }            
             onChange={(_, newValue) => handleMappingChange(params.row, newValue)}
             renderOption={(props, option) => (
               <li {...props} style={{ fontSize: '0.7rem' }}>
@@ -373,8 +343,6 @@ const MappingGrid = ({
             )}
             sx={{ 
               width: '100%',
-
-              height: '100%',
               '& .MuiAutocomplete-listbox': {
                 fontSize: '0.7rem'
               }
